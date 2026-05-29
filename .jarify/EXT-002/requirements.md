@@ -1,14 +1,9 @@
 ---
 id: EXT-002
 title: Distributed State Machine
-status: covered
+status: uncovered
 priority: high
-implementation:
-  - src/state/model.ts
-  - src/state/machine.ts
-  - src/state/log.ts
-  - src/state/recover.ts
-  - src/state/replication.ts
+implementation: []
 ---
 
 # Distributed State Machine

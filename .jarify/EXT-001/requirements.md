@@ -1,16 +1,9 @@
 ---
 id: EXT-001
 title: Reasoning / Execution Boundary
-status: covered
+status: uncovered
 priority: high
-implementation:
-  - src/core/json.ts
-  - src/core/decision.ts
-  - src/core/reasoning-boundary.ts
-  - src/core/index.ts
-  - src/core/decision-gate.ts
-  - src/exec/executor.ts
-  - scripts/check-planes.ts
+implementation: []
 ---
 
 # Reasoning / Execution Boundary
@@ -52,3 +45,22 @@ Deterministic execution modules MUST NOT invoke the LLM or otherwise branch on n
 - [ ] Execution-plane modules contain zero imports of the LLM client/adapter.
 - [ ] An automated architecture check fails the build if an execution module imports reasoning/LLM code.
 - [ ] Given identical inputs, an execution path produces identical outputs (deterministic).
+
+### [REQ-5] Extensible Validation Gate
+
+Developers can extend the validation gate with additional deterministic validators/policies without modifying core code. The gate remains total and deterministic; every registered validator runs before a decision is accepted.
+
+#### Acceptance Criteria
+- [ ] The gate exposes a registration API (e.g. `register_validator(fn)`) for additional deterministic validators that each return accept or a typed rejection reason.
+- [ ] All registered validators run in a defined, stable order; the first rejection short-circuits with its reason and no decision is accepted.
+- [ ] Built-in structural validation (serializable payload, required fields) always runs first and cannot be removed by a developer extension.
+- [ ] A validator must be a pure function of the decision (it performs no side effects); this keeps the gate deterministic.
+
+### [REQ-6] Pluggable Executor Handlers
+
+The executor dispatches an accepted decision to a handler registered for its `kind`, so developers can extend what the system *does* without changing the boundary or the gate. Unknown kinds are refused, not guessed.
+
+#### Acceptance Criteria
+- [ ] The executor exposes a registration API (e.g. `register_handler(kind, fn)`) mapping a decision `kind` to a deterministic handler.
+- [ ] `apply` validates via the gate, then dispatches to the handler for the decision's `kind`; a decision whose `kind` has no registered handler is refused with a clear reason and causes no side effect.
+- [ ] Handlers are invoked only with the validated decision and execution-plane collaborators (state machine, granted handles) — never the LLM/reasoning side.
