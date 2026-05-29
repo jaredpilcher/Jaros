@@ -292,6 +292,7 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# #EXT-008-REQ-1 Start
 def load_dotenv(env_path: Path | None = None) -> None:
     """Load keys/values from a .env file into os.environ if it exists."""
     if env_path is None:
@@ -314,6 +315,7 @@ def load_dotenv(env_path: Path | None = None) -> None:
                     os.environ.setdefault(key, val)
     except Exception:
         pass
+# #EXT-008-REQ-1 End
 
 
 def main(argv: Sequence[str] | None = None) -> int:
