@@ -1,0 +1,3 @@
+# Intent
+
+Keep non-deterministic reasoning and deterministic execution on opposite sides of a hard, one-way seam. Reasoning may only emit inert `Decision` data; a validation gate stands between that data and any action. This boundary is what makes the rest of Jaros trustworthy and deterministic — it is the local expression of the Prime Directive's first tenet: completely decouple AI reasoning from system execution.
