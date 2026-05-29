@@ -39,6 +39,32 @@ The only paths between an agent and the rest of the system are **rigid queues** 
 
 Decisions flow down; nothing in the Execution Plane reaches up to invoke reasoning inline.
 
+## The LLM Decides *What*, Not *How*
+
+A frequent misreading of this design is "the LLM can't make decisions." It can — that *is* the reasoning. The precise rule is:
+
+> **The LLM decides WHAT to propose. The deterministic system decides HOW — and whether — it runs.**
+
+The LLM absolutely makes judgment calls. What it cannot do is perform a side effect directly, mutate system state, control the flow of execution, or decide whether its own decision is carried out. A `Decision` (EXT-001) **is** the LLM's decision — captured as inert, serializable data. The model says *"I think we should do X"*; that proposal crosses a validation gate; only then does the deterministic Execution Plane decide whether and how to actually do X, and it may reject it outright.
+
+The LLM is an **advisor** writing recommendations on slips of paper. A deterministic **clerk** (the harness + state machine) reads each slip, checks it against the rulebook, and either executes it exactly or rejects it. The advisor makes real judgments but never touches the levers, never controls the machinery, and never decides if the advice is followed. Its entire interface with the world is **data in → data out**.
+
+```text
+  typical agent:   LLM ── tool call ──► side effect happens   (LLM drives execution)
+
+  jaros:           LLM ── Decision (data) ──► [gate] ──► executor   (executor drives execution)
+                                                 │
+                                                 └─► may REJECT; LLM has no say
+```
+
+This quarantine is *why* the other tenets hold:
+
+- The LLM is **interchangeable** (EXT-004) precisely because it holds no control — swap the model and nothing about how the system runs changes.
+- The **state machine stays deterministic** (EXT-002) because transitions are invoked by the executor, never by the model.
+- The **harness can constrain agents** (EXT-005) because an agent can only ever hand over a slip of paper, not pull a lever.
+
+The non-determinism is allowed to influence *what* happens, but is structurally barred from *executing* it.
+
 ## Communication Fabric (EXT-006)
 
 Agents never talk to each other directly. Every exchange is through a queue or the shared file system, both governed by the harness.
