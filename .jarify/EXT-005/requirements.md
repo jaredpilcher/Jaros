@@ -1,7 +1,7 @@
 ---
 id: EXT-005
 title: Architectural Harness
-status: uncovered
+status: covered
 priority: high
 implementation: []
 ---
