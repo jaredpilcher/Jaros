@@ -1,1 +1,35 @@
-{}
+{
+  "REQ-1": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 48,
+      "endLine": 63
+    },
+    {
+      "file": "jaros/cli.py",
+      "startLine": 248,
+      "endLine": 345
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 78,
+      "endLine": 106
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 109,
+      "endLine": 160
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 163,
+      "endLine": 245
+    }
+  ]
+}
