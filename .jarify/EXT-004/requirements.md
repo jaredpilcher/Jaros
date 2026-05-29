@@ -1,7 +1,7 @@
 ---
 id: EXT-004
 title: Interchangeable LLM Adapter
-status: uncovered
+status: covered
 priority: high
 implementation: []
 ---
