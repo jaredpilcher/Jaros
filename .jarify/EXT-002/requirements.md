@@ -1,7 +1,7 @@
 ---
 id: EXT-002
 title: Distributed State Machine
-status: uncovered
+status: covered
 priority: high
 implementation: []
 ---
