@@ -1,0 +1,60 @@
+{
+  "REQ-1": [
+    {
+      "file": "src/llm/client.ts",
+      "startLine": 3,
+      "endLine": 54
+    },
+    {
+      "file": "src/llm/index.ts",
+      "startLine": 1,
+      "endLine": 9
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "src/llm/adapters/default-adapter.ts",
+      "startLine": 3,
+      "endLine": 26
+    },
+    {
+      "file": "src/llm/adapters/uppercase-adapter.ts",
+      "startLine": 3,
+      "endLine": 24
+    },
+    {
+      "file": "src/llm/factory.ts",
+      "startLine": 5,
+      "endLine": 44
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "src/llm/client.ts",
+      "startLine": 3,
+      "endLine": 54
+    },
+    {
+      "file": "src/llm/adapters/default-adapter.ts",
+      "startLine": 3,
+      "endLine": 26
+    },
+    {
+      "file": "src/llm/adapters/uppercase-adapter.ts",
+      "startLine": 3,
+      "endLine": 24
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "src/llm/factory.ts",
+      "startLine": 5,
+      "endLine": 44
+    },
+    {
+      "file": "src/llm/index.ts",
+      "startLine": 1,
+      "endLine": 9
+    }
+  ]
+}
