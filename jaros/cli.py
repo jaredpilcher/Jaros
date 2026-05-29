@@ -292,12 +292,37 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def load_dotenv(env_path: Path | None = None) -> None:
+    """Load keys/values from a .env file into os.environ if it exists."""
+    if env_path is None:
+        env_path = Path(".env")
+    if not env_path.is_file():
+        return
+    try:
+        content = env_path.read_text(encoding="utf-8")
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" in line:
+                key, val = line.split("=", 1)
+                key = key.strip()
+                val = val.strip()
+                if (val.startswith('"') and val.endswith('"')) or (val.startswith("'") and val.endswith("'")):
+                    val = val[1:-1]
+                if key:
+                    os.environ.setdefault(key, val)
+    except Exception:
+        pass
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """CLI entry point: parse ``argv`` and dispatch to the matching command.
 
     Returns a process exit code. Never opens a socket or makes a network call;
     every command's effect is a read or write under the shared data directory.
     """
+    load_dotenv()
     parser = _build_parser()
     args = parser.parse_args(argv)
     data_dir = resolve_data_dir(args)
