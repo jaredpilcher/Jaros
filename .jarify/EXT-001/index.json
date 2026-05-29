@@ -1,0 +1,45 @@
+{
+  "REQ-4": [
+    {
+      "file": "scripts/check-planes.ts",
+      "startLine": 4,
+      "endLine": 110
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "src/exec/executor.ts",
+      "startLine": 4,
+      "endLine": 36
+    },
+    {
+      "file": "src/core/decision-gate.ts",
+      "startLine": 4,
+      "endLine": 59
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "src/core/reasoning-boundary.ts",
+      "startLine": 6,
+      "endLine": 21
+    },
+    {
+      "file": "src/core/index.ts",
+      "startLine": 1,
+      "endLine": 16
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "src/core/json.ts",
+      "startLine": 1,
+      "endLine": 19
+    },
+    {
+      "file": "src/core/decision.ts",
+      "startLine": 3,
+      "endLine": 117
+    }
+  ]
+}
