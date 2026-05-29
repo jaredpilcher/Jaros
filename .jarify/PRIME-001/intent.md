@@ -1,0 +1,3 @@
+# Intent
+
+The ultimate intention of this ecosystem is to completely decouple non-deterministic AI reasoning from deterministic system execution. Jaros must be built as an unbreakable, distributed state machine that orchestrates AI agents not as bloated microservices, but as lightweight computing threads. The system will treat the LLM purely as an interchangeable application, governed by an unyielding architectural harness where all inter-agent communication occurs exclusively through rigid queues and a shared file system.
