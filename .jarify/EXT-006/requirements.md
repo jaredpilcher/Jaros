@@ -1,7 +1,7 @@
 ---
 id: EXT-006
 title: Communication Fabric (Queues + Shared File System)
-status: uncovered
+status: covered
 priority: high
 implementation: []
 ---
