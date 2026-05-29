@@ -1,9 +1,13 @@
 ---
 id: EXT-003
 title: Agent Thread Runtime
-status: uncovered
+status: covered
 priority: high
-implementation: []
+implementation:
+  - src/runtime/agent-thread.ts
+  - src/runtime/agent-pool.ts
+  - src/runtime/lifecycle.ts
+  - scripts/check-no-server.ts
 ---
 
 # Agent Thread Runtime
