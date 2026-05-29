@@ -11,7 +11,7 @@
     "check:planes": "node dist/scripts/check-planes.js",
     "check:no-server": "node dist/scripts/check-no-server.js",
     "check:comms": "node dist/scripts/check-comms.js",
-    "test:unit": "node --test \"dist/**/*.test.js\"",
+    "test:unit": "node --test dist",
     "test": "npm run build && npm run checks && npm run test:unit",
     "test:integration": "node dist/test/integration/docker-run.js",
     "start": "node dist/src/main.js"

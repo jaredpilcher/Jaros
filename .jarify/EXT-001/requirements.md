@@ -1,9 +1,16 @@
 ---
 id: EXT-001
 title: Reasoning / Execution Boundary
-status: uncovered
+status: covered
 priority: high
-implementation: []
+implementation:
+  - src/core/json.ts
+  - src/core/decision.ts
+  - src/core/reasoning-boundary.ts
+  - src/core/index.ts
+  - src/core/decision-gate.ts
+  - src/exec/executor.ts
+  - scripts/check-planes.ts
 ---
 
 # Reasoning / Execution Boundary
