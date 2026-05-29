@@ -1,9 +1,13 @@
 ---
 id: EXT-005
 title: Architectural Harness
-status: uncovered
+status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/harness/capabilities.py
+  - jaros/harness/rules.py
+  - jaros/harness/harness.py
+  - jaros/harness/__init__.py
 ---
 
 # Architectural Harness
