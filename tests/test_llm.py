@@ -80,3 +80,25 @@ def test_response_is_frozen_immutable():
     resp = LlmResponse(text="t", model="m")
     with pytest.raises(dataclasses.FrozenInstanceError):
         resp.text = "other"  # type: ignore[misc]
+
+
+def test_ollama_provider_works():
+    from unittest.mock import MagicMock, patch
+
+    mock_response = MagicMock()
+    mock_response.read.return_value = b'{"response": "mocked ollama output"}'
+    mock_response.__enter__.return_value = mock_response
+
+    with patch("urllib.request.urlopen", return_value=mock_response) as mock_urlopen:
+        client = create_llm_client({"provider": "ollama"})
+        assert isinstance(client, LlmClient)
+        
+        with patch.dict("os.environ", {"OLLAMA_HOST": "http://localhost:11434", "OLLAMA_MODEL": "llama3"}):
+            resp = _run_via_client(client, "hello")
+            assert resp.text == "mocked ollama output"
+            assert resp.model == "llama3"
+
+        mock_urlopen.assert_called_once()
+        req_arg = mock_urlopen.call_args[0][0]
+        assert req_arg.full_url == "http://localhost:11434/api/generate"
+        assert req_arg.get_method() == "POST"

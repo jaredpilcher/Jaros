@@ -15,6 +15,7 @@ from typing import Callable, Mapping
 from jaros.core.json_value import JsonValue
 from jaros.llm.adapters.default_adapter import DefaultAdapter
 from jaros.llm.adapters.uppercase_adapter import UppercaseAdapter
+from jaros.llm.adapters.ollama_adapter import OllamaAdapter
 from jaros.llm.client import LlmClient
 
 
@@ -37,6 +38,7 @@ class LlmConfig:
 _REGISTRY: dict[str, Callable[[], LlmClient]] = {
     "default": DefaultAdapter,
     "uppercase": UppercaseAdapter,
+    "ollama": OllamaAdapter,
 }
 # #EXT-004-REQ-2 End
 

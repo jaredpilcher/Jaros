@@ -7,6 +7,7 @@ implementation:
   - jaros/llm/client.py
   - jaros/llm/adapters/default_adapter.py
   - jaros/llm/adapters/uppercase_adapter.py
+  - jaros/llm/adapters/ollama_adapter.py
   - jaros/llm/factory.py
   - jaros/llm/__init__.py
 ---
