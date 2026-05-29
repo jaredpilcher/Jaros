@@ -1,7 +1,7 @@
 ---
 id: EXT-008
 title: Host Control CLI and Shared-FS Ingestion
-status: uncovered
+status: covered
 priority: high
 implementation: []
 ---
