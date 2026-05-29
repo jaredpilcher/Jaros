@@ -2,8 +2,8 @@
   "REQ-2": [
     {
       "file": "jaros/llm/factory.py",
-      "startLine": 21,
-      "endLine": 41
+      "startLine": 22,
+      "endLine": 43
     },
     {
       "file": "jaros/llm/adapters/default_adapter.py",
@@ -14,13 +14,18 @@
       "file": "jaros/llm/adapters/uppercase_adapter.py",
       "startLine": 15,
       "endLine": 29
+    },
+    {
+      "file": "jaros/llm/adapters/ollama_adapter.py",
+      "startLine": 6,
+      "endLine": 36
     }
   ],
   "REQ-4": [
     {
       "file": "jaros/llm/factory.py",
-      "startLine": 44,
-      "endLine": 84
+      "startLine": 46,
+      "endLine": 86
     }
   ],
   "REQ-1": [
