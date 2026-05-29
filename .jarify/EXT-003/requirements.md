@@ -1,7 +1,7 @@
 ---
 id: EXT-003
 title: Agent Thread Runtime
-status: uncovered
+status: covered
 priority: high
 implementation: []
 ---
