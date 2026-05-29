@@ -1,9 +1,11 @@
 ---
 id: EXT-007
 title: Jaros Runtime Daemon
-status: uncovered
+status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/registry.py
+  - jaros/daemon.py
 ---
 
 # Jaros Runtime Daemon
