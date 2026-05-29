@@ -9,3 +9,5 @@ dist/
 venv/
 *.log
 .jaros-data/
+.env
+.env.local

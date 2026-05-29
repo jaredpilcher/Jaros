@@ -1,4 +1,28 @@
 {
+  "REQ-2": [
+    {
+      "file": "jaros/llm/factory.py",
+      "startLine": 21,
+      "endLine": 41
+    },
+    {
+      "file": "jaros/llm/adapters/default_adapter.py",
+      "startLine": 15,
+      "endLine": 29
+    },
+    {
+      "file": "jaros/llm/adapters/uppercase_adapter.py",
+      "startLine": 15,
+      "endLine": 29
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "jaros/llm/factory.py",
+      "startLine": 44,
+      "endLine": 84
+    }
+  ],
   "REQ-1": [
     {
       "file": "jaros/llm/client.py",
@@ -9,30 +33,6 @@
       "file": "jaros/llm/client.py",
       "startLine": 69,
       "endLine": 83
-    }
-  ],
-  "REQ-2": [
-    {
-      "file": "jaros/llm/factory.py",
-      "startLine": 21,
-      "endLine": 41
-    },
-    {
-      "file": "jaros/llm/adapters/uppercase_adapter.py",
-      "startLine": 15,
-      "endLine": 29
-    },
-    {
-      "file": "jaros/llm/adapters/default_adapter.py",
-      "startLine": 15,
-      "endLine": 29
-    }
-  ],
-  "REQ-4": [
-    {
-      "file": "jaros/llm/factory.py",
-      "startLine": 44,
-      "endLine": 84
     }
   ]
 }
