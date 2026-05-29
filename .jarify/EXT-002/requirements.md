@@ -3,7 +3,13 @@ id: EXT-002
 title: Distributed State Machine
 status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/state/model.py
+  - jaros/state/machine.py
+  - jaros/state/log.py
+  - jaros/state/recover.py
+  - jaros/state/replication.py
+  - jaros/state/__init__.py
 ---
 
 # Distributed State Machine

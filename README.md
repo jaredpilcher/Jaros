@@ -2,11 +2,26 @@
 
 > An unbreakable, distributed state machine that orchestrates AI agents as **lightweight computing threads** — not bloated microservices.
 
+![Jaros OS Docker Demo](docs/demo.gif)
+
 Jaros completely decouples non-deterministic AI reasoning from deterministic system execution. The LLM is treated purely as an **interchangeable application**, governed by an unyielding architectural harness where all inter-agent communication occurs exclusively through rigid queues and a shared file system.
 
 This is the system's [Prime Directive](.jarify/PRIME-001/intent.md). Every part of the codebase exists to serve it.
 
-## The core idea: the LLM decides *what*, not *how*
+---
+
+## Architecture
+
+![Jaros Architecture](docs/architecture.png)
+
+Jaros is split into two planes that never merge:
+
+- **Reasoning Plane** (non-deterministic): agents think and propose `Decision` data. The LLM lives here as a pluggable application.
+- **Execution Plane** (deterministic): the state machine and harness validate and execute decisions, persist state, and route all communication.
+
+The only channels between an agent and the rest of the system are **rigid queues** and the **shared file system**.
+
+### Decoder-EncoderDecoupling: The LLM decides *what*, not *how*
 
 A frequent misreading is "the LLM can't make decisions." It can — that *is* the reasoning. The precise rule is:
 
@@ -22,14 +37,7 @@ An agent's reasoning may only emit an inert, serializable `Decision` (data). A d
                                                  └─► may REJECT; LLM has no say
 ```
 
-## Architecture
-
-Jaros is split into two planes that never merge:
-
-- **Reasoning Plane** (non-deterministic): agents think and propose `Decision` data. The LLM lives here as a pluggable application.
-- **Execution Plane** (deterministic): the state machine and harness validate and execute decisions, persist state, and route all communication.
-
-The only channels between an agent and the rest of the system are **rigid queues** and the **shared file system**.
+### Subsystems
 
 | Subsystem | Spec | What it owns |
 | --- | --- | --- |
@@ -39,94 +47,175 @@ The only channels between an agent and the rest of the system are **rigid queues
 | Interchangeable LLM Adapter | [EXT-004](.jarify/EXT-004/requirements.md) | Single `LlmClient` interface, pluggable adapters, config-only swap |
 | Architectural Harness | [EXT-005](.jarify/EXT-005/requirements.md) | Mediated actions, non-bypassable rules, capability-scoped handles |
 | Communication Fabric | [EXT-006](.jarify/EXT-006/requirements.md) | Rigid typed queues, shared FS layout, exclusivity enforcement |
+| Runtime Daemon (OS Boot) | [EXT-007](.jarify/EXT-007/requirements.md) | OS server daemon, file monitoring, atomic inbox ingestion |
+| Host Control CLI | [EXT-008](.jarify/EXT-008/requirements.md) | Command-line management, atomic job submission, agent plugins installer |
 
 The full system-wide design lives in [`.jarify/PRIME-001/design.md`](.jarify/PRIME-001/design.md).
 
-## Project layout
+---
+
+## Project Layout
 
 ```text
-src/
-  core/      EXT-001  Decision, ReasoningBoundary, validation gate
-  exec/      EXT-001  deterministic executor
-  state/     EXT-002  state model, machine, durable log, recover, replication
-  runtime/   EXT-003  AgentThread, AgentPool (lightweight threads)
-  llm/       EXT-004  LlmClient interface + pluggable adapters + factory
-  harness/   EXT-005  capabilities, rules, Harness
-  comms/     EXT-006  Queue, SharedFileSystem
-  main.ts             composition root / end-to-end smoke run
-scripts/              architecture checks (planes / no-server / comms)
-test/integration/     Docker integration runner
-.jarify/              SpecFlow/Jarify specifications (the source of intent)
+jaros/
+  core/        EXT-001  Decision, ReasoningBoundary, validation gate
+  execution/   EXT-001  deterministic executor + pluggable handlers
+  state/       EXT-002  state model, machine, durable log, recover, replication
+  runtime/     EXT-003  AgentThread, AgentPool (lightweight threads)
+  llm/         EXT-004  LlmClient interface + pluggable adapters + factory
+  harness/     EXT-005  capabilities, rules, Harness (mediates all I/O)
+  comms/       EXT-006  Queue, SharedFileSystem
+  registry.py  EXT-007  Agent registration and plugin loading
+  daemon.py    EXT-007  Runtime daemon orchestration (the OS boot engine)
+  cli.py       EXT-008  Host Control CLI
+scripts/                architecture checks (planes / no-server / comms)
+tests/                  unit and integration test suites
+.jarify/                Jarify specifications (the source of intent)
 ```
 
-## Build, test, run
+---
+
+## Installation, Test & Run
+
+### 1. Installation
+Install the project in editable mode with development dependencies:
 
 ```bash
-npm install
-npm run build         # tsc -> dist/
-npm test              # build + architecture checks + 84 unit tests
-npm start             # run the end-to-end smoke (prints JAROS_SMOKE_OK)
+pip install -e ".[dev]"
 ```
 
-### Architecture checks (the structural guardrails)
-
-These run as part of `npm test` and fail the build on violation:
-
-- `npm run check:planes` — no Execution-Plane module may import the LLM/reasoning side (EXT-001/REQ-4).
-- `npm run check:no-server` — no agent/runtime code may open a server/port (EXT-003/REQ-3).
-- `npm run check:comms` — no direct agent-to-agent / RPC / network calls; only the queue + shared FS are allowed (EXT-006/REQ-5).
-
-### Run on Docker (the default isolation model)
-
-The container is the boundary for the **whole Jaros node**; agents run as threads *inside* it — never one container per agent.
+### 2. Run Tests
+Execute the entire test suite, including all 137 unit tests and all architecture checks:
 
 ```bash
+pytest
+```
+
+### 3. Architecture Guardrails
+These run automatically with `pytest` and fail the build if a structural constraint is violated:
+* **Decoupled Planes**: `python scripts/check_planes.py` — enforces that no Execution-Plane module imports reasoning/LLM code.
+* **No Server Footprint**: `python scripts/check_no_server.py` — asserts that no agent/runtime code spins up a listening socket or HTTP server.
+* **Exclusive Channels**: `python scripts/check_comms.py` — scans for direct agent-to-agent references, RPC, or network calls (forces queues + shared FS).
+
+### 4. Running the Host CLI & Daemon
+
+Start the Jaros OS Runtime Daemon (the server):
+```bash
+jaros serve --data-dir .jaros-data
+```
+
+From another terminal, use the Host Control CLI to inspect status and submit jobs:
+```bash
+# Check OS status
+jaros status --data-dir .jaros-data
+
+# Submit a job atomically to the OS
+jaros submit advance --input '{"events": ["START", "COMPLETE"]}' --data-dir .jaros-data
+
+# Watch OS execution and outbox results in real-time
+jaros watch --data-dir .jaros-data
+```
+
+---
+
+## Run on Docker (Containerized Isolation)
+
+The container acts as the boundary for the **whole Jaros node**; agents run as lightweight threads *inside* it — never one container per agent.
+
+```bash
+# Build the production-ready image
 docker build -t jaros .
-docker run --rm jaros            # prints JAROS_SMOKE_OK and exits 0
-npm run test:integration         # builds the image, runs the container, asserts success
+
+# Run the long-running daemon container
+docker run -d --name jaros_os -v ${PWD}/.jaros-data:/data jaros
+
+# Submit work from the host using the CLI over the shared volume
+jaros submit advance --input '{"events": ["START"]}' --data-dir .jaros-data
 ```
 
-## Building an agent that runs on the Jaros OS
-
-See **[docs/building-agents.md](docs/building-agents.md)** for the full guide. The essence:
-
-1. **Write a `ReasoningBoundary`.** Its only output is inert `Decision` data — it performs no side effects and holds no handles.
-2. **Ask the harness for capabilities.** The OS hands the agent *only* the scoped handles you grant (e.g. queue-send, fs-write). It has no ambient access.
-3. **Run it as a thread** under the `AgentPool`.
-4. **The deterministic side acts:** the gate validates the decision, the executor applies it, the state machine durably transitions, and results are written through the granted handle.
-
-```ts
-import { createDecision, type Decision } from "./core/decision";
-import type { ReasoningBoundary } from "./core/reasoning-boundary";
-import { createLlmClient } from "./llm";
-
-const llm = createLlmClient({ provider: "default" });
-
-// An agent is just a ReasoningBoundary: data in -> Decision data out.
-const myAgent: ReasoningBoundary = {
-  async decide() {
-    const reply = await llm.complete({ prompt: "What next?", context: {} });
-    return [
-      createDecision({
-        id: "decision-1",
-        source: "my-agent",
-        kind: "advance",
-        payload: { advice: reply.text, events: ["START", "COMPLETE"] }, // inert data only
-      }),
-    ];
-  },
-};
+To run the complete automated container integration test:
+```bash
+python tests/integration/run_container_demo.py
 ```
 
-To **constrain** an agent, narrow its grants — that is the whole knob:
+---
 
-```ts
-const ctx = harness.spawn("my-agent", { queueSend: queue, fs, fsWrite: true });
-// This agent can send on `queue` and write files — and nothing else.
+## Distributed Scheduling Across Containers
+
+Because Jaros uses a **file-system-only control plane**, scheduling is beautifully decoupled, highly scalable, and naturally adaptable to multi-container clusters:
+
+### Pattern A: Decoupled Host-Side Cron
+Because job submission is simple, standard schedulers (like Linux `cron`, Kubernetes `CronJob`, or Windows Task Scheduler) can trigger runs:
+```text
+0 * * * * python -m jaros.cli --data-dir /shared-data submit custom_agent --input '{"topic": "scheduled-run"}'
 ```
 
-`src/main.ts` is a complete, runnable end-to-end example wiring all six planes.
+### Pattern B: Multi-Container Ingest (Automatic Load Balancing)
+If you run **multiple replica containers** mounted to the same shared directory, the node architecture distributes the load out-of-the-box:
+1. **Atomic Ingestion**: Jobs are written atomically using `os.replace` to `inbox/<id>.json`.
+2. **Race Prevention**: The first daemon that successfully moves the file from `inbox/` to `processed/` owns and runs the job thread. Sibling nodes skip it.
+3. **High Availability**: If a node crashes mid-run, outstanding jobs are safely picked up by surviving nodes.
 
-## Specification-driven
+### Pattern C: Native Python Scheduling Loop
+You can run a lightweight background python loop programmatically submitting jobs:
+```python
+import schedule, time
+from jaros.cli import cmd_submit
 
-Jaros is developed spec-first under `.jarify/`. The Prime Directive (`PRIME-001`) holds the system intent; each feature spec (`EXT-00x`) decomposes one of its tenets into requirements, design, and tasks, with code traced back to requirements via `index.json`. See the Jarify VS Code extension for the live coverage view.
+schedule.every(10).minutes.do(lambda: cmd_submit("custom_agent", "{}", ".jaros-data"))
+while True:
+    schedule.run_pending()
+    time.sleep(1)
+```
+
+---
+
+## Building an Agent that Runs on Jaros OS
+
+See **[docs/building-agents.md](docs/building-agents.md)** for the comprehensive guide. The essence:
+
+1. **Write a `ReasoningBoundary`**: It consults the LLM and outputs only inert `Decision` data. It performs no side effects and holds no handles.
+2. **Spawn via Harness**: The OS spawner grants only the capability-scoped handles you request.
+3. **Run as a Thread**: Under the bounded `AgentPool` to manage concurrency.
+4. **Execution Gate validation**: The OS validates, handles state transitions, and writes results.
+
+```python
+import asyncio
+from jaros.core.decision import create_decision, Decision
+from jaros.core.reasoning_boundary import ReasoningBoundary
+from jaros.llm import create_llm_client
+
+# An agent is a ReasoningBoundary: data in -> Decision data out
+class GreeterAgent(ReasoningBoundary):
+    def __init__(self):
+        self.llm = create_llm_client(provider="default")
+
+    async def decide(self, context: dict) -> list[Decision]:
+        reply = await self.llm.complete(prompt="Greet the user", context=context)
+        
+        # Propose the decision as serializable, frozen data only
+        return [
+            create_decision(
+                id="greet-decision",
+                source="greeter",
+                kind="advance",
+                payload={
+                    "advice": reply.text,
+                    "events": ["START", "COMPLETE"],
+                    "artifact_path": "artifacts/greeting.json"
+                }
+            )
+        ]
+```
+
+To restrict the agent, simply restrict its capability grants at spawn time:
+```python
+# Grant ONLY the capability to write files inside the layout (and nothing else)
+ctx = harness.spawn("greeter", {"fs_write": True})
+```
+
+---
+
+## Specification-Driven with Jarify
+
+Jaros is developed spec-first under `.jarify/`. The Prime Directive (`PRIME-001`) holds the system intent; each feature spec (`EXT-00x`) decomposes one of its tenets into requirements, design, and tasks, with code traced back to requirements via `index.json`. 

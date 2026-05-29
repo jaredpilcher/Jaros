@@ -3,7 +3,12 @@ id: EXT-003
 title: Agent Thread Runtime
 status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/runtime/agent_thread.py
+  - jaros/runtime/agent_pool.py
+  - jaros/runtime/lifecycle.py
+  - jaros/runtime/__init__.py
+  - scripts/check_no_server.py
 ---
 
 # Agent Thread Runtime

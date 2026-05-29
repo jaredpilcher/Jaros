@@ -3,7 +3,12 @@ id: EXT-004
 title: Interchangeable LLM Adapter
 status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/llm/client.py
+  - jaros/llm/adapters/default_adapter.py
+  - jaros/llm/adapters/uppercase_adapter.py
+  - jaros/llm/factory.py
+  - jaros/llm/__init__.py
 ---
 
 # Interchangeable LLM Adapter
