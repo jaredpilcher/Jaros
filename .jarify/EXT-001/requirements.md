@@ -1,9 +1,17 @@
 ---
 id: EXT-001
 title: Reasoning / Execution Boundary
-status: uncovered
+status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/core/json_value.py
+  - jaros/core/decision.py
+  - jaros/core/reasoning_boundary.py
+  - jaros/core/__init__.py
+  - jaros/core/decision_gate.py
+  - jaros/execution/__init__.py
+  - jaros/execution/executor.py
+  - scripts/check_planes.py
 ---
 
 # Reasoning / Execution Boundary
