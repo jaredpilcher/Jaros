@@ -3,7 +3,11 @@ id: EXT-006
 title: Communication Fabric (Queues + Shared File System)
 status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/comms/queue.py
+  - jaros/comms/fs.py
+  - jaros/comms/__init__.py
+  - scripts/check_comms.py
 ---
 
 # Communication Fabric (Queues + Shared File System)

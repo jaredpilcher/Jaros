@@ -1,4 +1,11 @@
 {
+  "REQ-3": [
+    {
+      "file": "scripts/check_no_server.py",
+      "startLine": 27,
+      "endLine": 139
+    }
+  ],
   "REQ-4": [
     {
       "file": "jaros/runtime/agent_thread.py",
@@ -28,13 +35,6 @@
       "file": "jaros/runtime/agent_pool.py",
       "startLine": 38,
       "endLine": 173
-    }
-  ],
-  "REQ-3": [
-    {
-      "file": "scripts/check_no_server.py",
-      "startLine": 27,
-      "endLine": 139
     }
   ]
 }

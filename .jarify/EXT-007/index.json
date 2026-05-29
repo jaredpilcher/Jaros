@@ -6,6 +6,18 @@
       "endLine": 163
     }
   ],
+  "REQ-1": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 52,
+      "endLine": 118
+    },
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 296,
+      "endLine": 356
+    }
+  ],
   "REQ-2": [
     {
       "file": "jaros/daemon.py",
@@ -30,18 +42,6 @@
       "file": "jaros/daemon.py",
       "startLine": 254,
       "endLine": 292
-    }
-  ],
-  "REQ-1": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 52,
-      "endLine": 118
-    },
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 296,
-      "endLine": 356
     }
   ]
 }

@@ -1,206 +1,307 @@
 # Building Agents that Run on the Jaros OS
 
-This guide shows how to write an agent that runs on Jaros, how the OS constrains it, and how to run it (locally and in the Docker container). It is grounded in the real APIs — see [`src/main.ts`](../src/main.ts) for a complete, runnable example that wires every plane.
+This guide shows how to write an agent that runs on Jaros, how the OS constrains it, and how to run it (locally and in a container). It is grounded in the real Python APIs — see the codebase for direct implementations of every plane.
 
-## Mental model
+---
+
+## Mental Model
 
 Think of Jaros as an **operating system for agents**:
+* **The container** is the OS's machine,
+* **The harness** is the OS's kernel,
+* **Agents are its threads** — cheap to spawn, cheap to tear down, running concurrently.
 
-- the **container** is the OS's machine,
-- the **harness** is the OS's kernel,
-- **agents are its threads** — cheap to spawn, cheap to tear down, many at once.
+An agent never touches the world directly. It *reasons* and emits **inert `Decision` data**; the deterministic kernel validates that data and performs every side effect on the agent's behalf, using only the capabilities the agent was granted at boot time.
 
-An agent never touches the world directly. It *reasons* and emits **inert `Decision` data**; the deterministic kernel validates that data and performs every effect on the agent's behalf, only through the capabilities the agent was granted.
+> **Golden rule:** The agent decides *what* to propose. The OS decides *how* — and whether — it runs.
 
-> **Golden rule:** an agent decides *what* to propose. The OS decides *how* — and whether — it runs.
+---
 
-## What an agent is (and is not)
+## What an Agent Is (and Is Not)
 
-An agent **is** a `ReasoningBoundary`:
+An agent **is** a class or object implementing the `ReasoningBoundary` protocol:
 
-```ts
-// src/core/reasoning-boundary.ts
-export interface ReasoningBoundary {
-  decide(context: unknown): Promise<Decision[]>;
-}
+```python
+# jaros/core/reasoning_boundary.py
+from typing import Protocol, runtime_checkable
+from jaros.core.decision import Decision
+
+@runtime_checkable
+class ReasoningBoundary(Protocol):
+    def decide(self, context: object) -> list[Decision]:
+        """Reason over context and return inert decisions only."""
+        ...
 ```
 
 An agent **may**:
-- consult the LLM (`LlmClient.complete(...)`) to inform its reasoning;
-- return one or more `Decision` objects (pure, serializable data).
+* Consult the LLM (`LlmClient.complete(...)`) to inform its reasoning.
+* Return one or more `Decision` objects (pure, serializable data).
 
 An agent **may NOT**:
-- perform a side effect directly (write a file, mutate state, send a network request);
-- hold a raw queue / file-system / network handle;
-- call another agent;
-- drive control flow or the state machine.
+* Perform a side effect directly (write a file, mutate state, send a network request).
+* Hold a raw queue / file-system / network handle.
+* Call another agent.
+* Drive control flow or the state machine.
 
 Those are all the kernel's job.
 
-## Step 1 — Write the reasoning
+---
 
-`decide()` returns inert `Decision` data. Build each decision with `createDecision`, which deep-freezes the value and rejects anything non-serializable (functions, handles, class instances, etc.).
+## Step 1 — Write the Reasoning
 
-```ts
-import { createDecision, type Decision } from "../src/core/decision";
-import type { ReasoningBoundary } from "../src/core/reasoning-boundary";
-import { createLlmClient, type LlmClient } from "../src/llm";
+`decide()` returns a list of inert `Decision` data. Build each decision with `create_decision()`, which deep-freezes the payload and rejects anything non-serializable (functions, handles, sets, bytes, custom classes, etc.) recursively.
 
-const llm: LlmClient = createLlmClient({ provider: process.env.JAROS_LLM_PROVIDER ?? "default" });
+```python
+import os
+from jaros.core.decision import create_decision, Decision
+from jaros.core.reasoning_boundary import ReasoningBoundary
+from jaros.llm import create_llm_client, LlmClient
 
-export const greeterAgent: ReasoningBoundary = {
-  async decide(): Promise<Decision[]> {
-    const reply = await llm.complete({ prompt: "Plan the next step.", context: {} });
+class GreeterAgent(ReasoningBoundary):
+    def __init__(self) -> None:
+        # Treats the LLM purely as an interchangeable client
+        self.llm: LlmClient = create_llm_client(
+            provider=os.getenv("JAROS_LLM_PROVIDER", "default")
+        )
 
-    // The model is an advisor. We capture WHAT it proposes as data.
-    // The `events` are what the deterministic executor will drive — the agent
-    // does not transition state itself.
-    return [
-      createDecision({
-        id: "greeter-1",
-        source: "greeter",
-        kind: "advance",
-        payload: {
-          advice: reply.text,      // model text is data only; it drives nothing
-          model: reply.model,
-          events: ["START", "COMPLETE"],
-          artifactPath: "artifacts/greeter-result.json",
-        },
-      }),
-    ];
-  },
-};
+    async def decide(self, context: object) -> list[Decision]:
+        # Reason using the pluggable LLM
+        reply = await self.llm.complete(prompt="Plan the next step.", context={})
+
+        # The model is an advisor. We capture WHAT it proposes as data.
+        # The events are what the deterministic state machine drives —
+        # the agent does not transition state itself.
+        return [
+            create_decision(
+                id="greeter-1",
+                source="greeter",
+                kind="advance",
+                payload={
+                    "advice": reply.text,
+                    "model": reply.model,
+                    "events": ["START", "COMPLETE"],
+                    "artifact_path": "artifacts/greeter-result.json",
+                },
+            )
+        ]
 ```
 
-## Step 2 — Get capabilities from the harness (this is how you constrain it)
+---
 
-The OS mints **only** the scoped handles you grant. The agent has no ambient access to anything else.
+## Step 2 — Get Capabilities from the Harness (Sandboxing)
 
-```ts
-import { Harness } from "../src/harness/harness";
-import { Queue } from "../src/comms/queue";
-import { SharedFileSystem } from "../src/comms/fs";
+The OS spawner mints **only** the scoped handles you grant. The agent has no ambient access to anything else.
 
-const fs = new SharedFileSystem(process.env.JAROS_DATA_DIR ?? ".jaros-data").ensureLayout();
-const queue = new Queue<{ note: string }>(
-  (v): v is { note: string } => typeof (v as any)?.note === "string",
-  "work-queue"
-);
+```python
+from jaros.harness.harness import Harness
+from jaros.comms.queue import Queue
+from jaros.comms.fs import SharedFileSystem
 
-const harness = new Harness();
+# Set up the communication fabric
+fs = SharedFileSystem(os.getenv("JAROS_DATA_DIR", ".jaros-data")).ensure_layout()
+queue = Queue(
+    validator=lambda msg: isinstance(msg, dict) and "note" in msg,
+    name="work-queue"
+)
 
-// Grant ONLY what this agent needs. Narrowing the grant narrows the agent.
-const ctx = harness.spawn("greeter", {
-  queueSend: queue as unknown as Queue<unknown>,
-  fs,
-  fsWrite: true,
-});
+harness = Harness()
+
+# Spawn the agent, granting ONLY what it needs.
+# Narrowing the grant narrows the agent.
+ctx = harness.spawn("greeter", {
+    "queue_send": queue,
+    "fs": fs,
+    "fs_write": True
+})
 ```
 
-Want a read-only agent? Drop `fsWrite`. Want one that can only enqueue work? Grant only `queueSend`. Revoking the grant (on `harness.teardown(id)`) makes every handle throw — capabilities are revocable.
+Want a read-only agent? Simply omit `"fs_write": True`. Want an agent that can only enqueue work? Grant only `"queue_send"`. Calling `harness.teardown(agent_id)` invalidates these handles immediately — capabilities are revocable.
 
-## Step 3 — Run the agent as a lightweight thread
+---
 
-Agents run under a bounded `AgentPool`. The pool drives the thread to completion and frees its slot; a thrown error is contained (the agent is marked `failed`, siblings and the process survive).
+## Step 3 — Run the Agent as a Lightweight Thread
 
-```ts
-import { AgentPool } from "../src/runtime/agent-pool";
-import { AgentThread, type AgentRunContext } from "../src/runtime/agent-thread";
-import type { Decision } from "../src/core/decision";
+Agents run under a bounded `AgentPool`. The pool drives each agent thread to completion and frees its execution slot; any thrown error is contained (the agent is marked `FAILED`, siblings and the main process survive).
 
-const emitted: Decision[] = [];
-const pool = new AgentPool(4); // bound = max concurrent agents
+```python
+from jaros.runtime.agent_pool import AgentPool
+from jaros.runtime.agent_thread import AgentThread
+from jaros.runtime.lifecycle import AgentState
 
-const thread = await pool.submit(() =>
-  AgentThread.spawn({
-    id: "greeter",
-    boundary: greeterAgent,
-    grants: ctx.grants,
-    body: async (run: AgentRunContext) => {
-      const produced = await run.boundary.decide(undefined);
-      emitted.push(...produced);
-      return produced;
-    },
-  })
-);
+# A bounded concurrent pool (e.g., max 4 concurrent agents)
+pool = AgentPool(bound=4)
 
-await pool.drain();
-if (thread.state === "failed") throw thread.error;
+# Create an agent factory callable that returns the spawned agent thread
+def agent_factory() -> AgentThread:
+    agent_instance = GreeterAgent()
+    
+    # The thread body does the reasoning and returns the decisions
+    def run_agent():
+        # Run the sync/async decide function
+        return asyncio.run(agent_instance.decide({}))
+        
+    return AgentThread.spawn(
+        id="greeter",
+        body=run_agent
+    )
+
+# Submit to the pool (enforces queueing/backpressure if bound is reached)
+agent_thread = pool.submit(agent_factory)
+
+# Wait for all pool threads to complete
+pool.drain()
+
+# Check outcome cleanly
+if agent_thread.state == AgentState.FAILED:
+    print(f"Agent failed with error: {agent_thread.error}")
+elif agent_thread.state == AgentState.TORNDOWN:
+    print(f"Decisions produced: {[d.id for d in agent_thread.decisions]}")
 ```
 
-## Step 4 — Let the deterministic side execute the decision
+---
 
-This is the kernel's job, not the agent's. The gate validates, the executor accepts, the state machine durably transitions, and the result is written **through the harness-mediated handle**.
+## Step 4 — Deterministic System Execution
 
-```ts
-import { validateDecision } from "../src/core/decision-gate";
-import { apply } from "../src/exec/executor";
-import { commit } from "../src/state/machine";
-import { TransitionLog } from "../src/state/log";
-import { INITIAL_STATE, type Event, type State } from "../src/state/model";
+This is the kernel's job, not the agent's. The validation gate checks the decision payload, the executor validates its kind and dispatches to registered deterministic handlers, the state machine transitions and logs durably, and results are written **through the harness-mediated handles**.
 
-const decision = emitted[0];
+```python
+from jaros.core.decision_gate import validate_decision
+from jaros.execution.executor import Executor, apply
+from jaros.state.machine import commit
+from jaros.state.log import TransitionLog
+from jaros.state.model import INITIAL_STATE
 
-const gated = validateDecision(decision);          // EXT-001: may REJECT
-if (!gated.ok) throw new Error(gated.reason);
+# Emitted decision from the agent thread
+decision = agent_thread.decisions[0]
 
-const applied = apply(gated.value);                // EXT-001: deterministic dispatch
-if (!applied.applied) throw new Error(applied.reason);
+# 1. Validation Gate (EXT-001: rejects non-serializable or malformed)
+gated = validate_decision(decision)
+if not gated.ok:
+    raise ValueError(f"Rejected: {gated.reason}")
 
-const payload = applied.decision.payload as { events: Event[]; artifactPath: string };
+# 2. Pluggable Executor (EXT-001: dispatches deterministically to registered kind handler)
+applied = apply(gated.value)
+if not applied.applied:
+    raise RuntimeError(f"Execution failed: {applied.reason}")
 
-// EXT-002: drive the durable, validated state machine
-const log = new TransitionLog(`${fs.baseDir}/state`, "transition.log").ensure();
-let state: State = INITIAL_STATE;
-for (const event of payload.events) {
-  state = commit(log, state, event).state;         // validates + durably logs each step
-}
+payload = applied.decision.payload
 
-// EXT-005/006: write the result ONLY through the granted, harness-mediated handle
-const write = await harness.request("greeter", {
-  type: "fs.write",
-  args: { path: payload.artifactPath, data: JSON.stringify({ finalState: state }) },
-});
-if (!write.ok) throw new Error(write.reason);
+# 3. Distributed State Machine (EXT-002: drive durable, validated state transitions)
+log = TransitionLog(f"{fs.base_dir}/state", "transition.log").ensure()
+state = INITIAL_STATE
 
-harness.teardown("greeter"); // cheap lifecycle; revokes the grants
+for event in payload["events"]:
+    state = commit(log, state, event).state  # Validates + durably logs each event atomically
+
+# 4. Harness Mediation (EXT-005: write result ONLY through mediated, capability-scoped handles)
+write_result = harness.request("greeter", {
+    "type": "fs.write",
+    "args": {
+        "path": payload["artifact_path"],
+        "data": json.dumps({"final_state": state.name})
+    }
+})
+
+if not write_result.ok:
+    raise RuntimeError(f"Harness blocked I/O: {write_result.reason}")
+
+# Teardown frees resources and invalidates all capabilities atomically
+harness.teardown("greeter")
 ```
 
-## Running on the OS
+---
 
-### Locally
+## Agent Constraints & Sandboxing
 
-```bash
-npm run build
-node dist/src/main.js          # or: npm start
+Security in Jaros is enforced in layers inside the Execution Plane, completely outside the LLM.
+
+### 1. Job-Level Context Constraints (Submission Time)
+You can guide and restrict agent reasoning at trigger time. Any payload passed to the Host CLI `--input` parameter is supplied directly to the `decide(self, context)` method as `context` dictionary.
+```python
+# Submission: jaros submit my_agent --input '{"max_depth": 3, "read_only": true}'
+class MyAgent(ReasoningBoundary):
+    def decide(self, context: dict):
+        max_depth = context.get("max_depth", 5)
+        # Reason within these bounded limits...
 ```
 
-Point the composition root at your agent (or add it to a registry) and it runs as a thread under the pool.
+### 2. Extensible Validation Gate
+Developers can register validation policies at the gate that enforce architectural constraints. If an agent attempts to propose a disallowed decision, the gate rejects it immediately before execution occurs.
+```python
+from jaros.core.decision_gate import register_validator, ValidationResult
 
-### In the container (default isolation)
+def limit_validator(decision) -> ValidationResult:
+    if "admin" in str(decision.payload):
+        return ValidationResult(ok=False, reason="Admin scope is forbidden")
+    return ValidationResult(ok=True, value=decision)
 
-The container is the boundary for the whole Jaros node; your agent runs as a thread inside it.
-
-```bash
-docker build -t jaros .
-docker run --rm jaros
-# multiple containers = multiple nodes; the state machine replicates across them (EXT-002)
+register_validator(limit_validator)
 ```
 
-Configuration is environment-driven, so nothing about the agent changes between local and container runs:
+### 3. Harness Capability Grants
+The agent can only perform mediated requests (`harness.request`) if it possesses a corresponding Capability grant inside its `Grants` bundle. The Harness enforces rules (`DEFAULT_RULES`) mapping action types to required Capabilities in a strict, **default-deny** manner.
 
-| Env var | Purpose | Default |
-| --- | --- | --- |
-| `JAROS_DATA_DIR` | base dir for the shared FS + durable log | `.jaros-data` (container: `/data`) |
-| `JAROS_LLM_PROVIDER` | which `LlmClient` adapter to use | `default` |
+---
 
-## Checklist: does my agent honor the Prime Directive?
+## Decoupled Agent Communication & Cascading Workflows
 
-- [ ] It is a `ReasoningBoundary` whose `decide()` returns only `Decision` data.
-- [ ] It performs no side effects itself — the executor/harness do.
-- [ ] It holds only the capabilities the harness granted; no ambient queue/fs/network.
-- [ ] It never calls another agent (communicate via the queue or shared FS).
-- [ ] It does not open a server or port (it's a thread, not a service).
-- [ ] Its LLM use is via `LlmClient` only, and the model drives no control flow.
+To comply with the decoupling boundary, direct agent-to-agent references and RPC are completely blocked. Instead, cascading workflows are created cleanly using two event-driven patterns:
 
-If all six hold, `npm test` (with `check:planes`, `check:no-server`, `check:comms`) will stay green — the guardrails enforce these structurally.
+### Pattern A: Inbox-Driven Cascading
+An agent triggers the next step in a pipeline by proposing a decision to write a new job descriptor atomically into the monitored `inbox/` directory.
+
+```python
+class ResearchAgent(ReasoningBoundary):
+    async def decide(self, context):
+        llm_response = "Raw data to compile..."
+        return [
+            create_decision(
+                id="trigger-summarizer",
+                source="researcher",
+                kind="advance",
+                payload={
+                    "events": ["START"],
+                    "artifact_path": "inbox/job_summarizer.json",
+                    "data": {
+                        "id": "job_summarizer",
+                        "kind": "summarizer", # Triggers the summarizer agent kind!
+                        "input": {"text": llm_response}
+                    }
+                }
+            )
+        ]
+```
+The Daemon detects this file, resolves `summarizer`, and boots `SummarizerAgent` to continue the pipeline.
+
+### Pattern B: Queue-Driven Cascading
+An agent enqueues a validated contract message to a named queue (`jaros.comms.queue`) that a sibling agent dequeues and processes.
+```python
+class ResearchAgent(ReasoningBoundary):
+    async def decide(self, context):
+        return [
+            create_decision(
+                id="enqueue-summary",
+                source="researcher",
+                kind="advance",
+                payload={
+                    "events": ["START"],
+                    "action": "queue.send",
+                    "queue_name": "summarizer-tasks",
+                    "message": {"job_id": "job_123", "text": "Content..."}
+                }
+            )
+        ]
+```
+
+---
+
+## Checklist: Does My Agent Honor the Prime Directive?
+
+Use this checklist to ensure your agent complies with the decoupling seam. The automated architecture checks (`check_planes.py`, `check_no_server.py`, `check_comms.py`) enforce these constraints:
+
+- [ ] **Data-Only Seam**: The agent is a `ReasoningBoundary` whose `decide()` returns only inert `Decision` data.
+- [ ] **No Direct Side Effects**: It performs no I/O or state mutation itself — only the harness/executor does on its behalf.
+- [ ] **Strict Sandboxing**: It uses only the capability-scoped handles granted by the harness; no raw or ambient file system, queue, or socket access.
+- [ ] **Decoupled Comms**: It never references or imports another agent directly (all communication occurs through `Queue` or `SharedFileSystem` layout).
+- [ ] **Zero Footprint**: It does not open any listening socket, HTTP server, or process port.
+- [ ] **Decoupled LLM**: Its model use is restricted to `LlmClient` interface wrappers, and the LLM has no control over system logic or execution.

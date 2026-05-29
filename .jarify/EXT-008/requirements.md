@@ -3,7 +3,8 @@ id: EXT-008
 title: Host Control CLI and Shared-FS Ingestion
 status: covered
 priority: high
-implementation: []
+implementation:
+  - jaros/cli.py
 ---
 
 # Host Control CLI and Shared-FS Ingestion

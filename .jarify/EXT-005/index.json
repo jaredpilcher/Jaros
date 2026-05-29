@@ -6,6 +6,13 @@
       "endLine": 89
     }
   ],
+  "REQ-5": [
+    {
+      "file": "jaros/harness/harness.py",
+      "startLine": 109,
+      "endLine": 115
+    }
+  ],
   "REQ-2": [
     {
       "file": "jaros/harness/harness.py",
@@ -25,13 +32,6 @@
       "file": "jaros/harness/rules.py",
       "startLine": 25,
       "endLine": 68
-    }
-  ],
-  "REQ-5": [
-    {
-      "file": "jaros/harness/harness.py",
-      "startLine": 109,
-      "endLine": 115
     }
   ]
 }
