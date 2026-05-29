@@ -1,1 +1,59 @@
-{}
+{
+  "REQ-2": [
+    {
+      "file": "jaros/core/reasoning_boundary.py",
+      "startLine": 16,
+      "endLine": 27
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "jaros/core/json_value.py",
+      "startLine": 12,
+      "endLine": 69
+    },
+    {
+      "file": "jaros/core/decision.py",
+      "startLine": 17,
+      "endLine": 56
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "jaros/core/decision_gate.py",
+      "startLine": 18,
+      "endLine": 40
+    },
+    {
+      "file": "jaros/core/decision_gate.py",
+      "startLine": 85,
+      "endLine": 108
+    }
+  ],
+  "REQ-5": [
+    {
+      "file": "jaros/core/decision_gate.py",
+      "startLine": 43,
+      "endLine": 82
+    },
+    {
+      "file": "jaros/core/decision_gate.py",
+      "startLine": 98,
+      "endLine": 106
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "jaros/execution/executor.py",
+      "startLine": 22,
+      "endLine": 36
+    }
+  ],
+  "REQ-6": [
+    {
+      "file": "jaros/execution/executor.py",
+      "startLine": 39,
+      "endLine": 87
+    }
+  ]
+}
