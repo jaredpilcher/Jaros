@@ -8,6 +8,11 @@
     {
       "file": "jaros/cli.py",
       "startLine": 248,
+      "endLine": 318
+    },
+    {
+      "file": "jaros/cli.py",
+      "startLine": 295,
       "endLine": 372
     }
   ],
