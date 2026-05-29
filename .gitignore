@@ -1,4 +1,11 @@
-node_modules/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+build/
 dist/
+.venv/
+venv/
 *.log
 .jaros-data/

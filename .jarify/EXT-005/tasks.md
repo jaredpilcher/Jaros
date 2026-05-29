@@ -5,9 +5,8 @@
 Give agents only explicitly granted, revocable handles — no ambient I/O.
 
 #### Steps
-1. Create `src/harness/capabilities.ts` defining `Capability` types (e.g., `QueueSend`, `FsWrite`) and a `Grants` bundle of capabilities.
-2. Implement `grant(spec)` and `revoke(grants)` in `capabilities.ts` that produce/invalidate scoped handles.
-3. Ensure granted handles wrap the underlying queue/fs APIs so agents cannot reach the raw modules directly.
+1. Create `jaros/harness/capabilities.py` defining capability kinds (`QueueSend`, `QueueReceive`, `FsWrite`, `FsRead`), a `Grants` bundle, a `GrantSpec`, and `grant(spec)`/`revoke(grants)` that produce/invalidate SCOPED handles wrapping the underlying `Queue`/`SharedFileSystem`.
+2. Make revoked handles raise `RevokedCapabilityError` before any side effect; freeze granted handles so agents cannot reach raw modules.
 
 #### Implements
 - [REQ-3] Capability-Scoped I/O Handles
@@ -17,9 +16,8 @@ Give agents only explicitly granted, revocable handles — no ambient I/O.
 Route every agent action through validation; fail closed.
 
 #### Steps
-1. Create `src/harness/harness.ts` with `request(agentId, action)` that validates `action` against the active rules and performs it only via granted handles.
-2. Make validation default-deny: unknown or disallowed actions are refused and reported, with no side effect.
-3. Spawn agents in `harness.ts` with only their `Grants`, passing no global queue/fs/network references.
+1. Create `jaros/harness/harness.py` with a `Harness` whose `request(agent_id, action)` validates `action` against the active rules and performs it only via granted handles.
+2. Make validation default-deny: unknown/disallowed actions are refused and recorded, with no side effect; add `spawn(agent_id, grant_spec) -> AgentContext` giving the agent only its `Grants` (no global queue/fs/network refs) and `teardown(agent_id)` revoking them.
 
 #### Implements
 - [REQ-1] Mediated Agent Actions
@@ -30,9 +28,20 @@ Route every agent action through validation; fail closed.
 Define rules in the harness layer and make them auditable.
 
 #### Steps
-1. Create `src/harness/rules.ts` exporting the rule set as code/config consumed by `harness.ts`; agents have no API to mutate it.
-2. Add `describeRules()` in `rules.ts` returning the active rules for audit/introspection.
-3. Add `src/harness/rules.test.ts` asserting agent code cannot alter the rule set at runtime.
+1. Create `jaros/harness/rules.py` exporting the rule set (mapping action types to required capabilities) as code, deep-frozen at import, with no agent-facing mutation API.
+2. Add `describe_rules()` returning a snapshot for audit; add a test asserting agent code cannot mutate the rule set at runtime.
 
 #### Implements
 - [REQ-4] Architecturally-Defined Rules
+
+### [TASK-4] Make the rule set developer-configurable at construction
+
+Let developers configure/extend rules at boot without editing core, while keeping them agent-immutable.
+
+#### Steps
+1. In `jaros/harness/harness.py`, have `Harness.__init__` accept an optional `rules` (or `rule_overrides`) parameter; when omitted, fall back to the built-in default rules from `jaros/harness/rules.py`.
+2. Deep-freeze the resulting rule set after construction so there is no agent-reachable mutation path; `describe_rules()` reflects the configured set.
+3. Add a test constructing a `Harness` with an extra/tighter rule and asserting it is enforced, plus a test that agent code still cannot mutate the configured rules at runtime.
+
+#### Implements
+- [REQ-5] Developer-Configurable Rule Set

@@ -1,7 +1,7 @@
 ---
 id: EXT-005
 title: Architectural Harness
-status: covered
+status: uncovered
 priority: high
 implementation: []
 ---
@@ -45,3 +45,12 @@ Harness rules are defined in code/configuration, never negotiated by agents.
 - [ ] The rule set is declared in the harness layer (code/config), not supplied by agents.
 - [ ] Changing a rule is a harness-side change, reviewable independently of agents.
 - [ ] The active rule set is introspectable for audit.
+
+### [REQ-5] Developer-Configurable Rule Set
+
+Developers/operators can configure or extend the rule set when constructing the harness (boot time), without modifying core code — but agents still cannot change it at runtime. Configuration is a harness-side privilege; mutation by agents remains forbidden (see REQ-2).
+
+#### Acceptance Criteria
+- [ ] The `Harness` accepts a rule set (or rule overrides/extensions) at construction; absent any, it falls back to the built-in default rules.
+- [ ] A developer can add or tighten a rule via this configuration path without editing harness internals.
+- [ ] The configured rule set is frozen after construction; there is no agent-reachable API to mutate it at runtime (fails closed), and `describe_rules()` reflects the active configured set.

@@ -5,45 +5,32 @@
 Make an agent a cheap in-process unit with deterministic teardown.
 
 #### Steps
-1. Create `src/runtime/agent-thread.ts` exporting `AgentThread` with `spawn()`, `run()`, and `teardown()` backed by a worker thread / lightweight task — no socket or port.
-2. Ensure `teardown()` releases all handles and joins the underlying thread deterministically.
-3. Add `src/runtime/agent-thread.test.ts` measuring that spawn+teardown completes within a tight time bound.
+1. Create `jaros/runtime/lifecycle.py` defining `AgentState` (`spawned`/`running`/`done`/`failed`/`torndown`) and a structural `RunnableAgent` Protocol (`id`, `state`, `run()`, `teardown()`).
+2. Create `jaros/runtime/agent_thread.py` with `AgentThread` backed by `threading.Thread` (NO socket/port/server); `spawn(...)` builds it, `run()` executes the agent body once, `teardown()` joins and releases handles (idempotent). Wrap the body so an unhandled exception is contained: set state `failed`, record the error, fire `on_failed`, never propagate to crash the process.
 
 #### Implements
 - [REQ-1] Lightweight Agent Lifecycle
+- [REQ-4] Agent Isolation and Fault Containment
 
 ### [TASK-2] Implement the bounded concurrent agent pool
 
 Host many agents under an observable, bounded pool.
 
 #### Steps
-1. Create `src/runtime/agent-pool.ts` with `AgentPool(bound)` exposing `submit(agentFactory)` and `active()`.
-2. Apply backpressure in `submit` by queueing spawns once `active().length === bound`.
-3. Expose `snapshot()` returning each active agent's id and state for observability.
+1. Create `jaros/runtime/agent_pool.py` with `AgentPool(bound, on_agent_failed=None)` exposing `submit(factory)`, `active()`, `pending`, `snapshot()` (id+state), and `drain()`.
+2. Apply backpressure: queue spawns once `len(active()) == bound`; admit queued work as slots free; report contained failures via `on_agent_failed` while siblings keep running.
 
 #### Implements
 - [REQ-2] Concurrent Agent Pool
+- [REQ-4] Agent Isolation and Fault Containment
 
 ### [TASK-3] Add the no-server architecture check
 
 Forbid per-agent service footprints structurally.
 
 #### Steps
-1. Create `scripts/check-no-server.ts` that scans `src/runtime/**` and agent code for `http.createServer`/`listen(`/socket bindings and fails on any match.
-2. Add an `npm run check:no-server` script in `package.json`.
-3. Wire `check:no-server` into the CI/pretest script.
+1. Create `scripts/check_no_server.py` that scans `jaros/runtime/**.py` and agent code and fails (exit non-zero) on server/listener patterns (`socket.socket`, `.bind(`, `.listen(`, `HTTPServer`, `socketserver`, `asyncio.start_server`).
+2. Ensure it exits 0 on the current tree and handles the no-files case gracefully; add a unit test covering a positive and negative case.
 
 #### Implements
 - [REQ-3] No Per-Agent Service Footprint
-
-### [TASK-4] Implement fault containment for agents
-
-Contain a single agent's failure without harming the runtime or peers.
-
-#### Steps
-1. In `src/runtime/agent-thread.ts`, wrap agent execution so an unhandled error is caught, marks the agent `failed`, and triggers `teardown()`.
-2. In `src/runtime/agent-pool.ts`, report failed agents via a `onAgentFailed` callback to the harness and keep sibling agents running.
-3. Add `src/runtime/agent-pool.test.ts` asserting a thrown error in one agent leaves siblings and the process alive.
-
-#### Implements
-- [REQ-4] Agent Isolation and Fault Containment

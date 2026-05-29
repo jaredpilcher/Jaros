@@ -1,14 +1,9 @@
 ---
 id: EXT-004
 title: Interchangeable LLM Adapter
-status: covered
+status: uncovered
 priority: high
-implementation:
-  - src/llm/client.ts
-  - src/llm/adapters/default-adapter.ts
-  - src/llm/adapters/uppercase-adapter.ts
-  - src/llm/factory.ts
-  - src/llm/index.ts
+implementation: []
 ---
 
 # Interchangeable LLM Adapter

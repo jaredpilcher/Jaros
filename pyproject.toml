@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jaros"
+version = "0.1.0"
+description = "An unbreakable distributed state machine that orchestrates AI agents as lightweight threads."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[project.scripts]
+jaros = "jaros.cli:main"
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pillow>=10"]
+
+[tool.setuptools.packages.find]
+include = ["jaros*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

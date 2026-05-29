@@ -5,9 +5,8 @@
 Provide schema-validated message passing between agents.
 
 #### Steps
-1. Create `src/comms/queue.ts` with `Queue<T>` exposing `enqueue(msg: T)` and `dequeue(): Promise<T>` over a typed contract.
-2. Validate `msg` against its schema in `enqueue` and reject contract violations with a typed error before the message is stored.
-3. Document and implement the chosen delivery semantics (ordering + at-least-once) in `queue.ts`.
+1. Create `jaros/comms/queue.py` with a generic `Queue` taking a `validator` callable; `enqueue(msg)` validates and raises a typed `QueueContractError` before storage on a contract violation; `dequeue()`/`peek()` over FIFO ordering.
+2. Document the semantics (in-memory FIFO, at-least-once, non-durable) in the module docstring.
 
 #### Implements
 - [REQ-1] Rigid Queue Abstraction
@@ -18,9 +17,8 @@ Provide schema-validated message passing between agents.
 Expose a fixed, validated layout as the durable exchange surface.
 
 #### Steps
-1. Create `src/comms/fs.ts` defining the canonical layout constants `/state`, `/inbox`, `/outbox`, `/artifacts` (workspace-relative).
-2. Implement `read(path)` / `write(path, data)` in `fs.ts` that resolve paths within the layout and refuse writes outside it.
-3. Add `validateLayout()` in `fs.ts` that asserts the on-disk structure matches the canonical layout.
+1. Create `jaros/comms/fs.py` with a `SharedFileSystem(base_dir)` defining canonical layout dirs (`state`, `inbox`, `outbox`, `artifacts`, `plugins`, `processed`, `failed`); `ensure_layout()` creates them.
+2. Implement `read(path)`/`write(path, data)` resolving workspace-relative paths within `base_dir` and refusing `..` traversal and absolute escapes with a typed `LayoutViolationError`; add `validate_layout()`.
 
 #### Implements
 - [REQ-2] Shared File System Layout
@@ -31,9 +29,8 @@ Expose a fixed, validated layout as the durable exchange surface.
 Make queues + shared FS the only inter-agent paths, structurally.
 
 #### Steps
-1. Create `scripts/check-comms.ts` that scans agent/runtime code and fails on any direct agent-to-agent reference, RPC, or network call between agents.
-2. Allow only imports of `src/comms/queue.ts` and `src/comms/fs.ts` as cross-agent dependencies in the checker's allowlist.
-3. Add an `npm run check:comms` script in `package.json` and wire it into CI/pretest.
+1. Create `scripts/check_comms.py` that scans `jaros/runtime/**` and agent/plugin code and fails (exit non-zero) on direct agent-to-agent imports, RPC, or network calls (`socket`, `http.client`, `urllib.request`, `requests`, `grpc`, `asyncio.open_connection`).
+2. Allow only `jaros.comms.queue` and `jaros.comms.fs` as cross-agent dependencies; ensure it exits 0 on the current tree and add positive/negative tests.
 
 #### Implements
 - [REQ-3] Exclusive Communication Channels

@@ -5,22 +5,22 @@
 Give all callers one narrow contract that returns data only.
 
 #### Steps
-1. Create `src/llm/client.ts` exporting `interface LlmClient { complete(req: LlmRequest): Promise<LlmResponse> }` with provider-neutral `LlmRequest`/`LlmResponse` types.
-2. Document in `client.ts` that `LlmResponse` carries text/structured output only — no handles and nothing that invokes a state transition.
-3. Add `src/llm/index.ts` re-exporting `LlmClient` so callers never import a concrete adapter.
+1. Create `jaros/llm/client.py` defining `LlmRequest`/`LlmResponse` dataclasses (provider-neutral; response carries `text`/`structured`/`model` data only) and an `LlmClient` Protocol with `def complete(self, req: LlmRequest) -> LlmResponse:`.
+2. Document in `client.py` that `LlmResponse` carries no handles and nothing that invokes a state transition.
+3. Create `jaros/llm/__init__.py` re-exporting `LlmClient`, the request/response types, and the factory.
 
 #### Implements
 - [REQ-1] Single LLM Interface
 - [REQ-3] No Control Flow Inside the LLM
 
-### [TASK-2] Implement a concrete adapter and config-driven selection
+### [TASK-2] Implement adapters and config-driven selection
 
 Make the model pluggable and swappable without touching callers or the harness.
 
 #### Steps
-1. Create `src/llm/adapters/default-adapter.ts` implementing `LlmClient`.
-2. Add `src/llm/factory.ts` with `createLlmClient(config)` that selects an adapter by `config.llm.provider` and returns an `LlmClient`.
-3. Read provider/model from configuration in `src/llm/index.ts` and export the constructed client; verify swapping `config.llm.provider` requires no caller edits.
+1. Create `jaros/llm/adapters/default_adapter.py` (deterministic echo stub) and `jaros/llm/adapters/uppercase_adapter.py`, both implementing `LlmClient`.
+2. Create `jaros/llm/factory.py` with `create_llm_client(config)` selecting an adapter by `config["provider"]` (or a `LlmConfig` dataclass), raising a clear error listing known providers on unknown input.
+3. Add tests proving each provider works, unknown provider raises, and swapping `provider` changes output at the same `LlmClient` call site with no caller changes.
 
 #### Implements
 - [REQ-2] Pluggable Adapters via Configuration

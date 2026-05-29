@@ -1,12 +1,9 @@
 ---
 id: EXT-006
 title: Communication Fabric (Queues + Shared File System)
-status: covered
+status: uncovered
 priority: high
-implementation:
-  - src/comms/queue.ts
-  - src/comms/fs.ts
-  - scripts/check-comms.ts
+implementation: []
 ---
 
 # Communication Fabric (Queues + Shared File System)
