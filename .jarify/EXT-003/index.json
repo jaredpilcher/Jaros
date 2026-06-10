@@ -1,9 +1,14 @@
 {
-  "REQ-3": [
+  "REQ-1": [
     {
-      "file": "scripts/check_no_server.py",
-      "startLine": 27,
-      "endLine": 139
+      "file": "jaros/runtime/lifecycle.py",
+      "startLine": 17,
+      "endLine": 51
+    },
+    {
+      "file": "jaros/runtime/agent_thread.py",
+      "startLine": 29,
+      "endLine": 122
     }
   ],
   "REQ-4": [
@@ -18,23 +23,18 @@
       "endLine": 172
     }
   ],
-  "REQ-1": [
-    {
-      "file": "jaros/runtime/agent_thread.py",
-      "startLine": 29,
-      "endLine": 122
-    },
-    {
-      "file": "jaros/runtime/lifecycle.py",
-      "startLine": 17,
-      "endLine": 51
-    }
-  ],
   "REQ-2": [
     {
       "file": "jaros/runtime/agent_pool.py",
       "startLine": 38,
       "endLine": 173
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "scripts/check_no_server.py",
+      "startLine": 27,
+      "endLine": 139
     }
   ]
 }

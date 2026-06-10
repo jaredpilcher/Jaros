@@ -90,10 +90,9 @@ def test_ollama_provider_works():
     mock_response.__enter__.return_value = mock_response
 
     with patch("urllib.request.urlopen", return_value=mock_response) as mock_urlopen:
-        client = create_llm_client({"provider": "ollama"})
-        assert isinstance(client, LlmClient)
-        
         with patch.dict("os.environ", {"OLLAMA_HOST": "http://localhost:11434", "OLLAMA_MODEL": "llama3"}):
+            client = create_llm_client({"provider": "ollama"})
+            assert isinstance(client, LlmClient)
             resp = _run_via_client(client, "hello")
             assert resp.text == "mocked ollama output"
             assert resp.model == "llama3"

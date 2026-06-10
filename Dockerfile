@@ -9,6 +9,11 @@ COPY pyproject.toml README.md ./
 COPY jaros ./jaros
 RUN pip install --no-cache-dir .
 
+# Copy entrypoint script to dynamically load dependencies at startup.
+# Strip any CR so a Windows (CRLF) checkout still yields a valid shebang.
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN sed -i 's/\r$//' /entrypoint.sh && chmod +x /entrypoint.sh
+
 # Non-root user; /data is the shared file system (mount a host volume here).
 RUN useradd --create-home jaros \
     && mkdir -p /data \
@@ -21,5 +26,6 @@ ENV JAROS_DATA_DIR=/data \
 
 VOLUME ["/data"]
 
+ENTRYPOINT ["/entrypoint.sh"]
 # Boot the OS and keep it running. Watch with: docker logs -f <container>
 CMD ["jaros", "serve"]

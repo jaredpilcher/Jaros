@@ -13,9 +13,9 @@ def run_git(args):
     return True
 
 def main():
-    if not run_git(["add", "-A"]):
+    if not run_git(["add", "jaros/", ".jarify/", "tests/", "scripts/", "Dockerfile", "pyproject.toml", "README.md", ".gitignore", "docs/"]):
         sys.exit(1)
-    if not run_git(["commit", "-m", "docs: rebrand to jarify, update sandboxing, cascading workflows, and distributed scheduling"]):
+    if not run_git(["commit", "-m", "feat: contain status write exceptions to prevent daemon crashes"]):
         sys.exit(1)
     print("Success: Committed all updates successfully.")
 

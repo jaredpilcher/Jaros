@@ -164,21 +164,35 @@ class FsReadHandle(_RevocableHandle):
 
 # --- Grant spec + bundle ----------------------------------------------------
 
+#: Mapping of role names to their permitted capability types.
+BUILTIN_ROLES: dict[str, tuple[type[Capability], ...]] = {
+    "AdminRole": (FsRead, FsWrite, QueueSend, QueueReceive),
+    "AnalystRole": (FsRead,),
+    "ReporterRole": (FsWrite, QueueSend),
+    "GuestRole": (FsRead,),
+    "QueueSendRole": (QueueSend,),
+    "QueueReceiveRole": (QueueReceive,),
+    "FsWriteRole": (FsWrite,),
+    "FsReadRole": (FsRead,),
+    "FsRole": (FsRead, FsWrite),
+}
+
 
 @dataclass(frozen=True, slots=True)
 class GrantSpec:
-    """Declarative request for the capabilities a single agent should hold.
+    """Declarative request for the capabilities a single agent should hold under a role.
 
-    The harness (never the agent) supplies this. It names the capability kinds
-    the agent may exercise and the concrete backing objects to scope them to.
+    The harness (never the agent) supplies this. It names the role the agent
+    is assigned to, and the concrete backing objects to scope them to.
     """
 
-    capabilities: tuple[Capability, ...] = ()
+    role: str
     queue: Queue[Any] | None = None
     fs: SharedFileSystem | None = None
 
     def has(self, cap_type: type) -> bool:
-        return any(isinstance(c, cap_type) for c in self.capabilities)
+        caps = BUILTIN_ROLES.get(self.role, ())
+        return cap_type in caps
 
 
 @dataclass(frozen=True, slots=True)
@@ -194,6 +208,7 @@ class Grants:
     queue_receive: QueueReceiveHandle | None = None
     fs_write: FsWriteHandle | None = None
     fs_read: FsReadHandle | None = None
+    role: str = ""
     _revoked: list[bool] = field(default_factory=lambda: [False])
 
     @property
@@ -236,6 +251,7 @@ def grant(spec: GrantSpec) -> Grants:
         queue_receive=queue_receive,
         fs_write=fs_write,
         fs_read=fs_read,
+        role=spec.role,
         _revoked=revoked,
     )
 

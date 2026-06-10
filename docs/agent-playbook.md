@@ -223,3 +223,108 @@ Or check the specific job result file:
 result = json.loads(open(".jaros-data/outbox/a7780878b7464b72a7ad8ec7978cac5b.json").read())
 print(result["result"])
 ```
+
+---
+
+## 7. Protocol 6: Safe Host Command Execution (Bypassing the Seam)
+
+If you (the agent) need to trigger a shell command on the host and retrieve the result from the container, you **must not** attempt direct process execution or open network sockets. Instead, follow this decoupled, file-system-only event loop:
+
+### Step A: Propose a Host Command Request
+Emit a `Decision` of kind `"host_command"`, declaring the target binary and options. *This is pure data; you perform no execution.*
+
+```python
+return [
+    create_decision(
+        id="cmd-req-1",
+        source="my_agent",
+        kind="host_command",
+        payload={
+            "events": ["START"],
+            "command_id": "job-git-status-123",
+            "binary": "git",
+            "args": ["status"]
+        }
+    )
+]
+```
+
+### Step B: Validation Gate & Allowlist Verification
+The Validation Gate checks the proposed binary against an allowlist (e.g. `{"git", "dir", "pytest"}`). If the binary is unsafe or absent, the gate rejects it, failing closed.
+
+### Step C: Host Runner Execution
+A lightweight runner on the host — the standalone [`jaros-host-runner`](https://github.com/jaredpilcher/jaros-host-runner) companion project — polls `host_inbox/`, grabs the request, executes the command locally against its configured allowlist, and writes the `stdout`, `stderr`, and `returncode` atomically into the shared volume `host_outbox/job-git-status-123.json`.
+
+### Step D: Result Ingestion
+You check for the result in the shared folder `host_outbox/` using your granted `fs_read` capability. Once the file appears, you ingest it into your reasoning context:
+
+```python
+# Poll for the command result
+result_path = "host_outbox/job-git-status-123.json"
+# Read result atomically once it is written
+```
+This preserves the decoupled boundary perfectly!
+
+---
+
+## 8. Protocol 7: Safe Database (PostgreSQL) Queries
+
+If you (the agent) need to query a database (such as PostgreSQL), you **must not** attempt to import a database driver (like `psycopg2` or `asyncpg`), hold credentials, or open direct connection sockets. Follow this decoupled, parameter-driven pattern:
+
+### Step A: Propose the Query Request
+Emit a `Decision` of kind `"db_query"`, declaring the query string and parameterized variables. *This is pure data; you have no connection access.*
+
+```python
+return [
+    create_decision(
+        id="db-query-1",
+        source="my_agent",
+        kind="db_query",
+        payload={
+            "events": ["START"],
+            "query": "SELECT username, email FROM users WHERE role = %s",
+            "params": ["admin"]
+        }
+    )
+]
+```
+
+### Step B: Validation Gate Enforcement
+The Validation Gate checks the proposed query to ensure safety (e.g. enforcing read-only `SELECT` statements and blocking mutating operations like `DROP` or `DELETE`).
+
+### Step C: Executor Dispatch & Secure Execution
+The pluggable `Executor` in the Execution Plane dispatches the query to a registered handler. This handler executes the parameterized query using secure, environment-hidden database connection pools and returns the result safely back to your execution context.
+
+---
+
+## 9. Appendix: Custom Validation Gate Policies (Sandboxing Constraints)
+
+When developing or integrating other agents into Jaros, developers/operators can configure and register their own custom validation gates. 
+
+As an agent, you **must conform** to all custom validation policies configured in the Execution Plane. Custom validation policies:
+*   Are **pure, deterministic functions** of your emitted decisions.
+*   Execute *after* the baseline structural checks (which enforce non-empty fields and 100% JSON-serializability).
+*   Can **short-circuit and reject** your decisions immediately if they violate custom constraints (e.g. blocking mutating database queries, limiting payload sizes, or validating resource access).
+*   Can **normalize** your decision data before it is dispatched to execution handlers.
+
+---
+
+## 10. Appendix: Configurable Agent Roles & Permissions (Least Privilege)
+
+Jaros models agent permissions using a configurable, file-system-driven **Least-Privilege Role Capability system**.
+
+### 1. The Operational Constraint
+As an agent, your action permissions are strictly tied to the logical **Role** you are assigned during execution inside the host-side [**`config/permissions.json`**](../config/permissions.json). You possess no ad-hoc capability grants. If you propose an action for which your role lacks permission, the Validation Gate **fails-closed**, immediately blocks the action, and logs a security violation.
+
+### 2. Configuration-Driven Role Assignments
+Role bindings are entirely configuration-driven. The operator maps your agent kind key to its assigned role inside `config/permissions.json` under `"assignments"` (e.g. mapping `"custom_agent"` to `"AnalystRole"`). When the OS Daemon processes your job, it dynamically looks up your assignment, spawns your context inside the Harness, and safely tears it down upon completion.
+
+### 3. Dynamic Host Tools & Cached Reloading
+*   **Custom Tools**: Operators and agents can dynamically define namespaced host execution tools (such as `"db.accounts.read"`) by dropping a Python class conforming to the custom tool protocol inside the watched `.jaros-data/tools/` folder.
+*   **Zero-Restart Updates**: The OS Daemon re-scans the `tools/` folder dynamically on tick heartbeats. A high-performance `PolicyManager` monitors file modification times on the host, refreshing the policy memory cache instantly when `permissions.json` changes. Any permission update, custom tool registration, or role assignment is picked up at runtime instantly without restarts!
+*   **Layered Local Overrides**: To allow developers and operators to customize their local environment without accidentally committing their changes, the system supports an optional, git-ignored local override file: `config/permissions.local.json`. If present, the `PolicyManager` dynamically deep-merges it into the tracked defaults inside `config/permissions.json`. This enables developers to update repository-wide defaults while letting each host maintain its own private custom roles and assignments.
+
+
+
+
+

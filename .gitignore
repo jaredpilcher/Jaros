@@ -11,3 +11,8 @@ venv/
 .jaros-data/
 .env
 .env.local
+config/permissions.local.json
+config/requirements.txt
+gcp-creds.json
+*-creds.json
+scratch/

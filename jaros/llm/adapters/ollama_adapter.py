@@ -27,7 +27,7 @@ class OllamaAdapter:
         
         request = urllib.request.Request(url, data=data, headers=headers, method="POST")
         try:
-            with urllib.request.urlopen(request, timeout=30) as response:
+            with urllib.request.urlopen(request, timeout=120) as response:
                 resp_data = json.loads(response.read().decode("utf-8"))
                 text = resp_data.get("response", "").strip()
                 return LlmResponse(text=text, model=self.model)

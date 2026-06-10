@@ -1,47 +1,47 @@
 {
-  "REQ-1": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 52,
-      "endLine": 118
-    },
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 296,
-      "endLine": 356
-    }
-  ],
-  "REQ-2": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 122,
-      "endLine": 151
-    },
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 186,
-      "endLine": 250
-    }
-  ],
-  "REQ-5": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 155,
-      "endLine": 184
-    }
-  ],
-  "REQ-4": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 254,
-      "endLine": 292
-    }
-  ],
   "REQ-3": [
     {
       "file": "jaros/registry.py",
       "startLine": 33,
       "endLine": 163
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 52,
+      "endLine": 138
+    },
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 380,
+      "endLine": 448
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 142,
+      "endLine": 190
+    },
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 251,
+      "endLine": 326
+    }
+  ],
+  "REQ-5": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 194,
+      "endLine": 249
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 330,
+      "endLine": 376
     }
   ]
 }

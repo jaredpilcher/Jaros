@@ -21,7 +21,7 @@ Jaros is split into two planes that never merge:
 
 The only channels between an agent and the rest of the system are **rigid queues** and the **shared file system**.
 
-### Decoder-EncoderDecoupling: The LLM decides *what*, not *how*
+### Decision–Execution Decoupling: The LLM decides *what*, not *how*
 
 A frequent misreading is "the LLM can't make decisions." It can — that *is* the reasoning. The precise rule is:
 
@@ -85,7 +85,7 @@ pip install -e ".[dev]"
 ```
 
 ### 2. Run Tests
-Execute the entire test suite, including all 137 unit tests and all architecture checks:
+Execute the entire test suite, including all unit tests and all architecture checks:
 
 ```bash
 pytest
@@ -167,6 +167,19 @@ while True:
     schedule.run_pending()
     time.sleep(1)
 ```
+
+---
+
+## Safe Host Command Execution (Bypassing the Seam)
+
+If an agent needs to execute a terminal command on the host (e.g. `git status`) and capture its output, it must never invoke process execution inside the container. Instead, it utilizes a decoupled, file-system-only event loop mediated by a host runner:
+
+1. **Agent Proposes**: The agent emits a standard `Decision` of kind `"host_command"` containing the command and arguments as pure JSON data.
+2. **Validation Gate**: The Validation Gate checks the proposed command against a strict safety allowlist (e.g. `{"git", "dir", "pytest"}`) and rejects it if unsafe.
+3. **Host Runner**: A lightweight background runner on the host polls the shared `.jaros-data/host_inbox/` volume, executes allowed commands locally, and writes outputs (`returncode`, `stdout`, `stderr`) atomically back to `host_outbox/`. The runner is a standalone companion project — see the [`jaros-host-runner`](https://github.com/jaredpilcher/jaros-host-runner) repository — so Jaros core ships no host-execution code and stays a pure file-system control plane.
+4. **Agent Ingests**: The agent thread reads the result file from the shared volume once it appears.
+
+See **[docs/agent-playbook.md](docs/agent-playbook.md)** (Protocol 6) for the agent playbook instructions, and **[docs/building-agents.md](docs/building-agents.md)** (Pattern C) for the developer reference.
 
 ---
 

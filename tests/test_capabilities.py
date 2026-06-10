@@ -20,9 +20,12 @@ from jaros.harness.capabilities import (
 )
 
 
-def test_granted_queue_handle_works():
+def test_granted_queue_handle_works(tmp_path):
     q: Queue = Queue()
-    grants = grant(GrantSpec(capabilities=(QueueSend(), QueueReceive()), queue=q))
+    fs = SharedFileSystem(tmp_path)
+    fs.ensure_layout()
+    # AdminRole has FsRead, FsWrite, QueueSend, QueueReceive
+    grants = grant(GrantSpec(role="AdminRole", queue=q, fs=fs))
 
     grants.queue_send.send("hello")
     assert len(q) == 1
@@ -30,17 +33,22 @@ def test_granted_queue_handle_works():
 
 
 def test_granted_fs_handle_works(tmp_path):
+    q: Queue = Queue()
     fs = SharedFileSystem(tmp_path)
     fs.ensure_layout()
-    grants = grant(GrantSpec(capabilities=(FsWrite(), FsRead()), fs=fs))
+    # AdminRole has FsRead, FsWrite, QueueSend, QueueReceive
+    grants = grant(GrantSpec(role="AdminRole", queue=q, fs=fs))
 
     grants.fs_write.write("outbox/msg.txt", "data")
     assert grants.fs_read.read("outbox/msg.txt") == "data"
 
 
-def test_revoked_handle_raises_before_side_effect():
+def test_revoked_handle_raises_before_side_effect(tmp_path):
     q: Queue = Queue()
-    grants = grant(GrantSpec(capabilities=(QueueSend(),), queue=q))
+    fs = SharedFileSystem(tmp_path)
+    fs.ensure_layout()
+    # ReporterRole has FsWrite, QueueSend
+    grants = grant(GrantSpec(role="ReporterRole", queue=q, fs=fs))
 
     revoke(grants)
 
@@ -51,9 +59,11 @@ def test_revoked_handle_raises_before_side_effect():
 
 
 def test_revoked_fs_handle_raises_before_write(tmp_path):
+    q: Queue = Queue()
     fs = SharedFileSystem(tmp_path)
     fs.ensure_layout()
-    grants = grant(GrantSpec(capabilities=(FsWrite(),), fs=fs))
+    # ReporterRole has FsWrite, QueueSend
+    grants = grant(GrantSpec(role="ReporterRole", queue=q, fs=fs))
 
     revoke(grants)
 
@@ -62,20 +72,24 @@ def test_revoked_fs_handle_raises_before_write(tmp_path):
     assert not (tmp_path / "outbox" / "x.txt").exists()
 
 
-def test_unrequested_capabilities_are_unreachable():
+def test_unrequested_capabilities_are_unreachable(tmp_path):
     q: Queue = Queue()
-    # Only QueueSend granted -> the agent has no receive / fs handles at all.
-    grants = grant(GrantSpec(capabilities=(QueueSend(),), queue=q))
+    fs = SharedFileSystem(tmp_path)
+    fs.ensure_layout()
+    # ReporterRole only has FsWrite and QueueSend -> the agent has no receive/fs_read handles.
+    grants = grant(GrantSpec(role="ReporterRole", queue=q, fs=fs))
 
     assert grants.queue_send is not None
     assert grants.queue_receive is None
-    assert grants.fs_write is None
+    assert grants.fs_write is not None
     assert grants.fs_read is None
 
 
-def test_handles_are_frozen_cannot_swap_backing():
+def test_handles_are_frozen_cannot_swap_backing(tmp_path):
     q: Queue = Queue()
-    grants = grant(GrantSpec(capabilities=(QueueSend(),), queue=q))
+    fs = SharedFileSystem(tmp_path)
+    fs.ensure_layout()
+    grants = grant(GrantSpec(role="ReporterRole", queue=q, fs=fs))
     handle = grants.queue_send
 
     with pytest.raises(CapabilityError):
@@ -84,16 +98,25 @@ def test_handles_are_frozen_cannot_swap_backing():
         handle._revoked = [False]  # cannot clear its own revocation flag
 
 
-def test_grant_requires_backing_object():
+def test_grant_requires_backing_object(tmp_path):
+    fs = SharedFileSystem(tmp_path)
+    fs.ensure_layout()
+    q = Queue()
+    
+    # ReporterRole requires both queue and fs backing objects
     with pytest.raises(CapabilityError):
-        grant(GrantSpec(capabilities=(QueueSend(),)))  # no queue supplied
+        grant(GrantSpec(role="ReporterRole"))  # no backing objects at all
     with pytest.raises(CapabilityError):
-        grant(GrantSpec(capabilities=(FsWrite(),)))  # no fs supplied
+        grant(GrantSpec(role="ReporterRole", queue=q))  # fs missing
+    with pytest.raises(CapabilityError):
+        grant(GrantSpec(role="ReporterRole", fs=fs))  # queue missing
 
 
-def test_revoke_is_idempotent():
+def test_revoke_is_idempotent(tmp_path):
     q: Queue = Queue()
-    grants = grant(GrantSpec(capabilities=(QueueSend(),), queue=q))
+    fs = SharedFileSystem(tmp_path)
+    fs.ensure_layout()
+    grants = grant(GrantSpec(role="ReporterRole", queue=q, fs=fs))
     revoke(grants)
     revoke(grants)
     assert grants.revoked is True

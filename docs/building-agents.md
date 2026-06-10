@@ -93,7 +93,7 @@ class GreeterAgent(ReasoningBoundary):
 The OS spawner mints **only** the scoped handles you grant. The agent has no ambient access to anything else.
 
 ```python
-from jaros.harness.harness import Harness
+from jaros.harness import Harness, GrantSpec
 from jaros.comms.queue import Queue
 from jaros.comms.fs import SharedFileSystem
 
@@ -106,16 +106,16 @@ queue = Queue(
 
 harness = Harness()
 
-# Spawn the agent, granting ONLY what it needs.
-# Narrowing the grant narrows the agent.
-ctx = harness.spawn("greeter", {
-    "queue_send": queue,
-    "fs": fs,
-    "fs_write": True
-})
+# Spawn the agent, granting access strictly based on its Role.
+# Action permissions must be tied to roles, never ad-hoc to agents!
+ctx = harness.spawn("greeter", GrantSpec(
+    role="ReporterRole",
+    queue=queue,
+    fs=fs
+))
 ```
 
-Want a read-only agent? Simply omit `"fs_write": True`. Want an agent that can only enqueue work? Grant only `"queue_send"`. Calling `harness.teardown(agent_id)` invalidates these handles immediately — capabilities are revocable.
+Want a read-only agent? Simply spawn it under `"AnalystRole"`. Want an agent that can only enqueue work? Spawn it under `"QueueSendRole"`. Calling `harness.teardown(agent_id)` invalidates these handles immediately — capabilities are revocable.
 
 ---
 
@@ -226,20 +226,75 @@ class MyAgent(ReasoningBoundary):
 ```
 
 ### 2. Extensible Validation Gate
-Developers can register validation policies at the gate that enforce architectural constraints. If an agent attempts to propose a disallowed decision, the gate rejects it immediately before execution occurs.
+Every `Decision` proposed by the Reasoning Plane is sent through a deterministic **Validation Gate** before reaching the executor. Developers can configure, modify, and extend this gate:
+
+#### A. Built-in Structural Gate (Non-Bypassable)
+The gate executes a series of hardcoded structural checks first. These **cannot be removed** by developer configuration, guaranteeing that the system remains safe at the baseline:
+*   Enforces that the decision is a valid frozen `Decision` instance.
+*   Enforces that `id`, `source`, and `kind` are non-empty strings.
+*   Enforces that the `payload` is completely recursively JSON-serializable (rejects functions, system handles, bytes, and sets).
+
+#### B. Adding Custom Validation Gates (Policies)
+You can register any number of custom, deterministic validation gates. A custom gate is a **pure function** of the `Decision` returning a `ValidationResult`. It must not perform side effects so that the gate remains deterministic.
+
+You can register them programmatically or use the `@register_validator` decorator:
+
 ```python
 from jaros.core.decision_gate import register_validator, ValidationResult
 
-def limit_validator(decision) -> ValidationResult:
-    if "admin" in str(decision.payload):
-        return ValidationResult(ok=False, reason="Admin scope is forbidden")
-    return ValidationResult(ok=True, value=decision)
+# Option 1: Decorator registration
+@register_validator
+def read_only_gate(decision) -> ValidationResult:
+    payload = decision.payload if isinstance(decision.payload, dict) else {}
+    command = str(payload.get("query", "")).lower()
+    
+    # Reject mutating database queries at the validation gate
+    for mutation in ["drop", "delete", "truncate", "update"]:
+        if mutation in command:
+            return ValidationResult.reject(f"Mutating command '{mutation}' is blocked!")
+            
+    return ValidationResult.accept(decision)
 
-register_validator(limit_validator)
+# Option 2: Programmatic registration
+def allowlist_gate(decision) -> ValidationResult:
+    allowed_sources = {"custom_agent", "greeter"}
+    if decision.source not in allowed_sources:
+        return ValidationResult.reject(f"Source '{decision.source}' is not allowed!")
+    return ValidationResult.accept(decision)
+
+register_validator(allowlist_gate)
 ```
+
+#### C. Short-Circuiting and Decision Normalization
+*   **Short-Circuiting**: Custom validators run in registration order. The first validator to return a rejection (`ValidationResult.reject(reason)`) immediately aborts the pipeline; subsequent gates are skipped, and the executor refuses to act on the decision.
+*   **Normalization**: A gate can return a normalized or enriched version of the decision by returning `ValidationResult.accept(normalized_decision)`. Subsequent gates and the executor will consume this normalized version.
 
 ### 3. Harness Capability Grants
 The agent can only perform mediated requests (`harness.request`) if it possesses a corresponding Capability grant inside its `Grants` bundle. The Harness enforces rules (`DEFAULT_RULES`) mapping action types to required Capabilities in a strict, **default-deny** manner.
+
+### 4. Bounded Agent Roles & Configurable Permissions
+You group multiple capabilities into logical **Agent Roles** entirely on the host side using [**`config/permissions.json`**](../config/permissions.json) to enforce the principle of least privilege:
+*   **Role Configuration**: Define logical roles and their allowed action string keys (e.g. `AnalystRole` allowed `"fs.read"` and `"db.query"`).
+*   **Agent-Role Assignments**: Map agent kind registration keys directly to logical roles (e.g., `"custom_agent"` bound to `"AnalystRole"`).
+*   **Decoupled & Dynamic Enforcement**:
+    The daemon automatically looks up the role from the config assignments at trigger time, spawns the agent context under that role inside the Harness, validates actions dynamically, and safely tears down the context upon job completion.
+*   **Zero-Restart Cached Reloading**:
+    A high-performance `PolicyManager` monitors file modification times on the host, refreshing the policy memory cache instantly when `permissions.json` changes without requiring a daemon restart.
+*   **Layered Local Overrides**:
+    To allow local customization without affecting Git history or repository-wide defaults, operators can create a `config/permissions.local.json` file (ignored by Git). The `PolicyManager` automatically detects this file and deep-merges it with `permissions.json` at runtime.
+
+```python
+# 1. Spawn-teardown lifecycle automatically driven by the Daemon:
+# (Automatically resolves 'ReporterRole' from config assignments)
+from jaros.harness import GrantSpec
+
+# 2. Spawner binds the agent to its assigned role
+harness.spawn("custom_agent", GrantSpec(role="ReporterRole", fs=fs, queue=queue))
+
+# 3. Teardown clears the grants upon completion
+harness.teardown("custom_agent")
+```
+If the agent attempts to propose a decision for an action not permitted by its assigned role in `permissions.json`, the validation gate immediately blocks it (fails-closed).
 
 ---
 
@@ -292,6 +347,26 @@ class ResearchAgent(ReasoningBoundary):
             )
         ]
 ```
+
+### Pattern C: Safe Host Command Execution (Decoupled Seam)
+If an agent needs to execute a terminal command on the host (e.g. `git status`) and retrieve the stdout, it must never run a process locally inside the container. Instead, it leverages a decoupled event loop via the shared filesystem:
+1. **Agent Proposes**: Emits a `Decision` of kind `"host_command"`, detailing the binary and arguments as pure JSON data.
+2. **Validation Gate**: Validates the command against an allowlist (e.g. `{"git", "dir", "pytest"}`) at the gate.
+3. **Host Runner**: A lightweight runner on the host — the standalone [`jaros-host-runner`](https://github.com/jaredpilcher/jaros-host-runner) companion project — polls `host_inbox/`, safely runs the command against its configured allowlist, and writes the captured results (`returncode`, `stdout`, `stderr`) atomically to `host_outbox/`.
+4. **Agent Ingests**: The agent checks the shared folder `host_outbox/` for the result using `fs_read` capability.
+
+### Pattern D: Safe Database (PostgreSQL) Queries
+If an agent needs to query a database like PostgreSQL, it must never open direct connection sockets or handle credentials in the Reasoning Plane. Instead, it leverages the pluggable executor dispatch:
+1. **Agent Proposes**: Emits a `Decision` of kind `"db_query"`, declaring the query string and parameterized variables as pure JSON data.
+2. **Validation Gate**: Checks the query structurally at the gate, blocking mutating queries (`DROP`, `DELETE`) and enforcing strict parameterized safety.
+3. **Pluggable Executor**: The Execution Plane dispatches the query to a registered handler which connects securely to PostgreSQL using environment-hidden credentials and returns the serialized JSON results.
+
+### Pattern E: Safe Dynamic Host Tools (Custom Extensions)
+If an operator or agent needs a specialized action (e.g. `"db.accounts.read"`), they define a custom Python class dropped into the `.jaros-data/tools/` directory on the host:
+1. **Tool Class Signature**: Conforms to the custom tool signature (`NAME`, `validate(decision) -> ValidationResult`, `execute(decision) -> Any`).
+2. **Dynamic Ingestion**: The daemon re-scans the `tools/` folder dynamically on tick heartbeats, dynamically loading and registering new tools at runtime without restarts.
+3. **Validation & Role Permission**: The tool's `validate()` gate and the role permission check are automatically wired into the Validation Gate, fail-closing immediately if the agent's assigned role is not permitted to call that action namespace inside `permissions.json`.
+4. **Deterministic Execution**: The `execute()` method runs on the host-side Execution Plane to execute side-effects and return the serialized output back.
 
 ---
 

@@ -23,7 +23,7 @@ from jaros.harness.harness import Action, Harness
 def test_mediated_queue_send_through_harness():
     q: Queue = Queue()
     h = Harness()
-    ctx = h.spawn("a1", GrantSpec(capabilities=(QueueSend(),), queue=q))
+    ctx = h.spawn("a1", GrantSpec(role="QueueSendRole", queue=q))
 
     result = h.request("a1", Action(type="queue.send", message="work"))
 
@@ -41,8 +41,8 @@ def test_queue_send_only_agent_cannot_touch_fs(tmp_path):
     fs = SharedFileSystem(tmp_path)
     fs.ensure_layout()
     h = Harness()
-    # Granted only QueueSend; backing fs deliberately not provided.
-    h.spawn("sender", GrantSpec(capabilities=(QueueSend(),), queue=q))
+    # Granted only QueueSendRole; backing fs deliberately not provided.
+    h.spawn("sender", GrantSpec(role="QueueSendRole", queue=q))
 
     write = h.request("sender", Action(type="fs.write", path="outbox/x.txt", data="d"))
     read = h.request("sender", Action(type="fs.read", path="outbox/x.txt"))
@@ -55,7 +55,7 @@ def test_queue_send_only_agent_cannot_touch_fs(tmp_path):
 def test_disallowed_action_is_refused_with_no_side_effect():
     q: Queue = Queue()
     h = Harness()
-    h.spawn("a1", GrantSpec(capabilities=(QueueSend(),), queue=q))
+    h.spawn("a1", GrantSpec(role="QueueSendRole", queue=q))
 
     # Unknown action type -> default-deny, recorded, no effect.
     result = h.request("a1", Action(type="network.connect", message="evil"))
@@ -76,7 +76,7 @@ def test_unknown_agent_is_denied():
 def test_teardown_revokes_capabilities():
     q: Queue = Queue()
     h = Harness()
-    h.spawn("a1", GrantSpec(capabilities=(QueueSend(),), queue=q))
+    h.spawn("a1", GrantSpec(role="QueueSendRole", queue=q))
 
     h.teardown("a1")
 
@@ -99,14 +99,10 @@ def test_harness_rules_not_mutable_by_agent_at_runtime():
 
 
 def test_constructed_with_tighter_rule_is_enforced():
-    # Operator tightens the rule set: writing to fs now requires FsRead too is
-    # not expressible as one cap, so instead we *forbid* fs.write by requiring a
-    # capability the agent is given but mapping queue.send to FsWrite (tighter:
-    # an agent that only has QueueSend can no longer send to the queue).
     q: Queue = Queue()
     # Override: 'queue.send' now requires the FsWrite capability instead.
     h = Harness(rules={"queue.send": FsWrite})
-    h.spawn("a1", GrantSpec(capabilities=(QueueSend(),), queue=q))
+    h.spawn("a1", GrantSpec(role="QueueSendRole", queue=q))
 
     result = h.request("a1", Action(type="queue.send", message="x"))
 
@@ -123,7 +119,7 @@ def test_constructed_with_extra_rule_is_enforced(tmp_path):
     h = Harness(rules={"fs.peek": FsRead})
     h.spawn(
         "a1",
-        GrantSpec(capabilities=(FsRead(),), fs=fs),
+        GrantSpec(role="FsReadRole", fs=fs),
     )
 
     result = h.request("a1", Action(type="fs.peek", path="inbox/note.txt"))
@@ -153,7 +149,7 @@ def test_full_round_trip_fs_write_then_read(tmp_path):
     fs = SharedFileSystem(tmp_path)
     fs.ensure_layout()
     h = Harness()
-    h.spawn("a1", GrantSpec(capabilities=(FsWrite(), FsRead()), fs=fs))
+    h.spawn("a1", GrantSpec(role="FsRole", fs=fs))
 
     w = h.request("a1", Action(type="fs.write", path="artifacts/o.txt", data="payload"))
     r = h.request("a1", Action(type="fs.read", path="artifacts/o.txt"))
