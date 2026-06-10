@@ -62,6 +62,7 @@ Write your agent reasoning code exactly like this template. Keep it standard-lib
 ```python
 import json
 from jaros.core import create_decision
+from jaros.llm import LlmRequest
 
 # 1. Define the unique kind registration key
 KIND = "custom_agent"
@@ -75,7 +76,7 @@ def build(llm):
             prompt_input = context.get("task", "Plan next step")
             
             # Consult the interchangeable LLM client
-            reply = llm.complete(prompt=prompt_input)
+            reply = llm.complete(LlmRequest(prompt=prompt_input))
             
             # Propose the final outcome as inert, frozen JSON data only
             return [

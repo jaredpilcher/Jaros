@@ -41,6 +41,31 @@ def test_resolve_data_dir_falls_back_to_env_then_default(tmp_path, monkeypatch):
     assert str(cli.resolve_data_dir(args)) == cli.DEFAULT_DATA_DIR
 
 
+def test_data_dir_flag_accepted_after_subcommand(tmp_path, monkeypatch):
+    """The README form ``jaros status --data-dir D`` parses; the per-subcommand
+    flag wins over the global position when both are given."""
+    monkeypatch.delenv(cli.DATA_DIR_ENV, raising=False)
+    parser = cli._build_parser()
+
+    args = parser.parse_args(["status", "--data-dir", str(tmp_path / "after")])
+    assert cli.resolve_data_dir(args) == (tmp_path / "after")
+
+    args = parser.parse_args(
+        ["--data-dir", str(tmp_path / "global"), "status", "--data-dir", str(tmp_path / "sub")]
+    )
+    assert cli.resolve_data_dir(args) == (tmp_path / "sub")
+
+    # global-only position still resolves when the flag is not repeated
+    args = parser.parse_args(["--data-dir", str(tmp_path / "global"), "status"])
+    assert cli.resolve_data_dir(args) == (tmp_path / "global")
+
+
+def test_submit_accepts_str_data_dir(tmp_path):
+    """cmd_submit coerces a plain string data dir (as in the README Pattern C)."""
+    target = cli.cmd_submit("custom_agent", "{}", str(tmp_path))
+    assert target.is_file()
+
+
 # --- submit ----------------------------------------------------------------
 
 def test_submit_writes_valid_job_with_parsed_input(tmp_path, capsys):

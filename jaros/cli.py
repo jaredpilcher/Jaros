@@ -85,6 +85,7 @@ def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
     ``inbox/<id>.json`` so the daemon never reads a partial job. Returns the path
     of the created job file.
     """
+    data_dir = Path(data_dir)
     if input_json is None:
         parsed_input: object = None
     else:
@@ -247,39 +248,49 @@ def cmd_logs(data_dir: Path, stream=None) -> int:
 
 # #EXT-008-REQ-1 Start
 def _build_parser() -> argparse.ArgumentParser:
-    """Construct the argparse parser with the global ``--data-dir`` + subcommands."""
+    """Construct the argparse parser with ``--data-dir`` + subcommands.
+
+    ``--data-dir`` is accepted both before the subcommand (``jaros --data-dir D
+    status``) and after it (``jaros status --data-dir D``); the per-subcommand
+    occurrence wins when both are given.
+    """
+    data_dir_help = (
+        "shared data directory the daemon uses "
+        f"(else ${DATA_DIR_ENV}, else ./{DEFAULT_DATA_DIR})"
+    )
     parser = argparse.ArgumentParser(
         prog="jaros",
         description="Host control CLI for a Jaros OS (shared-filesystem only).",
     )
-    parser.add_argument(
-        "--data-dir",
-        dest="data_dir",
-        default=None,
-        help=(
-            "shared data directory the daemon uses "
-            f"(else ${DATA_DIR_ENV}, else ./{DEFAULT_DATA_DIR})"
-        ),
-    )
+    parser.add_argument("--data-dir", dest="data_dir", default=None, help=data_dir_help)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("serve", help="run the daemon (used inside the container)")
+    def add_command(name: str, help_text: str) -> argparse.ArgumentParser:
+        p = sub.add_parser(name, help=help_text)
+        # SUPPRESS keeps the global --data-dir value when the flag is not
+        # repeated after the subcommand.
+        p.add_argument(
+            "--data-dir", dest="data_dir", default=argparse.SUPPRESS, help=data_dir_help
+        )
+        return p
 
-    p_submit = sub.add_parser("submit", help="write a job descriptor into inbox/")
+    add_command("serve", "run the daemon (used inside the container)")
+
+    p_submit = add_command("submit", "write a job descriptor into inbox/")
     p_submit.add_argument("kind", help="agent kind that should handle the job")
     p_submit.add_argument(
         "--input", dest="input", default=None, help="job input as a JSON string"
     )
 
-    p_add = sub.add_parser("add-agent", help="install a plugin module into plugins/")
+    p_add = add_command("add-agent", "install a plugin module into plugins/")
     p_add.add_argument("path", help="path to the agent module (*.py)")
     p_add.add_argument(
         "--name", dest="name", default=None, help="override the installed kind/filename"
     )
 
-    sub.add_parser("status", help="read and print status.json")
+    add_command("status", "read and print status.json")
 
-    p_watch = sub.add_parser("watch", help="live status + new outbox results")
+    p_watch = add_command("watch", "live status + new outbox results")
     p_watch.add_argument(
         "--interval",
         dest="interval",
@@ -288,7 +299,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="seconds between refreshes (default: 1.0)",
     )
 
-    sub.add_parser("logs", help="print the daemon log file if present")
+    add_command("logs", "print the daemon log file if present")
     return parser
 
 

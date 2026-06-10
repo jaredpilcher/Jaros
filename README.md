@@ -159,13 +159,13 @@ If you run **multiple replica containers** mounted to the same shared directory,
 ### Pattern C: Native Python Scheduling Loop
 You can run a lightweight background python loop programmatically submitting jobs:
 ```python
-import schedule, time
+import time
+from pathlib import Path
 from jaros.cli import cmd_submit
 
-schedule.every(10).minutes.do(lambda: cmd_submit("custom_agent", "{}", ".jaros-data"))
 while True:
-    schedule.run_pending()
-    time.sleep(1)
+    cmd_submit("custom_agent", '{"topic": "scheduled-run"}', Path(".jaros-data"))
+    time.sleep(600)  # every 10 minutes
 ```
 
 ---
@@ -193,19 +193,18 @@ See **[docs/building-agents.md](docs/building-agents.md)** for the comprehensive
 4. **Execution Gate validation**: The OS validates, handles state transitions, and writes results.
 
 ```python
-import asyncio
 from jaros.core.decision import create_decision, Decision
 from jaros.core.reasoning_boundary import ReasoningBoundary
-from jaros.llm import create_llm_client
+from jaros.llm import LlmRequest, create_llm_client
 
 # An agent is a ReasoningBoundary: data in -> Decision data out
 class GreeterAgent(ReasoningBoundary):
     def __init__(self):
-        self.llm = create_llm_client(provider="default")
+        self.llm = create_llm_client({"provider": "default"})
 
-    async def decide(self, context: dict) -> list[Decision]:
-        reply = await self.llm.complete(prompt="Greet the user", context=context)
-        
+    def decide(self, context: dict) -> list[Decision]:
+        reply = self.llm.complete(LlmRequest(prompt="Greet the user"))
+
         # Propose the decision as serializable, frozen data only
         return [
             create_decision(
@@ -223,8 +222,10 @@ class GreeterAgent(ReasoningBoundary):
 
 To restrict the agent, simply restrict its capability grants at spawn time:
 ```python
+from jaros.harness.capabilities import GrantSpec
+
 # Grant ONLY the capability to write files inside the layout (and nothing else)
-ctx = harness.spawn("greeter", {"fs_write": True})
+ctx = harness.spawn("greeter", GrantSpec(role="FsWriteRole", fs=shared_fs))
 ```
 
 ---

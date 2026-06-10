@@ -55,18 +55,18 @@ Those are all the kernel's job.
 import os
 from jaros.core.decision import create_decision, Decision
 from jaros.core.reasoning_boundary import ReasoningBoundary
-from jaros.llm import create_llm_client, LlmClient
+from jaros.llm import LlmRequest, create_llm_client, LlmClient
 
 class GreeterAgent(ReasoningBoundary):
     def __init__(self) -> None:
         # Treats the LLM purely as an interchangeable client
         self.llm: LlmClient = create_llm_client(
-            provider=os.getenv("JAROS_LLM_PROVIDER", "default")
+            {"provider": os.getenv("JAROS_LLM_PROVIDER", "default")}
         )
 
-    async def decide(self, context: object) -> list[Decision]:
+    def decide(self, context: object) -> list[Decision]:
         # Reason using the pluggable LLM
-        reply = await self.llm.complete(prompt="Plan the next step.", context={})
+        reply = self.llm.complete(LlmRequest(prompt="Plan the next step."))
 
         # The model is an advisor. We capture WHAT it proposes as data.
         # The events are what the deterministic state machine drives —
@@ -98,11 +98,9 @@ from jaros.comms.queue import Queue
 from jaros.comms.fs import SharedFileSystem
 
 # Set up the communication fabric
-fs = SharedFileSystem(os.getenv("JAROS_DATA_DIR", ".jaros-data")).ensure_layout()
-queue = Queue(
-    validator=lambda msg: isinstance(msg, dict) and "note" in msg,
-    name="work-queue"
-)
+fs = SharedFileSystem(os.getenv("JAROS_DATA_DIR", ".jaros-data"))
+fs.ensure_layout()
+queue = Queue(validator=lambda msg: isinstance(msg, dict) and "note" in msg)
 
 harness = Harness()
 
@@ -131,30 +129,29 @@ from jaros.runtime.lifecycle import AgentState
 # A bounded concurrent pool (e.g., max 4 concurrent agents)
 pool = AgentPool(bound=4)
 
-# Create an agent factory callable that returns the spawned agent thread
+# An agent factory builds the spawned (unstarted) agent thread.
+# Keep a reference so the outcome can be inspected after the pool drains.
+spawned: list[AgentThread] = []
+
 def agent_factory() -> AgentThread:
     agent_instance = GreeterAgent()
-    
+
     # The thread body does the reasoning and returns the decisions
-    def run_agent():
-        # Run the sync/async decide function
-        return asyncio.run(agent_instance.decide({}))
-        
-    return AgentThread.spawn(
-        id="greeter",
-        body=run_agent
-    )
+    thread = AgentThread.spawn(id="greeter", body=lambda: agent_instance.decide({}))
+    spawned.append(thread)
+    return thread
 
 # Submit to the pool (enforces queueing/backpressure if bound is reached)
-agent_thread = pool.submit(agent_factory)
+pool.submit(agent_factory)
 
-# Wait for all pool threads to complete
+# Wait for all pool threads to complete (each is torn down as it finishes)
 pool.drain()
 
 # Check outcome cleanly
+agent_thread = spawned[0]
 if agent_thread.state == AgentState.FAILED:
     print(f"Agent failed with error: {agent_thread.error}")
-elif agent_thread.state == AgentState.TORNDOWN:
+else:
     print(f"Decisions produced: {[d.id for d in agent_thread.decisions]}")
 ```
 
@@ -165,11 +162,17 @@ elif agent_thread.state == AgentState.TORNDOWN:
 This is the kernel's job, not the agent's. The validation gate checks the decision payload, the executor validates its kind and dispatches to registered deterministic handlers, the state machine transitions and logs durably, and results are written **through the harness-mediated handles**.
 
 ```python
+import json
 from jaros.core.decision_gate import validate_decision
-from jaros.execution.executor import Executor, apply
+from jaros.execution.executor import apply, register_handler
+from jaros.harness import Action
 from jaros.state.machine import commit
 from jaros.state.log import TransitionLog
 from jaros.state.model import INITIAL_STATE
+
+# Register the deterministic handler for this decision kind (the running
+# daemon registers its built-in kinds the same way at boot)
+register_handler("advance", lambda decision, **collaborators: decision.payload)
 
 # Emitted decision from the agent thread
 decision = agent_thread.decisions[0]
@@ -184,25 +187,25 @@ applied = apply(gated.value)
 if not applied.applied:
     raise RuntimeError(f"Execution failed: {applied.reason}")
 
-payload = applied.decision.payload
+payload = applied.output
 
 # 3. Distributed State Machine (EXT-002: drive durable, validated state transitions)
-log = TransitionLog(f"{fs.base_dir}/state", "transition.log").ensure()
+log = TransitionLog(fs.base_dir / "state", "transition.log")
+log.ensure()
 state = INITIAL_STATE
 
 for event in payload["events"]:
-    state = commit(log, state, event).state  # Validates + durably logs each event atomically
+    # Validates + durably logs each event atomically
+    state = commit(log, state, event.lower()).state
 
 # 4. Harness Mediation (EXT-005: write result ONLY through mediated, capability-scoped handles)
-write_result = harness.request("greeter", {
-    "type": "fs.write",
-    "args": {
-        "path": payload["artifact_path"],
-        "data": json.dumps({"final_state": state.name})
-    }
-})
+write_result = harness.request("greeter", Action(
+    type="fs.write",
+    path=payload["artifact_path"],
+    data=json.dumps({"final_state": state}),
+))
 
-if not write_result.ok:
+if not write_result.allowed:
     raise RuntimeError(f"Harness blocked I/O: {write_result.reason}")
 
 # Teardown frees resources and invalidates all capabilities atomically

@@ -7,34 +7,34 @@
     },
     {
       "file": "jaros/cli.py",
-      "startLine": 248,
-      "endLine": 318
+      "startLine": 249,
+      "endLine": 329
     },
     {
       "file": "jaros/cli.py",
-      "startLine": 295,
-      "endLine": 372
+      "startLine": 306,
+      "endLine": 383
     }
   ],
   "REQ-2": [
     {
       "file": "jaros/cli.py",
       "startLine": 78,
-      "endLine": 106
+      "endLine": 107
     }
   ],
   "REQ-3": [
     {
       "file": "jaros/cli.py",
-      "startLine": 109,
-      "endLine": 160
+      "startLine": 110,
+      "endLine": 161
     }
   ],
   "REQ-4": [
     {
       "file": "jaros/cli.py",
-      "startLine": 163,
-      "endLine": 245
+      "startLine": 164,
+      "endLine": 246
     }
   ]
 }
