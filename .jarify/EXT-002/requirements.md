@@ -8,7 +8,6 @@ implementation:
   - jaros/state/machine.py
   - jaros/state/log.py
   - jaros/state/recover.py
-  - jaros/state/replication.py
   - jaros/state/__init__.py
 ---
 
