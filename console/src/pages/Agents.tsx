@@ -36,6 +36,7 @@ class MyTool:
         return {"ok": True, "payload": decision.payload}
 `;
 
+// #EXT-010-REQ-4 Start
 export function Agents() {
   const [agents, setAgents] = useState<AgentsModel>({ plugins: [], tools: [] });
   const [tab, setTab] = useState<"plugins" | "tools">("plugins");
@@ -106,3 +107,4 @@ export function Agents() {
     </div>
   );
 }
+// #EXT-010-REQ-4 End

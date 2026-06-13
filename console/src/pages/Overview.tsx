@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Snapshot } from "../api";
 import { Card, Json, Sparkline, Stat, StateBadge } from "../components/ui";
 
+// #EXT-010-REQ-2 Start
 export function Overview({ snap }: { snap: Snapshot | null }) {
   const [history, setHistory] = useState<number[]>([]);
   const lastTs = useRef(0);
@@ -78,3 +79,4 @@ export function Overview({ snap }: { snap: Snapshot | null }) {
     </div>
   );
 }
+// #EXT-010-REQ-2 End

@@ -228,6 +228,7 @@ Structural constraints are enforced by automated checks (run with `pytest`), so 
 | Runtime Daemon (OS Boot) | [EXT-007](.jarify/EXT-007/requirements.md) | Boot, file monitoring, atomic inbox ingestion, zero-infra boot |
 | Host Control CLI | [EXT-008](.jarify/EXT-008/requirements.md) | Command-line management, atomic job submission, plugin installer |
 | Dynamic Custom Tools | [EXT-009](.jarify/EXT-009/requirements.md) | Runtime-loaded namespaced tools (`NAME`/`validate`/`execute`) |
+| Admin & Monitoring Console | [EXT-010](.jarify/EXT-010/requirements.md) | Host-side TypeScript + React console: monitor, submit, install, replay |
 
 The full system-wide design lives in [`.jarify/PRIME-001/design.md`](.jarify/PRIME-001/design.md).
 

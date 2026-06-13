@@ -74,6 +74,7 @@ let harnessCache: unknown | null = null;
 
 // ---- SSE live updates ------------------------------------------------------
 
+// #EXT-010-REQ-2 Start
 const sseClients = new Set<http.ServerResponse>();
 
 function snapshot() {
@@ -99,6 +100,7 @@ setInterval(() => {
   const payload = `data: ${JSON.stringify(snapshot())}\n\n`;
   for (const client of sseClients) client.write(payload);
 }, 1000);
+// #EXT-010-REQ-2 End
 
 // ---- static SPA serving ----------------------------------------------------
 

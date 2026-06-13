@@ -3,6 +3,7 @@ import { Fragment, useEffect, useState } from "react";
 import { api, type DecisionRecord, type ReplayResult } from "../api";
 import { Card, Empty, Json, Pill } from "../components/ui";
 
+// #EXT-010-REQ-5 Start
 export function Replay() {
   const [decisions, setDecisions] = useState<DecisionRecord[]>([]);
   const [open, setOpen] = useState<number | null>(null);
@@ -96,3 +97,4 @@ export function Replay() {
     </div>
   );
 }
+// #EXT-010-REQ-5 End

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, type HarnessModel, type Job } from "../api";
 import { Card, Empty } from "../components/ui";
 
+// #EXT-010-REQ-6 Start
 export function Harness() {
   const [model, setModel] = useState<HarnessModel | null>(null);
   const [failed, setFailed] = useState<Job[]>([]);
@@ -82,3 +83,4 @@ export function Harness() {
     </div>
   );
 }
+// #EXT-010-REQ-6 End

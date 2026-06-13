@@ -9,6 +9,7 @@ const PRESETS: { kind: string; input: string }[] = [
   { kind: "greeter", input: '{ "name": "Jaros" }' },
 ];
 
+// #EXT-010-REQ-3 Start
 export function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [outbox, setOutbox] = useState<OutboxResult[]>([]);
@@ -117,3 +118,4 @@ export function Jobs() {
     </div>
   );
 }
+// #EXT-010-REQ-3 End

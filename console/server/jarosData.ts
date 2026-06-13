@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+// #EXT-010-REQ-1 Start
 export function resolveDataDir(): string {
   const fromArg = process.argv.find((a) => a.startsWith("--data-dir="));
   const dir =
@@ -148,7 +149,9 @@ export function getPlugins(): string[] {
 export function getTools(): string[] {
   return listFiles("tools", ".py").filter((f) => !f.startsWith("_"));
 }
+// #EXT-010-REQ-1 End
 
+// #EXT-010-REQ-3 Start
 /** Atomically write a job descriptor into inbox/ (temp file + rename). */
 export function submitJob(kind: string, input: unknown): { id: string } {
   const id = randomUUID().replace(/-/g, "");
@@ -160,7 +163,9 @@ export function submitJob(kind: string, input: unknown): { id: string } {
   fs.renameSync(tmp, dest);
   return { id };
 }
+// #EXT-010-REQ-3 End
 
+// #EXT-010-REQ-4 Start
 /** Atomically install a plugin agent or custom tool module. */
 export function installModule(area: "plugins" | "tools", name: string, source: string): { path: string } {
   const safe = name.endsWith(".py") ? name : `${name}.py`;
@@ -175,6 +180,7 @@ export function installModule(area: "plugins" | "tools", name: string, source: s
   fs.renameSync(tmp, dest);
   return { path: `${area}/${safe}` };
 }
+// #EXT-010-REQ-4 End
 
 export function dataDirExists(): boolean {
   try {

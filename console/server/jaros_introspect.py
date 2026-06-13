@@ -18,6 +18,7 @@ import tempfile
 from pathlib import Path
 
 
+# #EXT-010-REQ-6 Start
 def do_model() -> dict:
     from jaros.state.model import (
         EVENTS,
@@ -46,8 +47,10 @@ def do_harness() -> dict:
             role: [c.__name__ for c in caps] for role, caps in BUILTIN_ROLES.items()
         },
     }
+# #EXT-010-REQ-6 End
 
 
+# #EXT-010-REQ-5 Start
 def do_replay(data_dir: str) -> dict:
     from jaros.execution import executor
     from jaros.execution.tools import load_custom_tools, reset_tools_registry
@@ -104,6 +107,7 @@ def do_replay(data_dir: str) -> dict:
         "modelCalls": 0,
         "ok": True,
     }
+# #EXT-010-REQ-5 End
 
 
 def main(argv: list[str]) -> int:

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { api, type StateModel, type TransitionEntry } from "../api";
 import { Card, Empty, StateBadge } from "../components/ui";
 
+// #EXT-010-REQ-6 Start
 export function StateMachine() {
   const [model, setModel] = useState<StateModel | null>(null);
   const [log, setLog] = useState<TransitionEntry[]>([]);
@@ -66,3 +67,4 @@ export function StateMachine() {
     </div>
   );
 }
+// #EXT-010-REQ-6 End
