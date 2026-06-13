@@ -45,3 +45,16 @@ Let developers configure/extend rules at boot without editing core, while keepin
 
 #### Implements
 - [REQ-5] Developer-Configurable Rule Set
+
+### [TASK-5] Reframe harness capability language as least-privilege, not a sandbox
+
+Align harness docs and docstrings with the directive: structural least-privilege
+and blast-radius control, with the host as the security boundary.
+
+#### Steps
+1. In `jaros/harness/harness.py` and `jaros/harness/capabilities.py`, revise module/class docstrings to describe scoped handles as structural least-privilege + blast-radius control, and add a short "Security boundary" note stating that isolation against hostile code is delegated to the host (process/container/VPC).
+2. Remove or qualify any "sandbox"/"unbreakable"/"secure against hostile code" phrasing that implies an adversarial in-process boundary; keep default-deny/fail-closed described as correctness + auditability properties.
+3. Grep `jaros/harness/**` for `sandbox`, `unbreakable`, and `secure` and confirm remaining uses are framed as least-privilege/auditability, not adversarial isolation.
+
+#### Implements
+- [REQ-6] Capability-Safety Framing and Host Security Boundary

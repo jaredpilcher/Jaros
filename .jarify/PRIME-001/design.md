@@ -264,7 +264,7 @@ realize them. Every spec must stay consistent with this design and the intent.
        |
        |  MECHANISM (the means)
        +-- REQ-1 decouple reasoning/execution .. EXT-001  Reasoning / Execution Boundary
-       +-- REQ-2 durable, replayable state ..... EXT-002  Distributed State Machine
+       +-- REQ-2 durable, replayable state ..... EXT-002  Durable, Replayable State Machine
        +-- REQ-3 agents as lightweight threads . EXT-003  Agent Thread Runtime
        +-- REQ-4 LLM is an interchangeable app . EXT-004  Interchangeable LLM Adapter
        +-- REQ-5 unyielding architectural harness EXT-005 Architectural Harness

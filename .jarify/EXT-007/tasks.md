@@ -48,3 +48,16 @@ Publish live state for watching.
 
 #### Implements
 - [REQ-4] Observable Status and Heartbeat
+
+### [TASK-5] Add the zero-infrastructure architecture check
+
+Make "no server, database, or broker" a structural guarantee enforced by the
+build, alongside the existing plane/no-server/comms checks.
+
+#### Steps
+1. Create `scripts/check_zero_infra.py` that scans `jaros/**.py` and exits non-zero if runtime code imports a database driver, message broker, or external server framework (deny-list: `psycopg`, `pymysql`, `redis`, `pika`, `kafka`, `confluent_kafka`, `pymongo`, `flask`, `fastapi`, `uvicorn`, `aiohttp.web`, `http.server`; treat `sqlite3` as a violation only when used as a system-of-record store, not in tests).
+2. Print each offending `file:line` and the matched import; exit 0 on a clean tree. Add positive/negative fixtures under `tests/` mirroring `check_no_server`/`check_comms` test style.
+3. Wire the check into `pytest` (the architecture-guardrail test that already runs `check_planes`/`check_no_server`/`check_comms`) and into the README "Architecture Guardrails" list.
+
+#### Implements
+- [REQ-6] Zero-Infrastructure Boot

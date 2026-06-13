@@ -1,11 +1,12 @@
 ---
 id: EXT-007
 title: Jaros Runtime Daemon
-status: covered
+status: partial
 priority: high
 implementation:
   - jaros/registry.py
   - jaros/daemon.py
+  - scripts/check_zero_infra.py
 ---
 
 # Jaros Runtime Daemon
@@ -56,3 +57,22 @@ A failing job or agent is contained and recorded; the daemon keeps running.
 - [ ] An exception while running a job is caught, the job is recorded as failed (moved to `failed/` with a reason), and the loop continues.
 - [ ] One failed job/agent never terminates the daemon or affects sibling work.
 - [ ] Failure counts and the last error are reflected in `status.json`.
+
+### [REQ-6] Zero-Infrastructure Boot
+
+The daemon boots and runs the whole OS with **no external server, database, or
+message broker** — only the local/shared file system and in-process threads.
+This makes the zero-infrastructure purpose tenet ([PRIME-001 / P3]) a structural
+guarantee, not a convention, and is enforced by an architecture check shared with
+the communication and state layers (EXT-006 / REQ-6, EXT-002 / REQ-7).
+
+#### Acceptance Criteria
+- [ ] The daemon starts and processes a job with only a data directory present —
+      no database, broker, or external service is required or contacted.
+- [ ] `scripts/check_zero_infra.py` scans `jaros/**` and fails the build if
+      runtime code imports a database driver, message broker, or external server
+      framework (e.g. `sqlite3` as a store, `psycopg`, `redis`, `pika`,
+      `kafka`, `flask`/`fastapi`/`http.server` as a listener), complementing the
+      existing `check_no_server.py` (no listening socket) and `check_comms.py`
+      (no agent-to-agent RPC/network).
+- [ ] The check runs as part of `pytest` and exits 0 on the current tree.

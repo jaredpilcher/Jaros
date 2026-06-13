@@ -4,7 +4,13 @@ Architectural context, system flows, and design specifications for dynamically r
 
 ## System Flows
 
-The dynamic tooling system allows operators to plug new code into the Execution Plane while keeping the Reasoning Plane entirely sandboxed. 
+The dynamic tooling system allows operators to plug new code into the Execution Plane. Each tool registers its own deterministic `validate()`/`execute()` into the gate and executor; capability-safety remains structural least-privilege via harness-granted handles (EXT-005), not a policy-engine permission layer.
+
+> **Note (PRIME-001 revision):** the role-based permission *enforcer* described
+> below (the `role_permission_gate` and `config/permissions.json` action
+> allowlist) is **deprecated and removed** — Jaros is not an
+> agent-authorization/governance product. The validation flow below now ends at
+> the tool's own `validate()`; the "Check role permission" step is gone.
 
 ```text
 Host System (Execution Plane)                   Daemon Sandbox (Execution Plane)
@@ -36,14 +42,17 @@ Reasoning Plane (Non-Deterministic)             Validation & Execution Gates
 
 ## Detailed Specifications
 
-1. **Role Grant Storage**:
-   We extend the `Grants` bundle class to contain a `role: str` parameter, allowing the validation gate and executor to retrieve the spawned agent's assigned role and perform security checks.
-   
-2. **Permission Check Hook**:
-   We register a custom global validation gate check (`role_permission_gate`) that:
-   - Identifies the role of the decision's source (agent).
-   - Looks up the allowed actions for that role in the config (`config/permissions.json`).
-   - Rejects the decision if the action is not allowed for that role.
+1. **Role Grant Storage** *(retained, EXT-005)*:
+   The `Grants`/`GrantSpec` bundle carries a `role: str` that selects the agent's
+   *capability handles* via `BUILTIN_ROLES` (structural least-privilege). This is
+   a capability grant, not an authorization policy.
+
+2. **Permission Check Hook** *(DEPRECATED — removed)*:
+   The `role_permission_gate` validator that read `config/permissions.json` and
+   rejected decisions outside a role's action allowlist is removed. Jaros does
+   not enforce an authorization policy; isolation against hostile code is the
+   host's job (process/container/VPC), and blast-radius is bounded by the
+   capability handles an agent actually holds.
 
 3. **Dynamic Import**:
    We scan `plugins/tools/` (or a configured folder) at boot time using standard-library `importlib.util` to safely exec and load tool modules. Any parsing error is contained, logged, and isolated so the daemon boots normally even if a tool has syntax errors.

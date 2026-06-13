@@ -1,7 +1,7 @@
 ---
 id: EXT-005
 title: Architectural Harness
-status: covered
+status: partial
 priority: high
 implementation:
   - jaros/harness/capabilities.py
@@ -58,3 +58,27 @@ Developers/operators can configure or extend the rule set when constructing the 
 - [ ] The `Harness` accepts a rule set (or rule overrides/extensions) at construction; absent any, it falls back to the built-in default rules.
 - [ ] A developer can add or tighten a rule via this configuration path without editing harness internals.
 - [ ] The configured rule set is frozen after construction; there is no agent-reachable API to mutate it at runtime (fails closed), and `describe_rules()` reflects the active configured set.
+
+### [REQ-6] Capability-Safety Framing and Host Security Boundary
+
+Capability scoping is **structural least-privilege** for correctness and
+blast-radius control — *not* an adversarial sandbox against hostile code sharing
+the interpreter. The directive ([PRIME-001 / P2] and the "is not" boundary) is
+explicit: real isolation against hostile code is the **host's** job (process,
+container, VPC). This requirement makes that framing load-bearing so the harness
+neither markets nor relies on its in-process guards as an adversarial security
+boundary.
+
+#### Acceptance Criteria
+- [ ] The harness's documentation and module/docstring language describe
+      capability scoping as structural least-privilege and blast-radius control,
+      and name the host (process/container/VPC) as the isolation boundary against
+      hostile code.
+- [ ] No spec text, docstring, or comment in the harness layer asserts that
+      in-process guards stop a determined adversary sharing the interpreter
+      (purge "sandbox"/"unbreakable"/"secure against hostile code" claims framed
+      as adversarial).
+- [ ] The guarantees the harness *does* claim — default-deny mediation, no
+      ambient authority, an auditable record of every mediated action — remain
+      enforced (REQ-1…REQ-5) and are stated as correctness/auditability
+      properties, not as an adversarial sandbox.
