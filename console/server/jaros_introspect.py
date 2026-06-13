@@ -110,6 +110,31 @@ def do_replay(data_dir: str) -> dict:
 # #EXT-010-REQ-5 End
 
 
+# #EXT-010-REQ-8 Start
+def do_evals(data_dir: str) -> dict:
+    from jaros.eval import load_cases, run_suite
+    from jaros.execution import executor
+    from jaros.execution.tools import load_custom_tools, reset_tools_registry
+    from jaros.llm import LlmConfig, create_llm_client
+    from jaros.registry import AgentRegistry, load_plugins, register_builtins
+
+    data = Path(data_dir)
+    executor.reset_handlers()
+    reset_tools_registry()
+    llm = create_llm_client(LlmConfig(provider="default"))
+    registry = AgentRegistry()
+    register_builtins(registry, llm)
+    load_plugins(registry, data / "plugins", llm)
+    load_custom_tools(data / "tools")
+
+    cases = load_cases(data / "evals")
+    report = run_suite(cases, registry)
+    out = report.to_dict()
+    out["ok"] = True
+    return out
+# #EXT-010-REQ-8 End
+
+
 def main(argv: list[str]) -> int:
     if not argv:
         print(json.dumps({"error": "missing command"}))
@@ -125,6 +150,11 @@ def main(argv: list[str]) -> int:
                 print(json.dumps({"error": "replay requires <data_dir>"}))
                 return 2
             out = do_replay(argv[1])
+        elif cmd == "evals":
+            if len(argv) < 2:
+                print(json.dumps({"error": "evals requires <data_dir>"}))
+                return 2
+            out = do_evals(argv[1])
         else:
             print(json.dumps({"error": f"unknown command {cmd!r}"}))
             return 2

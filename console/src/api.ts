@@ -57,6 +57,16 @@ export interface StateModel {
   error?: string;
 }
 export interface HarnessModel { rules: Record<string, string>; roles: Record<string, string[]>; error?: string }
+export interface EvalCheck { name: string; ok: boolean; detail: string }
+export interface EvalCaseResult { case: string; passed: boolean; error: string | null; checks: EvalCheck[] }
+export interface EvalReport {
+  total: number;
+  passed: number;
+  failed: number;
+  ok: boolean;
+  results: EvalCaseResult[];
+  error?: string;
+}
 export interface ReplayResult {
   decisions: number;
   applied: number;
@@ -93,6 +103,7 @@ export const api = {
   model: () => get<StateModel>("/model"),
   harness: () => get<HarnessModel>("/harness"),
   replay: () => post<ReplayResult>("/replay", {}),
+  evals: () => post<EvalReport>("/evals", {}),
   schedules: () => get<ScheduleRow[]>("/schedules"),
   createSchedule: (name: string, schedule: Record<string, unknown>) =>
     post<{ name?: string; error?: string }>("/schedules", { name, schedule }),

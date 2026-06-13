@@ -120,3 +120,17 @@ hand.
       written atomically to `schedules/`, and pause/enable or delete an existing one.
 - [x] Schedule names are validated against path traversal; all changes are plain
       shared-FS writes the daemon picks up on its next tick.
+
+### [REQ-8] Run Agent Evaluations
+
+The console runs the agent eval suite (EXT-013) and shows the results, so an
+operator can test agents from the browser.
+
+#### Acceptance Criteria
+- [x] A one-click action runs `evals/*.json` against the data dir's built-in +
+      plugin agents and loaded tools, reporting total/passed/failed and per-case
+      checks.
+- [x] Each case is expandable to its individual checks (name, ok, detail) and any
+      error; the suite status is shown green/failing.
+- [x] The run assembles a deterministic environment and surfaces it read-only —
+      no model-grading, reproducible results.

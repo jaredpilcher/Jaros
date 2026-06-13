@@ -10,6 +10,7 @@ const NAV: { to: string; label: string; ico: string; badge?: (s: Snapshot | null
   { to: "/agents", label: "Agents & Tools", ico: "◆", badge: (s) => (s ? s.counts.plugins + s.counts.tools : undefined) },
   { to: "/replay", label: "Reproducibility", ico: "↻", badge: (s) => s?.counts.decisions },
   { to: "/schedules", label: "Schedules", ico: "⏱" },
+  { to: "/evals", label: "Evaluations", ico: "✓" },
   { to: "/state", label: "State Machine", ico: "⬡" },
   { to: "/harness", label: "Harness", ico: "▤" },
 ];

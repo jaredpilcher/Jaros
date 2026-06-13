@@ -215,6 +215,9 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/replay" && method === "POST") {
       return sendJson(res, 200, await runPython(["replay", DATA_DIR]));
     }
+    if (pathname === "/api/evals" && method === "POST") {
+      return sendJson(res, 200, await runPython(["evals", DATA_DIR]));
+    }
     if (pathname === "/api/events") {
       res.writeHead(200, {
         "content-type": "text/event-stream",

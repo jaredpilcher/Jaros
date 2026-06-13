@@ -13,6 +13,18 @@
       "endLine": 110
     }
   ],
+  "REQ-8": [
+    {
+      "file": "console/server/jaros_introspect.py",
+      "startLine": 113,
+      "endLine": 135
+    },
+    {
+      "file": "console/src/pages/Evals.tsx",
+      "startLine": 6,
+      "endLine": 87
+    }
+  ],
   "REQ-1": [
     {
       "file": "console/server/jarosData.ts",
@@ -39,11 +51,6 @@
       "file": "console/server/jarosData.ts",
       "startLine": 185,
       "endLine": 245
-    },
-    {
-      "file": "console/src/pages/Schedules.tsx",
-      "startLine": 9,
-      "endLine": 130
     }
   ],
   "REQ-2": [

@@ -42,6 +42,12 @@ const schedSrc = path.join(REPO, "examples", "readonly", "schedules");
 for (const f of fs.readdirSync(schedSrc)) {
   if (f.endsWith(".json")) fs.copyFileSync(path.join(schedSrc, f), path.join(data, "schedules", f));
 }
+// Stage example eval cases so the Evaluations page has a suite to run.
+fs.mkdirSync(path.join(data, "evals"), { recursive: true });
+const evalSrc = path.join(REPO, "examples", "readonly", "evals");
+for (const f of fs.readdirSync(evalSrc)) {
+  if (f.endsWith(".json")) fs.copyFileSync(path.join(evalSrc, f), path.join(data, "evals", f));
+}
 
 const env = { ...process.env, JAROS_DATA_DIR: data, JAROS_TICK_MS: "150", JAROS_CONSOLE_API_PORT: String(PORT) };
 const daemon = spawn("python", ["-m", "jaros.cli", "--data-dir", data, "serve"], { cwd: REPO, env, stdio: "ignore" });
@@ -61,7 +67,7 @@ try {
   browser = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ channel: "msedge", headless: true }));
   const page = await browser.newPage({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 2, colorScheme: "dark" });
 
-  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/schedules", "schedules"], ["/state", "state-machine"], ["/harness", "harness"]];
+  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/schedules", "schedules"], ["/evals", "evaluations"], ["/state", "state-machine"], ["/harness", "harness"]];
   for (const [route, name] of routes) {
     await page.goto(base + route, { waitUntil: "domcontentloaded" });
     await sleep(1400); // settle: initial fetches + first live SSE snapshot render
@@ -75,6 +81,12 @@ try {
         await page.locator("button", { hasText: "Replay decision log" }).click({ timeout: 5000 });
         await sleep(2800);
       } catch { /* best-effort: still capture the decision log */ }
+    }
+    if (route === "/evals") {
+      try {
+        await page.locator("button", { hasText: "Run eval suite" }).click({ timeout: 5000 });
+        await sleep(3500); // wait for the eval suite to run + render
+      } catch { /* best-effort */ }
     }
     await page.screenshot({ path: path.join(OUT, `${name}.png`) });
     console.log("[shots] captured", `${name}.png`);

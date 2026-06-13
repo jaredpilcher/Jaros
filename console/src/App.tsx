@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { useLiveSnapshot } from "./api";
 import { Layout } from "./components/Layout";
 import { Agents } from "./pages/Agents";
+import { Evals } from "./pages/Evals";
 import { Harness } from "./pages/Harness";
 import { Jobs } from "./pages/Jobs";
 import { Overview } from "./pages/Overview";
@@ -16,6 +17,7 @@ const PAGES: { path: string; title: string; crumb?: string; el: (snap: ReturnTyp
   { path: "/agents", title: "Agents & Tools", crumb: "runtime extensions", el: () => <Agents /> },
   { path: "/replay", title: "Reproducibility", crumb: "decision log & replay", el: () => <Replay /> },
   { path: "/schedules", title: "Schedules", crumb: "native cron & interval", el: () => <Schedules /> },
+  { path: "/evals", title: "Evaluations", crumb: "reproducible agent tests", el: () => <Evals /> },
   { path: "/state", title: "State Machine", crumb: "durable & replayable", el: () => <StateMachine /> },
   { path: "/harness", title: "Harness", crumb: "capability-safety", el: () => <Harness /> },
 ];
