@@ -22,9 +22,17 @@ That means a misbehaving agent run is debuggable like any other software: **pin 
 
 ![Reproducibility by replay: re-execute recorded decisions to byte-identical state, no model call](docs/replay.gif)
 
+In the [web console](console/) it's one click — browse the durable decision log and replay it, with the reconstructed state, the model-call count, and a byte-identical check shown inline:
+
+![The console's Reproducibility page — the decision log and a replay reconstructing DONE with 0 model calls, byte-identical](console/docs/screenshots/reproducibility.png)
+
 ### 🔒 Capability-safe by construction
 
 Agents hold only the scoped handles the harness grants them — no ambient access to the file system, queues, or network. A bug or a bad decision **cannot reach what it was never given**, and every mediated action leaves an auditable record. This is structural least-privilege for blast-radius control (host-level isolation against hostile code stays the host's job — process, container, VPC).
+
+The console makes that legible — the mediation rules, the role→capability bundles, and the refusal/failure audit, all in one view:
+
+![The console's Harness page — mediation rules, role capability bundles, and the refusal audit](console/docs/screenshots/harness.png)
 
 ### 📦 Zero-infrastructure
 
@@ -100,12 +108,20 @@ custom tools, watch live status, browse the durable decision log, and **replay
 it to byte-identical state** from the browser. It's a host-side companion (a thin
 file-system bridge + SPA); the Jaros node itself stays serverless.
 
+The **Overview** is a glanceable NOC view — live machine state, throughput, the agent pool, and the no-server/database/broker profile, all streamed over the file system:
+
 ![Jaros Console — Overview](console/docs/screenshots/overview.png)
+
+It reflects the *real* runtime, not a hard-coded copy: the **State Machine** view introspects the model straight from `jaros` and renders the live durable transition log beside it.
+
+![Jaros Console — State Machine: the introspected model and the live transition log](console/docs/screenshots/state-machine.png)
 
 ```bash
 cd console && npm install
 JAROS_DATA_DIR=/tmp/jaros-demo npm run dev        # then open http://localhost:5500
 ```
+
+The full page gallery (Jobs, Agents & Tools, and more) lives in the [console README](console/README.md#screenshots).
 
 ---
 
