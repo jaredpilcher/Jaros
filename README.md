@@ -100,6 +100,8 @@ custom tools, watch live status, browse the durable decision log, and **replay
 it to byte-identical state** from the browser. It's a host-side companion (a thin
 file-system bridge + SPA); the Jaros node itself stays serverless.
 
+![Jaros Console — Overview](console/docs/screenshots/overview.png)
+
 ```bash
 cd console && npm install
 JAROS_DATA_DIR=/tmp/jaros-demo npm run dev        # then open http://localhost:5500

@@ -20,6 +20,24 @@ Jaros OS — everything in the Prime Directive, drivable from the browser.
 | **State Machine** | The real state model (introspected from `jaros`) and the live durable transition log. |
 | **Harness** | Capability-safety: mediation rules, role→capability bundles, and the refusal/failure audit. |
 
+## Screenshots
+
+Live captures from a running console (regenerate with `npm run screenshots`).
+
+**Overview** — live status, throughput, agent pool, and the zero-infra profile:
+
+![Overview](docs/screenshots/overview.png)
+
+**Reproducibility** — browse the decision log and replay it to byte-identical state, with no model call:
+
+![Reproducibility](docs/screenshots/reproducibility.png)
+
+**State Machine** — the real model introspected from `jaros`, plus the live transition log:
+
+![State Machine](docs/screenshots/state-machine.png)
+
+More under [`docs/screenshots/`](docs/screenshots/): Jobs, Agents & Tools, Harness.
+
 ## Run it
 
 The console talks to a Jaros data directory. Point it at one and run a daemon
