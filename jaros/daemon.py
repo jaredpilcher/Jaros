@@ -110,11 +110,7 @@ class Daemon:
 
         # Load and wire up dynamic custom execution tools
         from jaros.execution.tools import load_custom_tools
-        load_custom_tools(
-            self.fs.base_dir / "tools",
-            self.harness,
-            Path("config/permissions.json")
-        )
+        load_custom_tools(self.fs.base_dir / "tools")
 
         # --- run-loop bookkeeping -----------------------------------------
         self._active_jobs: set[str] = set()
@@ -259,10 +255,10 @@ class Daemon:
 
         boundary = self.registry.resolve(kind)  # KeyError -> failed/ (REQ-5)
 
-        # Look up role assignment for this agent kind from config
-        from jaros.execution.tools import policy_manager
-        policy = policy_manager.get_policy()
-        role_name = policy.get("assignments", {}).get(kind, "GuestRole")
+        # Spawn each job kind under a fixed least-privilege role. Capability-safety
+        # is structural least-privilege via the harness-granted handles (EXT-005);
+        # Jaros enforces no authorization policy of its own.
+        role_name = "GuestRole"
 
         # Spawn in the harness under its assigned role before running reasoning.
         # Reference-counted so concurrent jobs of the same kind share one grant
@@ -391,11 +387,7 @@ class Daemon:
             load_plugins(self.registry, self.fs.base_dir / "plugins", self.llm)
             # Idempotently scan and register any new custom tools dropped at runtime
             from jaros.execution.tools import load_custom_tools
-            load_custom_tools(
-                self.fs.base_dir / "tools",
-                self.harness,
-                Path("config/permissions.json")
-            )
+            load_custom_tools(self.fs.base_dir / "tools")
         except Exception:  # a bad plugin/tool must never kill the loop
             pass
         self._process_inbox()

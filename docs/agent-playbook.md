@@ -310,20 +310,29 @@ As an agent, you **must conform** to all custom validation policies configured i
 
 ---
 
-## 10. Appendix: Configurable Agent Roles & Permissions (Least Privilege)
+## 10. Appendix: Agent Roles (Structural Least-Privilege)
 
-Jaros models agent permissions using a configurable, file-system-driven **Least-Privilege Role Capability system**.
+Jaros bounds an agent's reach with **capability handles**, not an authorization
+policy. A *role* is just a named bundle of capabilities (`BUILTIN_ROLES` in
+`jaros/harness/capabilities.py`).
 
 ### 1. The Operational Constraint
-As an agent, your action permissions are strictly tied to the logical **Role** you are assigned during execution inside the host-side [**`config/permissions.json`**](../config/permissions.json). You possess no ad-hoc capability grants. If you propose an action for which your role lacks permission, the Validation Gate **fails-closed**, immediately blocks the action, and logs a security violation.
+As an agent, you possess only the scoped handles your role grants — nothing else
+is reachable (no ambient queue, file system, or network). If you request an
+action you lack the capability handle for, the Harness refuses it (default-deny)
+and records the refusal for audit. This is structural least-privilege for
+correctness and blast-radius control — not an adversarial sandbox. Real
+isolation against hostile code is the host's job (process, container, VPC).
 
-### 2. Configuration-Driven Role Assignments
-Role bindings are entirely configuration-driven. The operator maps your agent kind key to its assigned role inside `config/permissions.json` under `"assignments"` (e.g. mapping `"custom_agent"` to `"AnalystRole"`). When the OS Daemon processes your job, it dynamically looks up your assignment, spawns your context inside the Harness, and safely tears it down upon completion.
+### 2. Capability Grants
+When the OS Daemon processes your job, it spawns your context in the Harness
+under a role (a fixed capability bundle), hands you only those handles, and tears
+the context down on completion. Jaros loads and enforces no external
+action-allowlist policy file.
 
-### 3. Dynamic Host Tools & Cached Reloading
+### 3. Dynamic Host Tools
 *   **Custom Tools**: Operators and agents can dynamically define namespaced host execution tools (such as `"db.accounts.read"`) by dropping a Python class conforming to the custom tool protocol inside the watched `.jaros-data/tools/` folder.
-*   **Zero-Restart Updates**: The OS Daemon re-scans the `tools/` folder dynamically on tick heartbeats. A high-performance `PolicyManager` monitors file modification times on the host, refreshing the policy memory cache instantly when `permissions.json` changes. Any permission update, custom tool registration, or role assignment is picked up at runtime instantly without restarts!
-*   **Layered Local Overrides**: To allow developers and operators to customize their local environment without accidentally committing their changes, the system supports an optional, git-ignored local override file: `config/permissions.local.json`. If present, the `PolicyManager` dynamically deep-merges it into the tracked defaults inside `config/permissions.json`. This enables developers to update repository-wide defaults while letting each host maintain its own private custom roles and assignments.
+*   **Zero-Restart Updates**: The OS Daemon re-scans the `tools/` folder dynamically on tick heartbeats, loading and registering new tools at runtime without restarts. Each tool contributes its own deterministic `validate()` to the gate and `execute()` handler to the executor.
 
 
 
