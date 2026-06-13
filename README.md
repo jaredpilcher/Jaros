@@ -69,6 +69,9 @@ It is deliberately **not**: a hardened security sandbox, a cluster-scale distrib
 
 ## Quickstart
 
+For the full day-one-to-production path (first agent → schedule → eval → replay →
+console → distributed Docker), see **[docs/getting-started.md](docs/getting-started.md)**.
+
 ```bash
 pip install -e ".[dev]"
 ```
