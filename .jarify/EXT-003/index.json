@@ -6,28 +6,16 @@
       "endLine": 139
     }
   ],
-  "REQ-1": [
-    {
-      "file": "jaros/runtime/lifecycle.py",
-      "startLine": 17,
-      "endLine": 51
-    },
-    {
-      "file": "jaros/runtime/agent_thread.py",
-      "startLine": 29,
-      "endLine": 122
-    }
-  ],
   "REQ-4": [
-    {
-      "file": "jaros/runtime/agent_thread.py",
-      "startLine": 30,
-      "endLine": 121
-    },
     {
       "file": "jaros/runtime/agent_pool.py",
       "startLine": 39,
       "endLine": 172
+    },
+    {
+      "file": "jaros/runtime/agent_thread.py",
+      "startLine": 30,
+      "endLine": 121
     }
   ],
   "REQ-2": [
@@ -35,6 +23,18 @@
       "file": "jaros/runtime/agent_pool.py",
       "startLine": 38,
       "endLine": 173
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "jaros/runtime/agent_thread.py",
+      "startLine": 29,
+      "endLine": 122
+    },
+    {
+      "file": "jaros/runtime/lifecycle.py",
+      "startLine": 17,
+      "endLine": 51
     }
   ]
 }

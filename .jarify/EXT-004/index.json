@@ -18,7 +18,7 @@
       "endLine": 43
     },
     {
-      "file": "jaros/llm/adapters/default_adapter.py",
+      "file": "jaros/llm/adapters/uppercase_adapter.py",
       "startLine": 15,
       "endLine": 29
     },
@@ -28,7 +28,7 @@
       "endLine": 36
     },
     {
-      "file": "jaros/llm/adapters/uppercase_adapter.py",
+      "file": "jaros/llm/adapters/default_adapter.py",
       "startLine": 15,
       "endLine": 29
     }
