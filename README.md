@@ -92,6 +92,21 @@ python tests/integration/run_container_demo.py    # full Docker container run
 
 ---
 
+## Web console
+
+A TypeScript + React administrative and monitoring interface for a running Jaros
+OS lives in **[`console/`](console/)** — submit jobs, install plugin agents and
+custom tools, watch live status, browse the durable decision log, and **replay
+it to byte-identical state** from the browser. It's a host-side companion (a thin
+file-system bridge + SPA); the Jaros node itself stays serverless.
+
+```bash
+cd console && npm install
+JAROS_DATA_DIR=/tmp/jaros-demo npm run dev        # then open http://localhost:5500
+```
+
+---
+
 ## How it works
 
 ![Jaros architecture: Reasoning Plane proposes decisions; the harness validates and the deterministic Execution Plane runs them](docs/architecture.png)
