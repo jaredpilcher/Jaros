@@ -102,9 +102,13 @@ def apply(
         logger.warning("decision %r refused: %s", validated.id, reason)
         return ExecutionResult(applied=False, reason=reason, accepted=validated)
 
-    # Record the accepted decision durably before any effect is observable.
+    # #EXT-001-REQ-7 Start
+    # The accepted decision is the run's sole replayable non-deterministic input.
+    # Record it durably (via the hook) before any effect is observable, so the
+    # run can be re-executed from recorded decisions alone (EXT-002 / REQ-6).
     if on_accept is not None:
         on_accept(validated)
+    # #EXT-001-REQ-7 End
 
     output = handler(validated, **collaborators)
     return ExecutionResult(applied=True, output=output, accepted=validated)

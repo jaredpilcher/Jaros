@@ -34,6 +34,7 @@ from jaros.state.model import (
     is_state,
     list_transitions,
 )
+from jaros.state.coordination import FileCoordinator
 from jaros.state.decision_log import (
     DecisionLog,
     DecisionRecord,
@@ -72,4 +73,6 @@ __all__ = [
     "record_decision",
     "read_decisions",
     "replay",
+    # coordination
+    "FileCoordinator",
 ]
