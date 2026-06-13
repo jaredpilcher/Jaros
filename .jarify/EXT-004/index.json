@@ -11,14 +11,14 @@
       "endLine": 29
     },
     {
-      "file": "jaros/llm/adapters/ollama_adapter.py",
-      "startLine": 6,
-      "endLine": 36
-    },
-    {
       "file": "jaros/llm/adapters/uppercase_adapter.py",
       "startLine": 15,
       "endLine": 29
+    },
+    {
+      "file": "jaros/llm/adapters/ollama_adapter.py",
+      "startLine": 6,
+      "endLine": 36
     }
   ],
   "REQ-4": [
