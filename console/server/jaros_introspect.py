@@ -86,6 +86,11 @@ def do_replay(data_dir: str) -> dict:
     except Exception:
         pass
 
+    def replay_once_bytes() -> bytes:
+        log = TransitionLog(Path(tempfile.mkdtemp(prefix="jaros-replay-")))
+        replay(decision_log, executor.apply, log=log)
+        return log.path.read_bytes()
+
     fresh = TransitionLog(Path(tempfile.mkdtemp(prefix="jaros-replay-")))
     results = replay(decision_log, executor.apply, log=fresh)
     final_state = recover(fresh)
@@ -99,11 +104,18 @@ def do_replay(data_dir: str) -> dict:
     except Exception:
         byte_identical = False
 
+    # Determinism check: the byte-identical guarantee holds only if handlers are
+    # deterministic. Replay again into isolated state and confirm they agree —
+    # divergence flags a non-deterministic handler (EXT-001 / REQ-7).
+    from jaros.execution import replays_agree
+    deterministic = replays_agree(replay_once_bytes, runs=2)
+
     return {
         "decisions": recorded,
         "applied": sum(1 for r in results if getattr(r, "applied", False)),
         "finalState": final_state,
         "byteIdentical": byte_identical,
+        "deterministic": deterministic,
         "modelCalls": 0,
         "ok": True,
     }

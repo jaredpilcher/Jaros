@@ -20,6 +20,8 @@ The only non-determinism in a run is the model's output, captured as inert `Deci
 
 That means a misbehaving agent run is debuggable like any other software: **pin the decision log, replay, reproduce, fix, re-run identically.** No "it only happens sometimes."
 
+The guarantee rests on one precondition — **executor handlers must be deterministic** functions of the decision and state — and Jaros doesn't just assume it: replay runs twice into isolated state and **flags any non-deterministic handler** (the console shows `deterministic` next to `byte-identical`; `jaros.execution.replays_agree` checks it in CI). Non-determinism that belongs in a run — a clock read, a random choice, external I/O — goes *outside* the handler or is captured as a decision, which is itself recorded and replayed.
+
 ![Reproducibility by replay: re-execute recorded decisions to byte-identical state, no model call](docs/replay.gif)
 
 In the [web console](console/) it's one click — browse the durable decision log and replay it, with the reconstructed state, the model-call count, and a byte-identical check shown inline:

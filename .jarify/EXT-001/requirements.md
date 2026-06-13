@@ -92,3 +92,8 @@ replay driver live in EXT-002 ([REQ-6]).
 - [ ] The executor exposes a hook (or returns the accepted decision) so the
       durable log (EXT-002 / REQ-6) can record each accepted `Decision` in commit
       order before its effects are observable.
+- [ ] Handler determinism — the precondition for byte-identical replay — is
+      checkable, not assumed: `jaros.execution.replays_agree` confirms that
+      replaying the same recorded decisions into isolated state agrees, and
+      divergence flags a non-deterministic handler (surfaced as replay's
+      `deterministic` result).

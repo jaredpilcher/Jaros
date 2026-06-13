@@ -72,6 +72,7 @@ export interface ReplayResult {
   applied: number;
   finalState: string;
   byteIdentical: boolean;
+  deterministic: boolean;
   modelCalls: number;
   ok: boolean;
   error?: string;

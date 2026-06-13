@@ -45,7 +45,13 @@ export function Replay() {
             <div className="grid cols-4">
               <div className="stat"><div className="label">Decisions replayed</div><div className="value">{result.decisions}</div></div>
               <div className="stat"><div className="label">Reconstructed state</div><div className="value green" style={{ fontSize: 22 }}>{result.finalState}</div></div>
-              <div className="stat"><div className="label">Model calls</div><div className="value">{result.modelCalls}</div><div className="foot">deterministic re-execution</div></div>
+              <div className="stat">
+                <div className="label">Handlers</div>
+                <div style={{ marginTop: 8 }}>
+                  <Pill tone={result.deterministic ? "ok" : "bad"}>{result.deterministic ? "deterministic" : "non-deterministic"}</Pill>
+                </div>
+                <div className="foot">{result.deterministic ? "isolated replays agree — guarantee holds" : "replays diverge — a handler is non-deterministic"}</div>
+              </div>
               <div className="stat">
                 <div className="label">Byte-identical</div>
                 <div style={{ marginTop: 8 }}>
