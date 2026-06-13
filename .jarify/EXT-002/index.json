@@ -21,8 +21,8 @@
   "REQ-1": [
     {
       "file": "jaros/state/model.py",
-      "startLine": 17,
-      "endLine": 87
+      "startLine": 18,
+      "endLine": 88
     }
   ],
   "REQ-2": [

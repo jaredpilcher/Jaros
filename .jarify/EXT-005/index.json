@@ -1,4 +1,25 @@
 {
+  "REQ-1": [
+    {
+      "file": "jaros/harness/harness.py",
+      "startLine": 54,
+      "endLine": 94
+    }
+  ],
+  "REQ-5": [
+    {
+      "file": "jaros/harness/harness.py",
+      "startLine": 114,
+      "endLine": 120
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/harness/harness.py",
+      "startLine": 97,
+      "endLine": 223
+    }
+  ],
   "REQ-4": [
     {
       "file": "jaros/harness/rules.py",
@@ -6,32 +27,11 @@
       "endLine": 68
     }
   ],
-  "REQ-1": [
-    {
-      "file": "jaros/harness/harness.py",
-      "startLine": 49,
-      "endLine": 89
-    }
-  ],
-  "REQ-5": [
-    {
-      "file": "jaros/harness/harness.py",
-      "startLine": 109,
-      "endLine": 115
-    }
-  ],
-  "REQ-2": [
-    {
-      "file": "jaros/harness/harness.py",
-      "startLine": 92,
-      "endLine": 218
-    }
-  ],
   "REQ-3": [
     {
       "file": "jaros/harness/capabilities.py",
-      "startLine": 26,
-      "endLine": 266
+      "startLine": 32,
+      "endLine": 272
     }
   ]
 }

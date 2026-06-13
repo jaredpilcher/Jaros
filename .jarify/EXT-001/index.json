@@ -1,4 +1,25 @@
 {
+  "REQ-4": [
+    {
+      "file": "jaros/execution/executor.py",
+      "startLine": 29,
+      "endLine": 46
+    }
+  ],
+  "REQ-7": [
+    {
+      "file": "jaros/execution/executor.py",
+      "startLine": 105,
+      "endLine": 111
+    }
+  ],
+  "REQ-6": [
+    {
+      "file": "jaros/execution/executor.py",
+      "startLine": 49,
+      "endLine": 115
+    }
+  ],
   "REQ-3": [
     {
       "file": "jaros/core/decision_gate.py",
@@ -40,27 +61,6 @@
       "file": "jaros/core/reasoning_boundary.py",
       "startLine": 16,
       "endLine": 27
-    }
-  ],
-  "REQ-4": [
-    {
-      "file": "jaros/execution/executor.py",
-      "startLine": 29,
-      "endLine": 46
-    }
-  ],
-  "REQ-7": [
-    {
-      "file": "jaros/execution/executor.py",
-      "startLine": 105,
-      "endLine": 111
-    }
-  ],
-  "REQ-6": [
-    {
-      "file": "jaros/execution/executor.py",
-      "startLine": 49,
-      "endLine": 115
     }
   ]
 }
