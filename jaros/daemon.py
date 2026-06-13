@@ -124,6 +124,9 @@ class Daemon:
         self._schedules_dir.mkdir(parents=True, exist_ok=True)
         self.scheduler = Scheduler(self.fs.base_dir / "state" / "schedules.state.json")
 
+        # Recover any job a crashed instance left mid-claim, back to the inbox.
+        self._reclaim_orphaned_claims()
+
         # Register the deterministic executor handler for the built-in kinds.
         executor.register_handler(ADVANCE_KIND, self._advance_handler)
         executor.register_handler("fs.write", self._fs_write_handler)
@@ -209,28 +212,49 @@ class Daemon:
     # -- inbox ingestion + fault isolation ----------------------------------
 
     # #EXT-007-REQ-5 Start
-    def _process_inbox(self) -> None:
-        """Process every job descriptor currently in ``inbox/`` in parallel.
+    def _reclaim_orphaned_claims(self) -> None:
+        """Return any claimed-but-unfinished jobs to the inbox (at-least-once).
 
-        For each ``inbox/*.json`` ``{id, kind, input}``: submit the job execution
-        lifecycle to the bounded thread pool. Running slots are reaped and new
-        work is admitted up to the configurable concurrency bound.
+        Run once at boot: a job left in ``claimed/`` by a crashed instance is moved
+        back to ``inbox/`` so it is processed again. (The queue contract is
+        at-least-once; agents are idempotent — the read-only ones trivially so.)
+        """
+        claimed = self.fs.base_dir / "claimed"
+        if not claimed.is_dir():
+            return
+        inbox = self.fs.base_dir / "inbox"
+        inbox.mkdir(parents=True, exist_ok=True)
+        for job_path in sorted(claimed.glob("*.json")):
+            try:
+                os.replace(job_path, inbox / job_path.name)
+            except OSError:
+                pass
+
+    def _process_inbox(self) -> None:
+        """Atomically claim each inbox job (multi-node safe) and process it.
+
+        The claim is an atomic rename ``inbox/<id> -> claimed/<id>``. On a shared
+        volume only ONE daemon wins that rename for a given job; sibling nodes get
+        ``ENOENT`` and skip it, so the same job is never processed twice across
+        containers — bounded multi-node coordination over the shared file system
+        (EXT-002 / REQ-7). The winner runs the job, then moves ``claimed/ ->
+        processed/`` or ``failed/``. Work admitted up to the pool's bound.
         """
         inbox = self.fs.base_dir / "inbox"
+        claimed_dir = self.fs.base_dir / "claimed"
+        claimed_dir.mkdir(parents=True, exist_ok=True)
         for job_path in sorted(inbox.glob("*.json")):
-            job_name = job_path.name
-            with self._lock:
-                if job_name in self._active_jobs:
-                    continue
-                self._active_jobs.add(job_name)
+            # #EXT-002-REQ-7 Start
+            claimed = claimed_dir / job_path.name
+            try:
+                os.replace(job_path, claimed)  # atomic claim; the loser gets ENOENT
+            except OSError:
+                continue  # another node already claimed it (or it vanished)
+            # #EXT-002-REQ-7 End
 
-            def _job_runner_factory(path=job_path, name=job_name):
+            def _job_runner_factory(path=claimed):
                 def _body():
-                    try:
-                        self._execute_job_lifecycle(path)
-                    finally:
-                        with self._lock:
-                            self._active_jobs.discard(name)
+                    self._execute_job_lifecycle(path)
                 return AgentThread.spawn(f"job-{path.stem}", _body)
 
             self.pool.submit(_job_runner_factory)

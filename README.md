@@ -216,7 +216,7 @@ jaros submit advance --input '{}' --data-dir .jaros-data
 Because the control plane is files only, scheduling is decoupled and needs no broker:
 
 - **Host-side cron** — any scheduler (`cron`, Kubernetes `CronJob`, Task Scheduler) can `jaros submit`.
-- **Multi-container ingest** — run several daemons on the same shared dir; they coordinate over the file system. The first daemon to atomically move `inbox/<id>.json` to `processed/` owns the job; siblings skip it (bounded multi-node, no consensus service).
+- **Multi-container ingest** — run several daemons on the same shared dir; they coordinate over the file system. Each job is claimed by an atomic `inbox/<id>.json → claimed/<id>.json` rename, so exactly one node processes it and siblings skip it (bounded multi-node, no consensus service). A crashed node's in-flight claim is reclaimed to the inbox on the next boot.
 
 ---
 
