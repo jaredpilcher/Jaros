@@ -246,6 +246,46 @@ def cmd_logs(data_dir: Path, stream=None) -> int:
 # #EXT-008-REQ-4 End
 
 
+# #EXT-013-REQ-4 Start
+def cmd_eval(data_dir: Path, stream=None) -> int:
+    """Run the agent eval suite in ``<data>/evals`` and print a pass/fail report.
+
+    Assembles a deterministic eval environment from the data dir — built-in +
+    plugin agents and the read-only/custom tool handlers — then runs every case
+    in ``evals/*.json``. Returns 0 iff all cases pass. Reads/loads only the shared
+    FS; no network.
+    """
+    out = stream if stream is not None else sys.stdout
+    from jaros.eval import load_cases, run_suite
+    from jaros.execution.tools import load_custom_tools
+    from jaros.llm import LlmConfig, create_llm_client
+    from jaros.registry import AgentRegistry, load_plugins, register_builtins
+
+    llm = create_llm_client(LlmConfig(provider="default"))
+    registry = AgentRegistry()
+    register_builtins(registry, llm)
+    load_plugins(registry, data_dir / "plugins", llm)
+    load_custom_tools(data_dir / "tools")  # register tool handlers for result checks
+
+    cases = load_cases(data_dir / "evals")
+    if not cases:
+        print(f"no eval cases found in {data_dir / 'evals'}", file=out)
+        return 1
+
+    report = run_suite(cases, registry)
+    for r in report.results:
+        print(f"[{'PASS' if r.passed else 'FAIL'}] {r.case}", file=out)
+        if not r.passed:
+            if r.error:
+                print(f"       error: {r.error}", file=out)
+            for c in r.checks:
+                if not c.ok:
+                    print(f"       - {c.name}: {c.detail}", file=out)
+    print(f"\n{report.passed}/{report.total} eval cases passed", file=out)
+    return 0 if report.ok else 1
+# #EXT-013-REQ-4 End
+
+
 # #EXT-008-REQ-1 Start
 def _build_parser() -> argparse.ArgumentParser:
     """Construct the argparse parser with ``--data-dir`` + subcommands.
@@ -300,6 +340,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     add_command("logs", "print the daemon log file if present")
+    add_command("eval", "run the agent eval suite in evals/")
     return parser
 
 
@@ -377,6 +418,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "logs":
         return cmd_logs(data_dir)
+
+    if args.command == "eval":
+        return cmd_eval(data_dir)
 
     parser.error(f"unknown command: {args.command!r}")  # pragma: no cover
     return 2  # pragma: no cover

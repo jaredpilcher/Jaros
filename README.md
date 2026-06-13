@@ -249,6 +249,7 @@ Structural constraints are enforced by automated checks (run with `pytest`), so 
 | Admin & Monitoring Console | [EXT-010](.jarify/EXT-010/requirements.md) | Host-side TypeScript + React console: monitor, submit, install, replay |
 | Native Agent Scheduling | [EXT-011](.jarify/EXT-011/requirements.md) | File-based cron + interval + one-shot scheduling, crash-safe, no external cron |
 | Read-Only Agent Library | [EXT-012](.jarify/EXT-012/requirements.md) | Many drop-in read-only agents + tools (health, disk, inventory, text) — run concurrently |
+| Agent Evaluation Framework | [EXT-013](.jarify/EXT-013/requirements.md) | Reproducible, declarative agent evals (`jaros eval`) — input → expected decision/result |
 
 The full system-wide design lives in [`.jarify/PRIME-001/design.md`](.jarify/PRIME-001/design.md).
 
