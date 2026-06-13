@@ -182,6 +182,68 @@ export function installModule(area: "plugins" | "tools", name: string, source: s
 }
 // #EXT-010-REQ-4 End
 
+// #EXT-010-REQ-7 Start
+export interface ScheduleFile {
+  name?: string;
+  id?: string;
+  kind?: string;
+  input?: unknown;
+  enabled?: boolean;
+  every_seconds?: number;
+  cron?: string;
+  at?: string;
+}
+
+interface LiveSchedule {
+  id: string;
+  trigger?: string;
+  lastRun?: string | null;
+  nextRun?: string | null;
+}
+
+/** Read the operator schedule files (schedules/*.json), merged with live timing. */
+export function getSchedules(): (ScheduleFile & { trigger?: string; lastRun?: string | null; nextRun?: string | null })[] {
+  const status = getStatus() as unknown as { schedules?: LiveSchedule[] } | null;
+  const live: LiveSchedule[] = status?.schedules ?? [];
+  const byId = new Map(live.map((s) => [s.id, s] as const));
+  return listFiles("schedules", ".json").map((file) => {
+    const name = file.replace(/\.json$/, "");
+    const body: ScheduleFile = readJsonSafe<ScheduleFile>(`schedules/${file}`) ?? {};
+    const timing = body.id ? byId.get(body.id) : undefined;
+    return { ...body, name, trigger: timing?.trigger, lastRun: timing?.lastRun ?? null, nextRun: timing?.nextRun ?? null };
+  });
+}
+
+/** Atomically write/replace a schedule file (operator action). */
+export function writeSchedule(name: string, body: Record<string, unknown>): { name: string } {
+  const safe = name.endsWith(".json") ? name : `${name}.json`;
+  if (safe.includes("/") || safe.includes("\\") || safe.startsWith(".")) {
+    throw new Error("invalid schedule name");
+  }
+  const dir = abs("schedules");
+  fs.mkdirSync(dir, { recursive: true });
+  const tmp = path.join(dir, `.tmp-${randomUUID()}`);
+  const dest = path.join(dir, safe);
+  fs.writeFileSync(tmp, JSON.stringify(body, null, 2), "utf-8");
+  fs.renameSync(tmp, dest);
+  return { name: safe };
+}
+
+/** Remove a schedule file (operator action). */
+export function deleteSchedule(name: string): { removed: boolean } {
+  const safe = name.endsWith(".json") ? name : `${name}.json`;
+  if (safe.includes("/") || safe.includes("\\") || safe.startsWith(".")) {
+    throw new Error("invalid schedule name");
+  }
+  try {
+    fs.unlinkSync(abs(`schedules/${safe}`));
+    return { removed: true };
+  } catch {
+    return { removed: false };
+  }
+}
+// #EXT-010-REQ-7 End
+
 export function dataDirExists(): boolean {
   try {
     return fs.statSync(DATA_DIR).isDirectory();

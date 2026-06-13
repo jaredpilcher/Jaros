@@ -18,15 +18,18 @@ import { fileURLToPath } from "node:url";
 import {
   DATA_DIR,
   dataDirExists,
+  deleteSchedule,
   getDecisions,
   getJobs,
   getOutbox,
   getPlugins,
+  getSchedules,
   getStatus,
   getTools,
   getTransitions,
   installModule,
   submitJob,
+  writeSchedule,
 } from "./jarosData";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -174,6 +177,29 @@ const server = http.createServer(async (req, res) => {
       }
       try {
         return sendJson(res, 200, installModule(area, String(body.name), body.source));
+      } catch (e) {
+        return sendJson(res, 400, { error: (e as Error).message });
+      }
+    }
+    if (pathname === "/api/schedules" && method === "GET") {
+      return sendJson(res, 200, getSchedules());
+    }
+    if (pathname === "/api/schedules" && method === "POST") {
+      const body = JSON.parse((await readBody(req)) || "{}");
+      if (!body.name || !body.schedule) {
+        return sendJson(res, 400, { error: "name and schedule are required" });
+      }
+      try {
+        return sendJson(res, 200, writeSchedule(String(body.name), body.schedule));
+      } catch (e) {
+        return sendJson(res, 400, { error: (e as Error).message });
+      }
+    }
+    if (pathname === "/api/schedules" && method === "DELETE") {
+      const name = url.searchParams.get("name");
+      if (!name) return sendJson(res, 400, { error: "name query param required" });
+      try {
+        return sendJson(res, 200, deleteSchedule(name));
       } catch (e) {
         return sendJson(res, 400, { error: (e as Error).message });
       }

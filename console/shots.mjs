@@ -30,8 +30,17 @@ async function waitFor(fn, timeout = 30000) {
 const data = fs.mkdtempSync(path.join(os.tmpdir(), "jaros-shots-data-"));
 for (const area of ["plugins", "tools"]) {
   fs.mkdirSync(path.join(data, area), { recursive: true });
-  const src = path.join(REPO, "examples", area);
-  for (const f of fs.readdirSync(src)) fs.copyFileSync(path.join(src, f), path.join(data, area, f));
+  for (const root of [path.join(REPO, "examples", area), path.join(REPO, "examples", "readonly", area)]) {
+    for (const f of fs.readdirSync(root)) {
+      if (f.endsWith(".py")) fs.copyFileSync(path.join(root, f), path.join(data, area, f));
+    }
+  }
+}
+// Stage example schedules so the Schedules page shows live next/last-run timing.
+fs.mkdirSync(path.join(data, "schedules"), { recursive: true });
+const schedSrc = path.join(REPO, "examples", "readonly", "schedules");
+for (const f of fs.readdirSync(schedSrc)) {
+  if (f.endsWith(".json")) fs.copyFileSync(path.join(schedSrc, f), path.join(data, "schedules", f));
 }
 
 const env = { ...process.env, JAROS_DATA_DIR: data, JAROS_TICK_MS: "150", JAROS_CONSOLE_API_PORT: String(PORT) };
@@ -52,7 +61,7 @@ try {
   browser = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ channel: "msedge", headless: true }));
   const page = await browser.newPage({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 2, colorScheme: "dark" });
 
-  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/state", "state-machine"], ["/harness", "harness"]];
+  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/schedules", "schedules"], ["/state", "state-machine"], ["/harness", "harness"]];
   for (const [route, name] of routes) {
     await page.goto(base + route, { waitUntil: "domcontentloaded" });
     await sleep(1400); // settle: initial fetches + first live SSE snapshot render

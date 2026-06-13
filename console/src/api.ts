@@ -36,6 +36,19 @@ export interface DecisionRecord {
 }
 export interface TransitionEntry { index: number; event: string; state: string; checksum: string }
 export interface Agents { plugins: string[]; tools: string[] }
+export interface ScheduleRow {
+  name: string;
+  id?: string;
+  kind?: string;
+  input?: unknown;
+  enabled?: boolean;
+  every_seconds?: number;
+  cron?: string;
+  at?: string;
+  trigger?: string;
+  lastRun?: string | null;
+  nextRun?: string | null;
+}
 export interface StateModel {
   states: string[];
   events: string[];
@@ -80,6 +93,13 @@ export const api = {
   model: () => get<StateModel>("/model"),
   harness: () => get<HarnessModel>("/harness"),
   replay: () => post<ReplayResult>("/replay", {}),
+  schedules: () => get<ScheduleRow[]>("/schedules"),
+  createSchedule: (name: string, schedule: Record<string, unknown>) =>
+    post<{ name?: string; error?: string }>("/schedules", { name, schedule }),
+  deleteSchedule: async (name: string) => {
+    const r = await fetch(`/api/schedules?name=${encodeURIComponent(name)}`, { method: "DELETE" });
+    return (await r.json()) as { removed?: boolean; error?: string };
+  },
 };
 
 /** Subscribe to the live event stream; falls back to polling if SSE drops. */

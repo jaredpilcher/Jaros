@@ -1,26 +1,56 @@
 {
-  "REQ-1": [
-    { "file": "console/server/jarosData.ts", "startLine": 14, "endLine": 152 }
-  ],
-  "REQ-2": [
-    { "file": "console/server/index.ts", "startLine": 77, "endLine": 103 },
-    { "file": "console/src/pages/Overview.tsx", "startLine": 6, "endLine": 82 }
-  ],
-  "REQ-3": [
-    { "file": "console/server/jarosData.ts", "startLine": 154, "endLine": 166 },
-    { "file": "console/src/pages/Jobs.tsx", "startLine": 12, "endLine": 121 }
-  ],
-  "REQ-4": [
-    { "file": "console/server/jarosData.ts", "startLine": 168, "endLine": 183 },
-    { "file": "console/src/pages/Agents.tsx", "startLine": 39, "endLine": 110 }
+  "REQ-6": [
+    {
+      "file": "console/server/jaros_introspect.py",
+      "startLine": 21,
+      "endLine": 50
+    }
   ],
   "REQ-5": [
-    { "file": "console/server/jaros_introspect.py", "startLine": 53, "endLine": 110 },
-    { "file": "console/src/pages/Replay.tsx", "startLine": 6, "endLine": 100 }
+    {
+      "file": "console/server/jaros_introspect.py",
+      "startLine": 53,
+      "endLine": 110
+    }
   ],
-  "REQ-6": [
-    { "file": "console/server/jaros_introspect.py", "startLine": 21, "endLine": 50 },
-    { "file": "console/src/pages/StateMachine.tsx", "startLine": 6, "endLine": 70 },
-    { "file": "console/src/pages/Harness.tsx", "startLine": 6, "endLine": 86 }
+  "REQ-1": [
+    {
+      "file": "console/server/jarosData.ts",
+      "startLine": 14,
+      "endLine": 152
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "console/server/jarosData.ts",
+      "startLine": 154,
+      "endLine": 166
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "console/server/jarosData.ts",
+      "startLine": 168,
+      "endLine": 183
+    }
+  ],
+  "REQ-7": [
+    {
+      "file": "console/server/jarosData.ts",
+      "startLine": 185,
+      "endLine": 245
+    },
+    {
+      "file": "console/src/pages/Schedules.tsx",
+      "startLine": 9,
+      "endLine": 130
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "console/server/index.ts",
+      "startLine": 80,
+      "endLine": 106
+    }
   ]
 }

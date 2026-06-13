@@ -7,6 +7,7 @@ import { Harness } from "./pages/Harness";
 import { Jobs } from "./pages/Jobs";
 import { Overview } from "./pages/Overview";
 import { Replay } from "./pages/Replay";
+import { Schedules } from "./pages/Schedules";
 import { StateMachine } from "./pages/StateMachine";
 
 const PAGES: { path: string; title: string; crumb?: string; el: (snap: ReturnType<typeof useLiveSnapshot>) => JSX.Element }[] = [
@@ -14,6 +15,7 @@ const PAGES: { path: string; title: string; crumb?: string; el: (snap: ReturnTyp
   { path: "/jobs", title: "Jobs", crumb: "submit & inspect", el: () => <Jobs /> },
   { path: "/agents", title: "Agents & Tools", crumb: "runtime extensions", el: () => <Agents /> },
   { path: "/replay", title: "Reproducibility", crumb: "decision log & replay", el: () => <Replay /> },
+  { path: "/schedules", title: "Schedules", crumb: "native cron & interval", el: () => <Schedules /> },
   { path: "/state", title: "State Machine", crumb: "durable & replayable", el: () => <StateMachine /> },
   { path: "/harness", title: "Harness", crumb: "capability-safety", el: () => <Harness /> },
 ];

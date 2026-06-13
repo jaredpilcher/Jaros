@@ -106,3 +106,17 @@ never a hard-coded copy.
       capability bundles are read live from `jaros.harness` and rendered.
 - [x] The capability-safety framing is shown as structural least-privilege (not an
       adversarial sandbox), with the contained-failure/refusal audit surfaced.
+
+### [REQ-7] Schedule Management
+
+The console exposes native scheduling (EXT-011) as an operator workflow — view,
+create, pause/enable, and delete schedules without touching the file system by
+hand.
+
+#### Acceptance Criteria
+- [x] The console lists the operator schedules (`schedules/*.json`) with their
+      trigger, enabled state, and live last/next run (merged from `status.json`).
+- [x] An operator can create a schedule (interval / cron / one-shot) that is
+      written atomically to `schedules/`, and pause/enable or delete an existing one.
+- [x] Schedule names are validated against path traversal; all changes are plain
+      shared-FS writes the daemon picks up on its next tick.
