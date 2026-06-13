@@ -20,6 +20,11 @@ Guarantees:
 - **Developer-configurable (REQ-5)**: ``Harness(rules=...)`` accepts an override
   rule set at boot; absent one, the built-in defaults apply. The result is
   frozen after construction.
+
+Security boundary (REQ-6): the harness's default-deny mediation and capability
+scoping are **structural least-privilege** and auditability properties — not an
+adversarial sandbox. Isolation against hostile code is delegated to the host
+(process, container, VPC).
 """
 
 from __future__ import annotations

@@ -1,9 +1,15 @@
-"""Capability/handle model for the Architectural Harness (EXT-005 / REQ-3).
+"""Capability/handle model for the Architectural Harness (EXT-005 / REQ-3, REQ-6).
 
 Agents hold no ambient power. They receive only the specific, scoped handles the
 harness grants them; those handles wrap the underlying :class:`~jaros.comms.queue.Queue`
 and :class:`~jaros.comms.fs.SharedFileSystem` so an agent can never reach the raw
 modules, other queues, other paths, or the network.
+
+Security boundary (EXT-005 / REQ-6): capability scoping here is **structural
+least-privilege** for correctness and blast-radius control — a bug or bad
+decision cannot touch what it was never granted. It is *not* an adversarial
+sandbox against hostile code sharing the interpreter; real isolation against
+hostile code is the host's job (process, container, VPC).
 
 A capability is a small, frozen descriptor (``QueueSend``, ``QueueReceive``,
 ``FsWrite``, ``FsRead``). A :class:`GrantSpec` bundles the capabilities a single

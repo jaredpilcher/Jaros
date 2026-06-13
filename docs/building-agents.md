@@ -88,7 +88,7 @@ class GreeterAgent(ReasoningBoundary):
 
 ---
 
-## Step 2 — Get Capabilities from the Harness (Sandboxing)
+## Step 2 — Get Capabilities from the Harness (Capability Scoping)
 
 The OS spawner mints **only** the scoped handles you grant. The agent has no ambient access to anything else.
 
@@ -189,7 +189,7 @@ if not applied.applied:
 
 payload = applied.output
 
-# 3. Distributed State Machine (EXT-002: drive durable, validated state transitions)
+# 3. Durable, Replayable State Machine (EXT-002: drive durable, validated state transitions)
 log = TransitionLog(fs.base_dir / "state", "transition.log")
 log.ensure()
 state = INITIAL_STATE
@@ -214,7 +214,7 @@ harness.teardown("greeter")
 
 ---
 
-## Agent Constraints & Sandboxing
+## Agent Constraints & Capability Scoping
 
 Security in Jaros is enforced in layers inside the Execution Plane, completely outside the LLM.
 
@@ -377,7 +377,7 @@ Use this checklist to ensure your agent complies with the decoupling seam. The a
 
 - [ ] **Data-Only Seam**: The agent is a `ReasoningBoundary` whose `decide()` returns only inert `Decision` data.
 - [ ] **No Direct Side Effects**: It performs no I/O or state mutation itself — only the harness/executor does on its behalf.
-- [ ] **Strict Sandboxing**: It uses only the capability-scoped handles granted by the harness; no raw or ambient file system, queue, or socket access.
+- [ ] **Strict Capability Scoping**: It uses only the capability-scoped handles granted by the harness; no raw or ambient file system, queue, or socket access.
 - [ ] **Decoupled Comms**: It never references or imports another agent directly (all communication occurs through `Queue` or `SharedFileSystem` layout).
 - [ ] **Zero Footprint**: It does not open any listening socket, HTTP server, or process port.
 - [ ] **Decoupled LLM**: Its model use is restricted to `LlmClient` interface wrappers, and the LLM has no control over system logic or execution.

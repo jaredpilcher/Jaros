@@ -1,6 +1,7 @@
 """Explicit state and transition model (EXT-002 / REQ-1).
 
-This module is the *single source of truth* for the distributed state machine.
+This module is the *single source of truth* for the durable, replayable state
+machine.
 The full set of states, the full set of events, the initial state, and the
 allowed ``(state, event) -> nextState`` transitions are declared here — never
 inferred or scattered across application logic. Every component that needs to

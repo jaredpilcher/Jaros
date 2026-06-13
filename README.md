@@ -1,6 +1,6 @@
 # Jaros
 
-> An unbreakable, distributed state machine that orchestrates AI agents as **lightweight computing threads** — not bloated microservices.
+> A zero-infrastructure runtime that makes agent systems **reproducible, testable, and capability-safe by construction** — a durable, replayable state machine that orchestrates AI agents as **lightweight computing threads**, not bloated microservices.
 
 ![Jaros OS Docker Demo](docs/demo.gif)
 
@@ -42,7 +42,7 @@ An agent's reasoning may only emit an inert, serializable `Decision` (data). A d
 | Subsystem | Spec | What it owns |
 | --- | --- | --- |
 | Reasoning / Execution Boundary | [EXT-001](.jarify/EXT-001/requirements.md) | Inert `Decision` contract, reasoning boundary, validation gate, executor |
-| Distributed State Machine | [EXT-002](.jarify/EXT-002/requirements.md) | Explicit transition model, durable append-only log, crash recovery, replication |
+| Durable, Replayable State Machine | [EXT-002](.jarify/EXT-002/requirements.md) | Explicit transition model, durable decision log, deterministic replay, crash recovery, bounded multi-node coordination over the shared FS |
 | Agent Thread Runtime | [EXT-003](.jarify/EXT-003/requirements.md) | Cheap agent lifecycle, bounded pool, fault containment |
 | Interchangeable LLM Adapter | [EXT-004](.jarify/EXT-004/requirements.md) | Single `LlmClient` interface, pluggable adapters, config-only swap |
 | Architectural Harness | [EXT-005](.jarify/EXT-005/requirements.md) | Mediated actions, non-bypassable rules, capability-scoped handles |
@@ -141,9 +141,9 @@ python tests/integration/run_container_demo.py
 
 ---
 
-## Distributed Scheduling Across Containers
+## Scheduling Across Containers (Single-Node-First)
 
-Because Jaros uses a **file-system-only control plane**, scheduling is beautifully decoupled, highly scalable, and naturally adaptable to multi-container clusters:
+Because Jaros uses a **file-system-only control plane**, scheduling is cleanly decoupled. It is single-node-first, with bounded multi-node coordination over the shared file system — no broker or consensus service required:
 
 ### Pattern A: Decoupled Host-Side Cron
 Because job submission is simple, standard schedulers (like Linux `cron`, Kubernetes `CronJob`, or Windows Task Scheduler) can trigger runs:
@@ -151,8 +151,8 @@ Because job submission is simple, standard schedulers (like Linux `cron`, Kubern
 0 * * * * python -m jaros.cli --data-dir /shared-data submit custom_agent --input '{"topic": "scheduled-run"}'
 ```
 
-### Pattern B: Multi-Container Ingest (Automatic Load Balancing)
-If you run **multiple replica containers** mounted to the same shared directory, the node architecture distributes the load out-of-the-box:
+### Pattern B: Multi-Container Ingest (Shared-FS Coordination)
+If you run **multiple containers** mounted to the same shared directory, the daemons coordinate over the shared file system out-of-the-box (single-node-first, bounded multi-node — no broker or consensus service):
 1. **Atomic Ingestion**: Jobs are written atomically using `os.replace` to `inbox/<id>.json`.
 2. **Race Prevention**: The first daemon that successfully moves the file from `inbox/` to `processed/` owns and runs the job thread. Sibling nodes skip it.
 3. **High Availability**: If a node crashes mid-run, outstanding jobs are safely picked up by surviving nodes.

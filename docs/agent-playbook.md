@@ -298,7 +298,7 @@ The pluggable `Executor` in the Execution Plane dispatches the query to a regist
 
 ---
 
-## 9. Appendix: Custom Validation Gate Policies (Sandboxing Constraints)
+## 9. Appendix: Custom Validation Gate Policies (Capability Constraints)
 
 When developing or integrating other agents into Jaros, developers/operators can configure and register their own custom validation gates. 
 
