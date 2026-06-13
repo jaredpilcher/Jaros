@@ -1,10 +1,13 @@
-"""Shared file system with a fixed, validated layout (EXT-006 / REQ-2, REQ-4).
+"""Shared file system with a fixed, validated layout (EXT-006 / REQ-2, REQ-4, REQ-6).
 
 The shared file system is the durable exchange surface between agents. It has a
 canonical layout of top-level directories; all file exchange uses
 workspace-relative paths *within* that layout. Writes that try to escape the
 workspace (via ``..`` traversal or absolute paths) are refused loudly with a
 typed :class:`LayoutViolationError`.
+
+It is backed by local/mounted files only — **no database or external service**
+(EXT-006 / REQ-6) — keeping the zero-infrastructure tenet intact.
 
 Canonical layout (relative to ``base_dir``)::
 

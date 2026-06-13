@@ -96,6 +96,7 @@ These run automatically with `pytest` and fail the build if a structural constra
 * **Decoupled Planes**: `python scripts/check_planes.py` — enforces that no Execution-Plane module imports reasoning/LLM code.
 * **No Server Footprint**: `python scripts/check_no_server.py` — asserts that no agent/runtime code spins up a listening socket or HTTP server.
 * **Exclusive Channels**: `python scripts/check_comms.py` — scans for direct agent-to-agent references, RPC, or network calls (forces queues + shared FS).
+* **Zero Infrastructure**: `python scripts/check_zero_infra.py` — asserts that no code imports a database driver, message broker, or external server framework (the runtime needs only files + threads).
 
 ### 4. Running the Host CLI & Daemon
 

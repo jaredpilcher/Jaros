@@ -1,40 +1,47 @@
 {
+  "REQ-6": [
+    {
+      "file": "scripts/check_zero_infra.py",
+      "startLine": 23,
+      "endLine": 84
+    }
+  ],
   "REQ-1": [
     {
       "file": "jaros/daemon.py",
-      "startLine": 52,
-      "endLine": 138
+      "startLine": 58,
+      "endLine": 145
     },
     {
       "file": "jaros/daemon.py",
-      "startLine": 380,
-      "endLine": 448
+      "startLine": 391,
+      "endLine": 455
     }
   ],
   "REQ-2": [
     {
       "file": "jaros/daemon.py",
-      "startLine": 142,
-      "endLine": 190
+      "startLine": 149,
+      "endLine": 197
     },
     {
       "file": "jaros/daemon.py",
-      "startLine": 251,
-      "endLine": 326
+      "startLine": 258,
+      "endLine": 337
     }
   ],
   "REQ-5": [
     {
       "file": "jaros/daemon.py",
-      "startLine": 194,
-      "endLine": 249
+      "startLine": 201,
+      "endLine": 256
     }
   ],
   "REQ-4": [
     {
       "file": "jaros/daemon.py",
-      "startLine": 330,
-      "endLine": 376
+      "startLine": 341,
+      "endLine": 387
     }
   ],
   "REQ-3": [

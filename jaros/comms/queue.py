@@ -1,9 +1,13 @@
-"""Rigid, typed message queue (EXT-006 / REQ-1, REQ-4).
+"""Rigid, typed message queue (EXT-006 / REQ-1, REQ-4, REQ-6).
 
 Agents never call each other; they exchange work through queues governed by a
 rigid, typed message contract. Every message is schema-validated *before* it is
 stored, so a contract violation is rejected at enqueue time and never reaches a
 consumer.
+
+This queue is a plain in-process structure: it requires and contacts **no
+external message broker or queue service** (EXT-006 / REQ-6) — the comms-layer
+half of the zero-infrastructure tenet.
 
 Semantics (explicitly specified):
 
