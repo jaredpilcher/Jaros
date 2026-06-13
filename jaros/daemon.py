@@ -28,6 +28,8 @@ import os
 import signal
 import threading
 import time
+import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -40,6 +42,7 @@ from jaros.harness import Action, GrantSpec, Harness
 from jaros.llm import LlmConfig, create_llm_client
 from jaros.registry import AgentRegistry, load_plugins, register_builtins
 from jaros.runtime import AgentPool, AgentThread
+from jaros.scheduling import Scheduler, load_schedules
 from jaros.state import (
     INITIAL_STATE,
     DecisionLog,
@@ -115,6 +118,12 @@ class Daemon:
         self.decision_log = DecisionLog(self.fs.base_dir / "state")
         self.decision_log.ensure()
 
+        # Native scheduler (EXT-011): operator schedules under schedules/ are
+        # evaluated each tick; last-fire state is persisted for crash-safety.
+        self._schedules_dir = self.fs.base_dir / "schedules"
+        self._schedules_dir.mkdir(parents=True, exist_ok=True)
+        self.scheduler = Scheduler(self.fs.base_dir / "state" / "schedules.state.json")
+
         # Register the deterministic executor handler for the built-in kinds.
         executor.register_handler(ADVANCE_KIND, self._advance_handler)
         executor.register_handler("fs.write", self._fs_write_handler)
@@ -140,6 +149,7 @@ class Daemon:
         self.tick_count = 0
         self.processed = 0
         self.failed = 0
+        self.scheduled = 0
         self.last_result: dict[str, Any] | None = None
         self.state = INITIAL_STATE
     # #EXT-007-REQ-1 End
@@ -362,6 +372,10 @@ class Daemon:
                 },
                 "processed": self.processed,
                 "failed": self.failed,
+                "scheduled": self.scheduled,
+                "schedules": self.scheduler.describe(
+                    load_schedules(self._schedules_dir), datetime.now()
+                ),
                 "lastResult": self.last_result,
                 "tick": self.tick_count,
                 "uptimeSec": round(time.monotonic() - self._started_at, 3),
@@ -386,6 +400,40 @@ class Daemon:
             )
     # #EXT-007-REQ-4 End
 
+    # -- native scheduling --------------------------------------------------
+
+    # #EXT-011-REQ-4 Start
+    def _dispatch_schedules(self) -> None:
+        """Submit any due scheduled jobs to the inbox (atomic), each contained.
+
+        Reads the operator schedules, prunes durable state for removed ones, and
+        for every due schedule writes one ``inbox/<id>.json`` and records the
+        dispatch so a restart neither double-fires nor skips it. A failure on one
+        schedule never affects the others or the daemon.
+        """
+        now = datetime.now()
+        schedules = load_schedules(self._schedules_dir)
+        self.scheduler.prune({s.id for s in schedules})
+        for sch in self.scheduler.due(schedules, now):
+            try:
+                job_id = f"{sch.id}-{int(now.timestamp())}-{uuid.uuid4().hex[:6]}"
+                inbox = self.fs.base_dir / "inbox"
+                inbox.mkdir(parents=True, exist_ok=True)
+                tmp = inbox / f".tmp-{job_id}"
+                dest = inbox / f"{job_id}.json"
+                tmp.write_text(
+                    json.dumps({"id": job_id, "kind": sch.kind, "input": sch.input}),
+                    encoding="utf-8",
+                )
+                os.replace(tmp, dest)
+                self.scheduler.mark_fired(sch, now)
+                with self._lock:
+                    self.scheduled += 1
+                print(f"JAROS_SCHED fired schedule={sch.id} kind={sch.kind} job={job_id}", flush=True)
+            except Exception as exc:
+                print(f"JAROS_SCHED FAILED schedule={sch.id}: {exc}", flush=True)
+    # #EXT-011-REQ-4 End
+
     # -- tick + run loop ----------------------------------------------------
 
     # #EXT-007-REQ-1 Start
@@ -404,6 +452,10 @@ class Daemon:
             from jaros.execution.tools import load_custom_tools
             load_custom_tools(self.fs.base_dir / "tools")
         except Exception:  # a bad plugin/tool must never kill the loop
+            pass
+        try:
+            self._dispatch_schedules()
+        except Exception:  # a bad schedule must never kill the loop
             pass
         self._process_inbox()
         self.pool.drain()
