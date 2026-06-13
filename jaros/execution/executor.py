@@ -1,10 +1,17 @@
-"""The deterministic executor (EXT-001 / REQ-4, REQ-6).
+"""The deterministic executor (EXT-001 / REQ-4, REQ-6, REQ-7).
 
 The executor is the only thing that acts on a Decision, and only after the gate
 accepts it. It dispatches an accepted decision to a handler registered for the
 decision's ``kind``; unknown kinds are refused with a reason and cause no side
 effect. This module MUST NOT import ``jaros.llm`` or ``reasoning_boundary`` —
 the boundary is enforced structurally by ``scripts/check_planes.py``.
+
+The accepted decision is the *sole* replayable non-deterministic input to a run
+(EXT-001 / REQ-7): :func:`apply` surfaces it on :class:`ExecutionResult` and
+offers an ``on_accept`` hook that fires after the gate accepts and **before** the
+handler runs, so the durable decision log (EXT-002 / REQ-6) can record each
+accepted decision before its effects are observable. ``apply`` performs no model
+call, so a run can be re-executed from recorded decisions alone.
 """
 
 from __future__ import annotations
@@ -33,6 +40,9 @@ class ExecutionResult:
     applied: bool
     reason: str | None = None
     output: Any = None
+    # The gate-accepted decision (EXT-001 / REQ-7), surfaced so a caller can
+    # record it durably for replay. None when the decision was refused.
+    accepted: "Decision | None" = None
 # #EXT-001-REQ-4 End
 
 
@@ -59,7 +69,12 @@ def reset_handlers() -> None:
     _handlers.clear()
 
 
-def apply(d: Decision, **collaborators: Any) -> ExecutionResult:
+def apply(
+    d: Decision,
+    *,
+    on_accept: "Callable[[Decision], None] | None" = None,
+    **collaborators: Any,
+) -> ExecutionResult:
     """Validate ``d`` via the gate, then dispatch to its ``kind`` handler.
 
     On gate rejection the reason is logged and a non-applied result is returned
@@ -67,6 +82,11 @@ def apply(d: Decision, **collaborators: Any) -> ExecutionResult:
     the decision is refused with a clear reason and no side effect. Otherwise the
     handler is invoked with the validated decision and any execution-plane
     ``collaborators`` (state machine, granted handles) — never the reasoning side.
+
+    ``on_accept`` (EXT-001 / REQ-7) fires once with the gate-accepted decision
+    *before* the handler runs, so a caller can durably record it for replay
+    (EXT-002 / REQ-6) before its effects are observable. The accepted decision is
+    also surfaced on the returned :class:`ExecutionResult`.
     """
     result = validate_decision(d)
     if not result.ok:
@@ -80,8 +100,12 @@ def apply(d: Decision, **collaborators: Any) -> ExecutionResult:
     if handler is None:
         reason = f"no handler registered for kind {validated.kind!r}"
         logger.warning("decision %r refused: %s", validated.id, reason)
-        return ExecutionResult(applied=False, reason=reason)
+        return ExecutionResult(applied=False, reason=reason, accepted=validated)
+
+    # Record the accepted decision durably before any effect is observable.
+    if on_accept is not None:
+        on_accept(validated)
 
     output = handler(validated, **collaborators)
-    return ExecutionResult(applied=True, output=output)
+    return ExecutionResult(applied=True, output=output, accepted=validated)
 # #EXT-001-REQ-6 End

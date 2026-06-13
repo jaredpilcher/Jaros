@@ -17,9 +17,14 @@ non-recoverable log and raises :class:`RecoveryError`.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any, Callable
+
 from jaros.state.log import LogEntry, TransitionLog
 from jaros.state.machine import assert_valid_state
 from jaros.state.model import INITIAL_STATE, STATES
+
+if TYPE_CHECKING:
+    from jaros.state.decision_log import DecisionLog
 
 
 # #EXT-002-REQ-4 Start
@@ -70,3 +75,29 @@ def recover(log: TransitionLog) -> str:
     # Final invariant: recovered state must be a declared state.
     return assert_valid_state(state)
 # #EXT-002-REQ-4 End
+
+
+# #EXT-002-REQ-6 Start
+def recover_via_replay(
+    decision_log: "DecisionLog",
+    apply: "Callable[..., Any]",
+    transition_log: TransitionLog,
+    **collaborators: Any,
+) -> str:
+    """Recover current state by replaying the recorded decisions (recovery as replay).
+
+    Re-executes the recorded decisions through the deterministic executor — with
+    no model call — which re-drives the very transitions the original run
+    committed into ``transition_log``; the recovered state then falls out of that
+    rebuilt log exactly as in :func:`recover`. This is the canonical expression
+    of the EXT-002 invariant that *recovery is a special case of replay*: a full
+    from-scratch replay and a crash recovery agree on the final state.
+
+    The handler that ``apply`` dispatches to must commit its transitions into the
+    same ``transition_log`` passed here (the daemon wires it this way).
+    """
+    from jaros.state.decision_log import replay
+
+    replay(decision_log, apply, **collaborators)
+    return recover(transition_log)
+# #EXT-002-REQ-6 End

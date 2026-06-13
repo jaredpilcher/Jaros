@@ -40,7 +40,13 @@ from jaros.harness import Action, GrantSpec, Harness
 from jaros.llm import LlmConfig, create_llm_client
 from jaros.registry import AgentRegistry, load_plugins, register_builtins
 from jaros.runtime import AgentPool, AgentThread
-from jaros.state import INITIAL_STATE, TransitionLog, commit
+from jaros.state import (
+    INITIAL_STATE,
+    DecisionLog,
+    TransitionLog,
+    commit,
+    record_decision,
+)
 
 #: The built-in agent kind the daemon registers an executor handler for.
 ADVANCE_KIND = "advance"
@@ -103,6 +109,11 @@ class Daemon:
         # append-only record of every committed transition.
         self.log = TransitionLog(self.fs.base_dir / "state")
         self.log.ensure()
+        # Durable decision log: records each accepted Decision (the run's only
+        # non-deterministic input) so a run can be re-executed deterministically
+        # by replay (EXT-002 / REQ-6).
+        self.decision_log = DecisionLog(self.fs.base_dir / "state")
+        self.decision_log.ensure()
 
         # Register the deterministic executor handler for the built-in kinds.
         executor.register_handler(ADVANCE_KIND, self._advance_handler)
@@ -283,7 +294,11 @@ class Daemon:
                 if not gated.ok:
                     raise RuntimeError(f"decision rejected by gate: {gated.reason}")
 
-                outcome = executor.apply(decision, log=self.log)
+                outcome = executor.apply(
+                    decision,
+                    on_accept=lambda d: record_decision(self.decision_log, d),
+                    log=self.log,
+                )
                 if not outcome.applied:
                     raise RuntimeError(f"executor refused decision: {outcome.reason}")
 

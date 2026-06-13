@@ -1,11 +1,4 @@
 {
-  "REQ-4": [
-    {
-      "file": "jaros/state/recover.py",
-      "startLine": 25,
-      "endLine": 72
-    }
-  ],
   "REQ-1": [
     {
       "file": "jaros/state/model.py",
@@ -30,6 +23,25 @@
       "file": "jaros/state/log.py",
       "startLine": 30,
       "endLine": 172
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "jaros/state/recover.py",
+      "startLine": 25,
+      "endLine": 72
+    }
+  ],
+  "REQ-6": [
+    {
+      "file": "jaros/state/decision_log.py",
+      "startLine": 33,
+      "endLine": 230
+    },
+    {
+      "file": "jaros/state/recover.py",
+      "startLine": 80,
+      "endLine": 103
     }
   ]
 }

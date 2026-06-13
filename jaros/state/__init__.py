@@ -34,7 +34,14 @@ from jaros.state.model import (
     is_state,
     list_transitions,
 )
-from jaros.state.recover import RecoveryError, recover
+from jaros.state.decision_log import (
+    DecisionLog,
+    DecisionRecord,
+    read_decisions,
+    record_decision,
+    replay,
+)
+from jaros.state.recover import RecoveryError, recover, recover_via_replay
 
 __all__ = [
     # model
@@ -58,4 +65,11 @@ __all__ = [
     # recover
     "recover",
     "RecoveryError",
+    "recover_via_replay",
+    # decision log + replay
+    "DecisionLog",
+    "DecisionRecord",
+    "record_decision",
+    "read_decisions",
+    "replay",
 ]
