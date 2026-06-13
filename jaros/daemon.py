@@ -93,7 +93,9 @@ class Daemon:
             except ValueError:
                 pass
         self._lock = threading.RLock()
-        self.harness = Harness()
+        # Durable audit log: every mediated action (allowed/denied) is recorded
+        # to state/audit.log — the auditable record the directive demands (P2).
+        self.harness = Harness(audit_path=self.fs.base_dir / "state" / "audit.log")
         self.pool = AgentPool(bound=max(1, pool_bound))
         # Grant the daemon's own writer a scoped FsWrite handle so even the
         # daemon's result writes flow through the harness (mediated side effect).

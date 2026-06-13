@@ -33,5 +33,17 @@
       "startLine": 97,
       "endLine": 223
     }
+  ],
+  "REQ-7": [
+    {
+      "file": "jaros/harness/harness.py",
+      "startLine": 225,
+      "endLine": 247
+    },
+    {
+      "file": "jaros/harness/harness.py",
+      "startLine": 259,
+      "endLine": 277
+    }
   ]
 }

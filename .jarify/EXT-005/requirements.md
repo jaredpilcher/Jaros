@@ -82,3 +82,20 @@ boundary.
       ambient authority, an auditable record of every mediated action — remain
       enforced (REQ-1…REQ-5) and are stated as correctness/auditability
       properties, not as an adversarial sandbox.
+
+### [REQ-7] Durable Audit Log
+
+Every mediated action — allowed and denied — is recorded to a durable,
+append-only audit log, making the directive's "every action is an auditable
+record" ([PRIME-001 / P2]) real for compliance and forensics, not just an
+in-memory list.
+
+#### Acceptance Criteria
+- [x] When configured with an `audit_path`, the harness appends one record per
+      mediated `request` — `{ts, agent, action, allowed, reason}` — to a durable,
+      append-only newline-delimited JSON log.
+- [x] Auditing is best-effort and never breaks mediation; with no `audit_path`
+      configured it is a no-op (nothing written).
+- [x] The log is readable from the shared FS (`read_audit`); the runtime daemon
+      enables it at `state/audit.log` so allowed and denied actions are durably
+      recorded.
