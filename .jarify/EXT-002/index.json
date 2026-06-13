@@ -1,4 +1,16 @@
 {
+  "REQ-3": [
+    {
+      "file": "jaros/state/log.py",
+      "startLine": 30,
+      "endLine": 172
+    },
+    {
+      "file": "jaros/state/machine.py",
+      "startLine": 68,
+      "endLine": 113
+    }
+  ],
   "REQ-6": [
     {
       "file": "jaros/state/decision_log.py",
@@ -14,13 +26,18 @@
   "REQ-7": [
     {
       "file": "jaros/state/coordination.py",
-      "startLine": 21,
-      "endLine": 90
+      "startLine": 22,
+      "endLine": 123
     },
     {
       "file": "jaros/daemon.py",
-      "startLine": 247,
-      "endLine": 253
+      "startLine": 223,
+      "endLine": 260
+    },
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 276,
+      "endLine": 288
     }
   ],
   "REQ-1": [
@@ -35,18 +52,6 @@
       "file": "jaros/state/machine.py",
       "startLine": 21,
       "endLine": 65
-    }
-  ],
-  "REQ-3": [
-    {
-      "file": "jaros/state/machine.py",
-      "startLine": 68,
-      "endLine": 113
-    },
-    {
-      "file": "jaros/state/log.py",
-      "startLine": 30,
-      "endLine": 172
     }
   ],
   "REQ-4": [

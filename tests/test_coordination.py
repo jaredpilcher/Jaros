@@ -42,6 +42,32 @@ def test_multi_node_handoff_after_release(tmp_path):
     assert b.owner("job-1") == "node-b"
 
 
+def test_expired_lease_is_stolen_but_fresh_is_not(tmp_path):
+    import os
+    import time
+
+    a = FileCoordinator(tmp_path, node_id="node-a", single_node=False, lease_seconds=1.0)
+    b = FileCoordinator(tmp_path, node_id="node-b", single_node=False, lease_seconds=1.0)
+    assert a.try_claim("job") is True
+    assert b.try_claim("job") is False          # live claim is not stealable
+    assert b.owner("job") == "node-a"
+
+    # Node-a "crashes": its claim's lease expires (no more renew).
+    claim = tmp_path / "state" / "claims" / "job.claim"
+    old = time.time() - 100
+    os.utime(claim, (old, old))
+    assert b.try_claim("job") is True            # stolen after the lease expired
+    assert b.owner("job") == "node-b"
+
+
+def test_renew_keeps_a_claim_and_rejects_non_owner(tmp_path):
+    a = FileCoordinator(tmp_path, node_id="node-a", single_node=False, lease_seconds=10.0)
+    assert a.try_claim("job") is True
+    assert a.renew("job") is True
+    b = FileCoordinator(tmp_path, node_id="node-b", single_node=False, lease_seconds=10.0)
+    assert b.renew("job") is False               # cannot renew what you don't own
+
+
 def test_release_is_idempotent_and_unclaimed_owner_is_none(tmp_path):
     b = FileCoordinator(tmp_path, node_id="node-b", single_node=False)
     assert b.owner("never") is None

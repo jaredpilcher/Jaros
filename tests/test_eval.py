@@ -80,6 +80,28 @@ def test_result_contains_executes_handler():
     assert res.passed, [c for c in res.checks if not c.ok]
 
 
+def test_deterministic_check_passes_for_pure_handler():
+    executor.register_handler("act", lambda d, **_: {"v": d.payload.get("n", 0) * 2})
+    reg = _FakeRegistry("k", _decision(kind="act", payload={"n": 3}))
+    case = EvalCase.from_dict({"name": "det", "kind": "k", "expect": {"deterministic": True}})
+    assert run_case(case, reg, execute=True).passed
+
+
+def test_deterministic_check_catches_flaky_handler():
+    seen = {"n": 0}
+
+    def flaky(d, **_):
+        seen["n"] += 1
+        return {"v": seen["n"]}
+
+    executor.register_handler("act", flaky)
+    reg = _FakeRegistry("k", _decision(kind="act"))
+    case = EvalCase.from_dict({"name": "flaky", "kind": "k", "expect": {"deterministic": True}})
+    res = run_case(case, reg, execute=True)
+    assert not res.passed
+    assert any(c.name == "deterministic" and not c.ok for c in res.checks)
+
+
 def test_load_cases_skips_malformed(tmp_path: Path):
     (tmp_path / "evals").mkdir()
     (tmp_path / "evals" / "good.json").write_text(

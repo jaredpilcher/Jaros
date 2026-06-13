@@ -126,9 +126,6 @@ class Daemon:
         self._schedules_dir.mkdir(parents=True, exist_ok=True)
         self.scheduler = Scheduler(self.fs.base_dir / "state" / "schedules.state.json")
 
-        # Recover any job a crashed instance left mid-claim, back to the inbox.
-        self._reclaim_orphaned_claims()
-
         # Register the deterministic executor handler for the built-in kinds.
         executor.register_handler(ADVANCE_KIND, self._advance_handler)
         executor.register_handler("fs.write", self._fs_write_handler)
@@ -139,6 +136,15 @@ class Daemon:
 
         # --- run-loop bookkeeping -----------------------------------------
         self._active_jobs: set[str] = set()
+        # Names of claims THIS node is actively processing. Heartbeated each tick
+        # so a live node never reclaims its own in-flight work; a crashed node
+        # stops heartbeating, so its claims go stale and a sibling reclaims them.
+        self._processing: set[str] = set()
+        lease_ms = os.environ.get("JAROS_CLAIM_LEASE_MS")
+        try:
+            self._claim_lease_s = (int(lease_ms) if lease_ms else 60000) / 1000.0
+        except ValueError:
+            self._claim_lease_s = 60.0
         # Reference counts for per-kind harness grants, so concurrent jobs of the
         # same kind share one grant (torn down only when the last finishes).
         self._grant_refs: dict[str, int] = {}
@@ -214,23 +220,44 @@ class Daemon:
     # -- inbox ingestion + fault isolation ----------------------------------
 
     # #EXT-007-REQ-5 Start
-    def _reclaim_orphaned_claims(self) -> None:
-        """Return any claimed-but-unfinished jobs to the inbox (at-least-once).
+    # #EXT-002-REQ-7 Start
+    def _claim_maintenance(self) -> None:
+        """Heartbeat this node's in-flight claims; reclaim siblings' stale ones.
 
-        Run once at boot: a job left in ``claimed/`` by a crashed instance is moved
-        back to ``inbox/`` so it is processed again. (The queue contract is
-        at-least-once; agents are idempotent — the read-only ones trivially so.)
+        A claim is a file in ``claimed/`` whose mtime is its lease. Each tick this
+        node **touches** (refreshes) the claims it is actively processing, so as
+        long as it is alive its claims never expire. Any *other* claim whose lease
+        has expired (``> JAROS_CLAIM_LEASE_MS``, default 60s) is assumed orphaned
+        by a crashed node and moved back to ``inbox/`` for re-processing. This is
+        crash recovery for distribution: exactly-once in the happy path,
+        at-least-once under node failure (so agents must be idempotent).
         """
         claimed = self.fs.base_dir / "claimed"
         if not claimed.is_dir():
             return
         inbox = self.fs.base_dir / "inbox"
-        inbox.mkdir(parents=True, exist_ok=True)
+        now = time.time()
+        with self._lock:
+            active = set(self._processing)
         for job_path in sorted(claimed.glob("*.json")):
+            if job_path.name in active:
+                try:
+                    os.utime(job_path, None)  # heartbeat: refresh our lease
+                except OSError:
+                    pass
+                continue
             try:
-                os.replace(job_path, inbox / job_path.name)
+                age = now - job_path.stat().st_mtime
             except OSError:
-                pass
+                continue
+            if age > self._claim_lease_s:  # orphaned by a crashed node -> recover
+                try:
+                    inbox.mkdir(parents=True, exist_ok=True)
+                    os.replace(job_path, inbox / job_path.name)
+                    print(f"JAROS_RECLAIM stale claim job={job_path.name} age={age:.0f}s", flush=True)
+                except OSError:
+                    pass
+    # #EXT-002-REQ-7 End
 
     def _process_inbox(self) -> None:
         """Atomically claim each inbox job (multi-node safe) and process it.
@@ -252,6 +279,12 @@ class Daemon:
                 os.replace(job_path, claimed)  # atomic claim; the loser gets ENOENT
             except OSError:
                 continue  # another node already claimed it (or it vanished)
+            try:
+                os.utime(claimed, None)  # stamp the claim time — the lease clock
+            except OSError:
+                pass
+            with self._lock:
+                self._processing.add(claimed.name)
             # #EXT-002-REQ-7 End
 
             def _job_runner_factory(path=claimed):
@@ -272,7 +305,7 @@ class Daemon:
                 self._write_status()
         except FileNotFoundError:
             # The job file vanished between scan and processing (e.g. cleared by an
-            # operator, or already handled). That's benign — skip it silently rather
+            # operator, or reclaimed). That's benign — skip it silently rather
             # than recording a spurious failure.
             return
         except Exception as exc:
@@ -289,6 +322,10 @@ class Daemon:
                 self.failed += 1
                 self.last_result = {"error": reason, "job": job_path.name}
                 self._write_status()
+        finally:
+            # Release the claim's lease — we are no longer heartbeating it.
+            with self._lock:
+                self._processing.discard(job_path.name)
     # #EXT-007-REQ-5 End
 
     # #EXT-007-REQ-2 Start
@@ -482,6 +519,10 @@ class Daemon:
         try:
             self._dispatch_schedules()
         except Exception:  # a bad schedule must never kill the loop
+            pass
+        try:
+            self._claim_maintenance()  # heartbeat ours; reclaim siblings' stale claims
+        except Exception:
             pass
         self._process_inbox()
         self.pool.drain()

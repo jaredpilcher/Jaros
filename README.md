@@ -221,7 +221,7 @@ jaros submit advance --input '{}' --data-dir .jaros-data
 Because the control plane is files only, scheduling is decoupled and needs no broker:
 
 - **Host-side cron** — any scheduler (`cron`, Kubernetes `CronJob`, Task Scheduler) can `jaros submit`.
-- **Multi-container ingest** — run several daemons on the same shared dir; they coordinate over the file system. Each job is claimed by an atomic `inbox/<id>.json → claimed/<id>.json` rename, so exactly one node processes it and siblings skip it (bounded multi-node, no consensus service). A crashed node's in-flight claim is reclaimed to the inbox on the next boot.
+- **Multi-container ingest** — run several daemons on the same shared dir; they coordinate over the file system. Each job is claimed by an atomic `inbox/<id>.json → claimed/<id>.json` rename: **exactly-once in the happy path** (one node processes it, siblings skip it). The claim is a **lease** the owner heartbeats; if a node crashes, its lease expires and a live sibling reclaims the job to the inbox — so under failure the contract is **at-least-once** (agents are idempotent — the read-only ones trivially so). Bounded multi-node, no broker or consensus service.
 
 ---
 
@@ -235,6 +235,7 @@ Structural constraints are enforced by automated checks (run with `pytest`), so 
 | `scripts/check_no_server.py` | No agent/runtime code opens a listening socket or HTTP server |
 | `scripts/check_comms.py` | No direct agent-to-agent reference, RPC, or network call |
 | `scripts/check_zero_infra.py` | No import of a database driver, message broker, or external server framework |
+| `scripts/check_determinism.py` | The core replay path is deterministic — replaying the same decisions agrees every time (the precondition for byte-identical replay) |
 
 ---
 

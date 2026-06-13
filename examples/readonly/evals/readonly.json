@@ -8,7 +8,8 @@
       "decision_kind": "sys.info",
       "source": "system-health",
       "gate": "accept",
-      "result_contains": { "tool": "sys.info" }
+      "result_contains": { "tool": "sys.info" },
+      "deterministic": true
     }
   },
   {

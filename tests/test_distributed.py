@@ -56,19 +56,40 @@ def test_two_nodes_process_each_job_exactly_once(tmp_path: Path):
     assert list((tmp_path / "claimed").glob("*.json")) == []
 
 
-def test_boot_reclaims_orphaned_claim(tmp_path: Path):
-    # Simulate a node that crashed after claiming a job (it sits in claimed/).
+def test_stale_claim_is_reclaimed_by_a_live_node(tmp_path: Path):
+    import os
+    import time
+
+    # A job claimed by a node that then crashed: it sits in claimed/ with an
+    # expired lease (old mtime, no heartbeat).
     (tmp_path / "claimed").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "claimed" / "stuck.json").write_text(
-        json.dumps({"id": "stuck", "kind": "advance", "input": {}}), encoding="utf-8"
-    )
+    stuck = tmp_path / "claimed" / "stuck.json"
+    stuck.write_text(json.dumps({"id": "stuck", "kind": "advance", "input": {}}), encoding="utf-8")
+    old = time.time() - 100
+    os.utime(stuck, (old, old))
 
-    d = Daemon(tmp_path)  # boot reclaim moves it back to inbox
-    assert (tmp_path / "inbox" / "stuck.json").exists()
-
+    d = Daemon(tmp_path)
+    d._claim_lease_s = 1.0  # short lease for the test
     for _ in range(40):
-        d.tick()
+        d.tick()  # _claim_maintenance reclaims the stale claim, then processes it
         if d.processed >= 1:
             break
     assert d.processed >= 1
     assert (tmp_path / "outbox" / "stuck.json").exists()
+    assert list((tmp_path / "claimed").glob("*.json")) == []
+
+
+def test_fresh_sibling_claim_is_not_stolen(tmp_path: Path):
+    # A claim freshly held by a live sibling (recent mtime) must NOT be reclaimed.
+    (tmp_path / "claimed").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "claimed" / "sib.json").write_text(
+        json.dumps({"id": "sib", "kind": "advance", "input": {}}), encoding="utf-8"
+    )
+
+    d = Daemon(tmp_path)
+    d._claim_lease_s = 60.0
+    d.tick()
+
+    # Not ours and not stale -> left for the live sibling; we did not process it.
+    assert (tmp_path / "claimed" / "sib.json").exists()
+    assert d.processed == 0

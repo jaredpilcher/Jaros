@@ -30,6 +30,7 @@ class Expect:
     payload_contains: dict[str, Any] | None = None
     gate: str | None = None  # "accept" | "reject"
     result_contains: dict[str, Any] | None = None
+    deterministic: bool | None = None  # re-run the handler and require identical output
 
 
 @dataclass(frozen=True)
@@ -59,6 +60,7 @@ class EvalCase:
                 payload_contains=exp.get("payload_contains"),
                 gate=exp.get("gate"),
                 result_contains=exp.get("result_contains"),
+                deterministic=exp.get("deterministic"),
             ),
         )
 
@@ -137,6 +139,15 @@ def run_case(case: EvalCase, registry: Any, *, execute: bool = True) -> EvalResu
             checks.append(EvalCheck("result_contains", False, f"not applied: {outcome.reason}"))
         else:
             checks.append(EvalCheck("result_contains", _is_subset(exp.result_contains, outcome.output), f"output={outcome.output!r}"))
+
+    if exp.deterministic and first is not None:
+        # Re-run the handler and require identical output — catches a
+        # non-deterministic handler (clock/RNG/external I/O) in the eval/CI itself.
+        from jaros.execution import digest
+        a = executor.apply(first)
+        b = executor.apply(first)
+        same = a.applied and b.applied and digest(a.output) == digest(b.output)
+        checks.append(EvalCheck("deterministic", same, "handler output differs across runs" if not same else ""))
 
     result.passed = bool(checks) and all(c.ok for c in checks)
     return result

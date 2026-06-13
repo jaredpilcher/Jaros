@@ -15,6 +15,7 @@ under ``state/claims/`` — the filesystem itself is the arbiter.
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 
@@ -28,6 +29,11 @@ class FileCoordinator:
         single_node: When ``True`` (default), coordination is a zero-overhead
             no-op — claims always succeed and no files are written. Set ``False``
             to enable bounded multi-node coordination over the shared FS.
+        lease_seconds: When set, a claim is a **lease**: a holder must
+            :meth:`renew` it (heartbeat) to keep it. A claim whose lease has
+            expired (the holder crashed) can be stolen by another node — so a
+            crash strands work only until the lease elapses. ``None`` keeps the
+            simple no-steal behaviour.
     """
 
     def __init__(
@@ -36,17 +42,20 @@ class FileCoordinator:
         node_id: str = "node-1",
         *,
         single_node: bool = True,
+        lease_seconds: float | None = None,
     ) -> None:
         self.claims_dir: Path = Path(fs_base) / "state" / "claims"
         self.node_id = node_id
         self.single_node = single_node
+        self.lease_seconds = lease_seconds
 
     def try_claim(self, work_id: str) -> bool:
         """Atomically claim ``work_id`` for this node.
 
         Returns ``True`` if this node now owns the claim, ``False`` if another
-        node already holds it. In single-node mode this is a zero-overhead no-op
-        that always returns ``True`` (no contention is possible).
+        node already holds a *live* claim. In single-node mode this is a
+        zero-overhead no-op that always returns ``True``. With ``lease_seconds``
+        set, an expired claim (a crashed holder that stopped renewing) is stolen.
         """
         if self.single_node:
             return True
@@ -55,12 +64,36 @@ class FileCoordinator:
         try:
             fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
+            if self.lease_seconds is not None:
+                try:
+                    if time.time() - path.stat().st_mtime > self.lease_seconds:
+                        path.unlink()  # expired lease (crashed holder) -> steal
+                        return self.try_claim(work_id)
+                except OSError:
+                    pass
             return False
         with os.fdopen(fd, "w", encoding="utf-8") as fh:
             fh.write(self.node_id)
             fh.flush()
             os.fsync(fh.fileno())
         return True
+
+    def renew(self, work_id: str) -> bool:
+        """Heartbeat this node's claim — refresh its lease. Returns False if lost.
+
+        A holder calls this while it works; a crashed holder stops, so its lease
+        expires and a sibling can steal the claim.
+        """
+        if self.single_node:
+            return True
+        path = self.claims_dir / f"{work_id}.claim"
+        if self.owner(work_id) != self.node_id:
+            return False
+        try:
+            os.utime(path, None)
+            return True
+        except OSError:
+            return False
 
     def owner(self, work_id: str) -> str | None:
         """Return the node id that holds ``work_id``'s claim, or ``None``.
