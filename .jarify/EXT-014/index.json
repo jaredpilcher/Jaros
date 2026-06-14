@@ -1,0 +1,8 @@
+{
+  "REQ-4": [
+    { "file": "agent-kit/templates/agent.py", "startLine": 1, "endLine": 51 },
+    { "file": "agent-kit/templates/tool.py", "startLine": 1, "endLine": 46 },
+    { "file": "agent-kit/templates/eval.json", "startLine": 1, "endLine": 15 },
+    { "file": "agent-kit/templates/schedule.json", "startLine": 1, "endLine": 7 }
+  ]
+}

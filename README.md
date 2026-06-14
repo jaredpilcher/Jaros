@@ -225,6 +225,10 @@ ctx = harness.spawn("greeter", GrantSpec(role="FsWriteRole", fs=shared_fs))
 
 A *custom tool* extends what the system can *do*: drop a class exposing `NAME`, `validate()`, and `execute()` into `tools/`, and an agent proposes a decision of that `kind`. See **[`examples/tools/greet_tool.py`](examples/tools/greet_tool.py)** and the full guide in **[docs/building-agents.md](docs/building-agents.md)**.
 
+### Building with an AI agent
+
+Jaros is made to be extended by coding agents. Point any AI coding agent at **[`AGENTS.md`](AGENTS.md)** → **[`agent-kit/`](agent-kit/)** and it has the whole project in one folder: the mental model, a skill for each artifact (agent, tool, eval, schedule), accurate API reference, and runnable templates that pass `jaros eval` unmodified. It can author new Jaros agents and tools and verify them on its own.
+
 ---
 
 ## Run on Docker
