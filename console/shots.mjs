@@ -28,7 +28,7 @@ async function waitFor(fn, timeout = 30000) {
 }
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), "jaros-shots-data-"));
-for (const area of ["plugins", "tools"]) {
+for (const area of ["agents", "tools"]) {
   fs.mkdirSync(path.join(data, area), { recursive: true });
   for (const root of [path.join(REPO, "examples", area), path.join(REPO, "examples", "readonly", area)]) {
     for (const f of fs.readdirSync(root)) {

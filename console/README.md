@@ -15,7 +15,7 @@ Jaros OS — everything in the Prime Directive, drivable from the browser.
 | --- | --- |
 | **Overview** | Live machine state, processed/failed, throughput sparkline, agent pool, zero-infra profile, last result. |
 | **Jobs** | Submit jobs to the inbox (atomic write); inspect inbox/processed/failed and outbox results. |
-| **Agents & Tools** | List loaded plugin agents and custom tools; install new ones into the watched folders at runtime. |
+| **Agents & Tools** | List loaded agents and custom tools; install new ones into the watched folders at runtime. |
 | **Reproducibility** | Browse the durable decision log; **replay** it through the deterministic executor and see it reconstruct the run to byte-identical state — no model call. |
 | **State Machine** | The real state model (introspected from `jaros`) and the live durable transition log. |
 | **Harness** | Capability-safety: mediation rules, role→capability bundles, and the refusal/failure audit. |

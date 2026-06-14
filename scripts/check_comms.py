@@ -2,13 +2,13 @@
 
 Inter-agent communication must occur ONLY through the rigid queues
 (``jaros.comms.queue``) and the shared file system (``jaros.comms.fs``). This
-check scans agent / plugin / runtime code and fails (non-zero exit) on any
+check scans agent / agent / runtime code and fails (non-zero exit) on any
 direct agent-to-agent path:
 
 - network / RPC imports (``socket``, ``http.client``, ``urllib.request``,
   ``requests``, ``grpc``) and ``asyncio.open_connection`` calls;
 - direct imports of another agent's package (``jaros.agents.*`` /
-  ``jaros.plugins.*``) by sibling agent/plugin code.
+  ``jaros.agents.*``) by sibling agent/agent code.
 
 The only inter-agent dependencies that pass are ``jaros.comms.queue`` and
 ``jaros.comms.fs``. Exits 0 on a clean tree and when no scannable files exist.
@@ -33,11 +33,11 @@ FORBIDDEN_NETWORK_PREFIXES = (
     "grpc",
 )
 
-# Agent / plugin package prefixes; one of these importing another is a direct
+# Agent / agent package prefixes; one of these importing another is a direct
 # agent-to-agent reference.
 AGENT_PACKAGE_PREFIXES = (
     "jaros.agents",
-    "jaros.plugins",
+    "jaros.agents",
 )
 
 # The only cross-agent dependencies that are allowed.
@@ -46,11 +46,11 @@ ALLOWED_COMMS_PREFIXES = (
     "jaros.comms.fs",
 )
 
-# Directories scanned for violations: runtime + any agent / plugin code.
+# Directories scanned for violations: runtime + any agent / agent code.
 SCAN_DIRS = (
     Path("jaros") / "runtime",
     Path("jaros") / "agents",
-    Path("jaros") / "plugins",
+    Path("jaros") / "agents",
 )
 
 
@@ -61,7 +61,7 @@ def _matches(module: str | None, prefixes: tuple[str, ...]) -> bool:
 
 
 def _own_agent_package(path: Path, repo_root: Path) -> str | None:
-    """Return the specific agent/plugin package ``path`` belongs to.
+    """Return the specific agent/agent package ``path`` belongs to.
 
     For ``jaros/agents/foo/x.py`` this is ``jaros.agents.foo`` — one level below
     the umbrella ``jaros.agents`` — so that imports between *different* agents
@@ -81,7 +81,7 @@ def _own_agent_package(path: Path, repo_root: Path) -> str | None:
 
 
 def _agent_of_module(module: str) -> str | None:
-    """Return the specific agent/plugin package a ``module`` refers to, if any."""
+    """Return the specific agent/agent package a ``module`` refers to, if any."""
     for prefix in AGENT_PACKAGE_PREFIXES:
         if module.startswith(prefix + "."):
             head = module[len(prefix) + 1 :].split(".", 1)[0]
@@ -97,8 +97,8 @@ def _check_module(module: str | None, path: Path, lineno: int, repo_root: Path) 
         return None  # explicitly sanctioned channel
     if _matches(module, FORBIDDEN_NETWORK_PREFIXES):
         return f"{path.as_posix()}:{lineno}: forbidden network/RPC import of {module!r}"
-    # Direct agent-to-agent import: this file lives in an agent/plugin package
-    # and imports a *different* agent/plugin package.
+    # Direct agent-to-agent import: this file lives in an agent/agent package
+    # and imports a *different* agent/agent package.
     target_agent = _agent_of_module(module)
     if target_agent is not None:
         own = _own_agent_package(path, repo_root)

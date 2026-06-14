@@ -1,7 +1,7 @@
 /**
  * End-to-end smoke for the Jaros Console: boot a daemon + the bridge on a
  * throwaway data dir, then drive EVERY interactive path through the console API —
- * submit jobs, install a plugin agent and a custom tool, create/list/delete a
+ * submit jobs, install an agent and a custom tool, create/list/delete a
  * schedule, run the eval suite, introspect the model + harness, and replay.
  *
  * Run:  node console/smoke.mjs   (from repo root, after `npm install` in console/)
@@ -27,9 +27,9 @@ async function waitFor(fn, timeout = 30000) {
 }
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), "jaros-console-"));
-for (const area of ["plugins", "tools", "evals"]) fs.mkdirSync(path.join(data, area), { recursive: true });
+for (const area of ["agents", "tools", "evals"]) fs.mkdirSync(path.join(data, area), { recursive: true });
 // Stage the example + read-only library so jobs, tools, and the eval suite work.
-for (const [area, root] of [["plugins", "examples/plugins"], ["tools", "examples/tools"], ["plugins", "examples/readonly/plugins"], ["tools", "examples/readonly/tools"], ["evals", "examples/readonly/evals"]]) {
+for (const [area, root] of [["agents", "examples/agents"], ["tools", "examples/tools"], ["agents", "examples/readonly/agents"], ["tools", "examples/readonly/tools"], ["evals", "examples/readonly/evals"]]) {
   const src = path.join(REPO, root);
   for (const f of fs.readdirSync(src)) if (f.endsWith(".py") || f.endsWith(".json")) fs.copyFileSync(path.join(src, f), path.join(data, area, f));
 }
@@ -52,8 +52,8 @@ try {
   }
   await waitFor(async () => (await j("/api/snapshot")).counts.processed >= 3);
 
-  // 2. Install a plugin agent + a custom tool (Agents & Tools page).
-  const installPlugin = await post("/api/agents", { name: "smoke_agent.py", source: 'import uuid\nfrom jaros.core import create_decision\nKIND="smoke"\nclass B:\n  def __init__(self, llm): pass\n  def decide(self, c): return [create_decision(id=f"s-{uuid.uuid4().hex}", source="smoke", kind="advance", payload={"events":["start","complete"]})]\ndef build(llm): return B()\n' });
+  // 2. Install an agent + a custom tool (Agents & Tools page).
+  const installAgent = await post("/api/agents", { name: "smoke_agent.py", source: 'import uuid\nfrom jaros.core import create_decision\nKIND="smoke"\nclass B:\n  def __init__(self, llm): pass\n  def decide(self, c): return [create_decision(id=f"s-{uuid.uuid4().hex}", source="smoke", kind="advance", payload={"events":["start","complete"]})]\ndef build(llm): return B()\n' });
   const installTool = await post("/api/tools", { name: "smoke_tool.py", source: 'from jaros.core.decision_gate import ValidationResult\nclass T:\n  NAME="smoke.noop"\n  def validate(self, d): return ValidationResult.accept(d)\n  def execute(self, d, **k): return {"ok": True}\n' });
   const agents = await j("/api/agents");
 
@@ -75,7 +75,7 @@ try {
 
   const checks = {
     "submit jobs -> processed >= 3": snap.counts.processed >= 3 && snap.counts.failed === 0,
-    "install plugin (POST /api/agents)": !!installPlugin.path && agents.plugins.includes("smoke_agent.py"),
+    "install agent (POST /api/agents)": !!installAgent.path && agents.agents.includes("smoke_agent.py"),
     "install tool (POST /api/tools)": !!installTool.path && agents.tools.includes("smoke_tool.py"),
     "create schedule (POST /api/schedules)": !!createSched.name && schedAfterCreate.some((s) => s.id === "smoke-sched"),
     "delete schedule (DELETE)": !schedAfterDelete.some((s) => s.id === "smoke-sched"),

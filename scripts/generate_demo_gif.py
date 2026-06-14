@@ -2,7 +2,7 @@
 
 Produces two animated GIFs under ``docs/``:
 
-- ``demo.gif``   — boot the OS and run a built-in + two example plugin agents.
+- ``demo.gif``   — boot the OS and run a built-in + two example agents.
 - ``replay.gif`` — the headline differentiator: reproduce a run byte-for-byte by
   replaying the recorded decision log, with no model call.
 
@@ -91,8 +91,8 @@ def demo_script() -> list:
             ("operator@host:~$ ", PROMPT),
             ("docker logs -f jaros_os\n", CMD),
             ("[ingest] advance  -> agent thread  (capabilities: fs_write)\n", HILITE),
-            ("[ingest] echo     -> plugin agent  (loaded at runtime)\n", HILITE),
-            ("[ingest] greeter  -> plugin agent  -> custom tool demo.greet\n", HILITE),
+            ("[ingest] echo     -> agent  (loaded at runtime)\n", HILITE),
+            ("[ingest] greeter  -> agent  -> custom tool demo.greet\n", HILITE),
             ("[gate]   3 decisions ACCEPTED (inert data)\n", TEXT),
             ("[log]    recorded 3 decisions -> state/decisions.log\n", OK),
             ("_", TEXT),
@@ -105,7 +105,7 @@ def demo_script() -> list:
             ("  Failed Jobs:    ", TEXT), ("0\n", TEXT),
             ("  Active Agents:  ", TEXT), ("0\n", TEXT),
             ("\n", TEXT),
-            ("PASS: built-in + 2 plugin agents + a custom tool, zero infra.\n", OK),
+            ("PASS: built-in + 2 agents + a custom tool, zero infra.\n", OK),
             ("operator@host:~$ ", PROMPT), ("_", TEXT),
         ],
     ]

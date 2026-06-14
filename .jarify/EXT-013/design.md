@@ -41,7 +41,7 @@ gives a recorded run (EXT-002 / REQ-6).
 ```
 
 The CLI assembles a deterministic environment from the data dir (built-in +
-plugin agents via the registry, tool handlers via `load_custom_tools`) so
+agents via the registry, tool handlers via `load_custom_tools`) so
 `result_contains` checks execute real tools — read-only, deterministic.
 
 ## Prime Directive consistency

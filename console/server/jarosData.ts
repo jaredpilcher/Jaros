@@ -3,7 +3,7 @@
  *
  * The console never talks to the daemon over a socket — there is none. It reads
  * and writes the shared data directory exactly as the host CLI does: status.json,
- * the inbox/outbox, the durable decision + transition logs, and the plugins/tools
+ * the inbox/outbox, the durable decision + transition logs, and the agents/tools
  * drop folders. The Jaros node stays serverless; this is a host-side companion.
  */
 
@@ -142,8 +142,8 @@ export function getOutbox(): OutboxResult[] {
   });
 }
 
-export function getPlugins(): string[] {
-  return listFiles("plugins", ".py").filter((f) => !f.startsWith("_"));
+export function getAgents(): string[] {
+  return listFiles("agents", ".py").filter((f) => !f.startsWith("_"));
 }
 
 export function getTools(): string[] {
@@ -166,8 +166,8 @@ export function submitJob(kind: string, input: unknown): { id: string } {
 // #EXT-010-REQ-3 End
 
 // #EXT-010-REQ-4 Start
-/** Atomically install a plugin agent or custom tool module. */
-export function installModule(area: "plugins" | "tools", name: string, source: string): { path: string } {
+/** Atomically install an agent or custom tool module. */
+export function installModule(area: "agents" | "tools", name: string, source: string): { path: string } {
   const safe = name.endsWith(".py") ? name : `${name}.py`;
   if (safe.includes("/") || safe.includes("\\") || safe.startsWith(".")) {
     throw new Error("invalid module name");

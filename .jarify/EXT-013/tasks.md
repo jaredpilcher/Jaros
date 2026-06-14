@@ -28,7 +28,7 @@ Load cases from the shared FS and aggregate results.
 Run the eval suite from the host, CI-friendly.
 
 #### Steps
-1. In `jaros/cli.py`, add `cmd_eval(data_dir)` that builds the LLM + `AgentRegistry` (`register_builtins` + `load_plugins`) and loads custom tool handlers, then runs `load_cases`/`run_suite` over `evals/`.
+1. In `jaros/cli.py`, add `cmd_eval(data_dir)` that builds the LLM + `AgentRegistry` (`register_builtins` + `load_agents`) and loads custom tool handlers, then runs `load_cases`/`run_suite` over `evals/`.
 2. Print a per-case PASS/FAIL report with failing-check details and a summary; register the `eval` subcommand and dispatch it; return 0 iff all cases pass.
 
 #### Implements

@@ -3,16 +3,16 @@ it from the host via the shared-FS CLI, with example agents.
 
 This proves the end-to-end story the Prime Directive demands:
   - the OS boots inside the container and keeps running (EXT-007);
-  - the host adds work + plugins + tools ONLY through the shared volume (EXT-006/008);
+  - the host adds work + agents + tools ONLY through the shared volume (EXT-006/008);
   - the daemon ingests each job, runs an agent as a thread, validates the
     decision, drives a durable state transition, and writes a result;
-  - a built-in agent, two example plugin agents (one calling a custom tool), all
+  - a built-in agent, two example agents (one calling a custom tool), all
     run; every accepted decision is recorded to the durable decision log
     (EXT-002 / REQ-6);
   - the host watches results + status purely by reading the shared volume.
 
 It builds the image, runs the container with a bind-mounted throwaway data dir,
-stages the example plugins/tools into it, submits jobs with `jaros submit`, polls
+stages the example agents/tools into it, submits jobs with `jaros submit`, polls
 the mounted `outbox/` + `status.json`, and asserts success. Skips gracefully
 (exit 0) when docker is unavailable.
 
@@ -53,12 +53,12 @@ def main() -> int:
     data_dir = Path(tempfile.mkdtemp(prefix="jaros-demo-"))
     print(f"[demo] host data dir: {data_dir}")
 
-    # Stage the example plugin agents + custom tool into the shared volume so the
+    # Stage the example agents + custom tool into the shared volume so the
     # containerized daemon loads them at runtime over the mount.
-    (data_dir / "plugins").mkdir(parents=True, exist_ok=True)
+    (data_dir / "agents").mkdir(parents=True, exist_ok=True)
     (data_dir / "tools").mkdir(parents=True, exist_ok=True)
-    for p in (EXAMPLES / "plugins").glob("*.py"):
-        shutil.copy(p, data_dir / "plugins" / p.name)
+    for p in (EXAMPLES / "agents").glob("*.py"):
+        shutil.copy(p, data_dir / "agents" / p.name)
     for p in (EXAMPLES / "tools").glob("*.py"):
         shutil.copy(p, data_dir / "tools" / p.name)
 
@@ -157,7 +157,7 @@ def main() -> int:
 
         if all(checks.values()):
             print("PASS: the OS booted in the container, ingested host-submitted jobs "
-                  "(built-in + example plugin agents + a custom tool) over the shared "
+                  "(built-in + example agents + a custom tool) over the shared "
                   "volume, produced results, and recorded decisions for replay.")
             return 0
         print("FAIL: one or more checks failed.")

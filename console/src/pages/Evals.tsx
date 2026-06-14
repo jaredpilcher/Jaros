@@ -39,7 +39,7 @@ export function Evals() {
           )
         ) : (
           <div className="hint">
-            Runs <code>evals/*.json</code> against the built-in + plugin agents and the loaded tools. Because reasoning emits inert data
+            Runs <code>evals/*.json</code> against the built-in + agents and the loaded tools. Because reasoning emits inert data
             and execution is deterministic, results reproduce exactly — debuggable like any test.
           </div>
         )}

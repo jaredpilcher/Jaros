@@ -54,9 +54,9 @@ docker run -d \
 
 ## 3. Protocol 2: Develop and Install a New Agent
 
-To create and register a new agent kind inside Jaros, you must write a Python script conforming to the `ReasoningBoundary` plugin structure.
+To create and register a new agent kind inside Jaros, you must write a Python script conforming to the `ReasoningBoundary` agent structure.
 
-### Step A: Create the Agent Plugin Script (`custom_agent.py`)
+### Step A: Create the Agent Agent Script (`custom_agent.py`)
 Write your agent reasoning code exactly like this template. Keep it standard-library-only.
 
 ```python
@@ -95,7 +95,7 @@ def build(llm):
 ```
 
 ### Step B: Install the Agent atomically via the Host CLI
-Execute the `add-agent` subcommand from the host. This copies the script into the watched `plugins/` directory atomically:
+Execute the `add-agent` subcommand from the host. This copies the script into the watched `agents/` directory atomically:
 
 ```bash
 python -m jaros.cli --data-dir .jaros-data add-agent path/to/custom_agent.py --name custom_agent
@@ -131,7 +131,7 @@ job_id = uuid.uuid4().hex
 # Define job descriptor
 job = {
     "id": job_id,
-    "kind": "custom_agent",  # The agent plugin kind to trigger
+    "kind": "custom_agent",  # The agent kind to trigger
     "input": {"task": "Verify transaction logs"}  # Prompt context
 }
 

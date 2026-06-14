@@ -128,7 +128,7 @@ def do_evals(data_dir: str) -> dict:
     from jaros.execution import executor
     from jaros.execution.tools import load_custom_tools, reset_tools_registry
     from jaros.llm import LlmConfig, create_llm_client
-    from jaros.registry import AgentRegistry, load_plugins, register_builtins
+    from jaros.registry import AgentRegistry, load_agents, register_builtins
 
     data = Path(data_dir)
     executor.reset_handlers()
@@ -136,7 +136,7 @@ def do_evals(data_dir: str) -> dict:
     llm = create_llm_client(LlmConfig(provider="default"))
     registry = AgentRegistry()
     register_builtins(registry, llm)
-    load_plugins(registry, data / "plugins", llm)
+    load_agents(registry, data / "agents", llm)
     load_custom_tools(data / "tools")
 
     cases = load_cases(data / "evals")

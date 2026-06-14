@@ -20,7 +20,7 @@ from jaros.execution.tools import load_custom_tools, reset_tools_registry
 RO = Path(__file__).resolve().parents[1] / "examples" / "readonly"
 
 
-def _load_plugin(path: Path):
+def _load_agent(path: Path):
     spec = importlib.util.spec_from_file_location(path.stem, path)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
@@ -55,7 +55,7 @@ def test_each_readonly_agent_runs_through_its_tool(tmp_path: Path):
     }
     results = {}
     for fname, ctx in cases.items():
-        mod = _load_plugin(RO / "plugins" / fname)
+        mod = _load_agent(RO / "agents" / fname)
         [decision] = mod.build(object()).decide(ctx)
         gated = validate_decision(decision)
         assert gated.ok, gated.reason
@@ -70,13 +70,13 @@ def test_each_readonly_agent_runs_through_its_tool(tmp_path: Path):
 
 
 def test_many_readonly_agents_run_under_one_daemon(tmp_path: Path):
-    _stage(RO / "plugins", tmp_path / "plugins")
+    _stage(RO / "agents", tmp_path / "agents")
     _stage(RO / "tools", tmp_path / "tools")
     sample = tmp_path / "sample.txt"
     sample.write_text("a b c\n", encoding="utf-8")
 
     daemon = Daemon(tmp_path)
-    daemon.tick()  # load the plugin agents + read-only tools
+    daemon.tick()  # load the agents + read-only tools
 
     jobs = [
         ("system-health", {}),

@@ -7,7 +7,7 @@ import { Pill } from "./ui";
 const NAV: { to: string; label: string; ico: string; badge?: (s: Snapshot | null) => number | undefined }[] = [
   { to: "/", label: "Overview", ico: "◎" },
   { to: "/jobs", label: "Jobs", ico: "▣", badge: (s) => s?.counts.inbox },
-  { to: "/agents", label: "Agents & Tools", ico: "◆", badge: (s) => (s ? s.counts.plugins + s.counts.tools : undefined) },
+  { to: "/agents", label: "Agents & Tools", ico: "◆", badge: (s) => (s ? s.counts.agents + s.counts.tools : undefined) },
   { to: "/replay", label: "Reproducibility", ico: "↻", badge: (s) => s?.counts.decisions },
   { to: "/schedules", label: "Schedules", ico: "⏱" },
   { to: "/evals", label: "Evaluations", ico: "✓" },

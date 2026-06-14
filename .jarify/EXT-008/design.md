@@ -8,7 +8,7 @@ The CLI is a thin, pure-files client. The shared data directory (a Docker-mounte
    HOST (Windows / macOS / Linux)              CONTAINER (Jaros daemon)
    +-----------------------------+             +---------------------------+
    |  jaros submit advance ...   | --write-->  |  inbox/<id>.json          |
-   |  jaros add-agent greet.py   | --write-->  |  plugins/greet.py         |
+   |  jaros add-agent greet.py   | --write-->  |  agents/greet.py         |
    |  jaros status / watch       | <--read---  |  status.json, outbox/*    |
    +-----------------------------+             +---------------------------+
               \__________ same dir, mounted: -v <host-dir>:/data __________/
@@ -21,7 +21,7 @@ The CLI is a thin, pure-files client. The shared data directory (a Docker-mounte
 ```text
   jaros serve                 run the daemon (used inside the container)
   jaros submit <kind> [--input JSON]   -> inbox/<id>.json
-  jaros add-agent <file.py> [--name K] -> plugins/<file>.py
+  jaros add-agent <file.py> [--name K] -> agents/<file>.py
   jaros status                -> print status.json
   jaros watch [--interval S]  -> live status + new outbox results
   jaros logs                  -> tail the daemon log (if present)
@@ -40,4 +40,4 @@ The CLI is a thin, pure-files client. The shared data directory (a Docker-mounte
 
 - Pure standard library + `pathlib`; identical behavior on every OS.
 - The only transport is the shared data directory; no network is ever opened.
-- Writes are atomic via `os.replace`, so the daemon reads only complete jobs/plugins.
+- Writes are atomic via `os.replace`, so the daemon reads only complete jobs/agents.

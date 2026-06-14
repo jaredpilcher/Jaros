@@ -15,7 +15,7 @@ Canonical layout (relative to ``base_dir``)::
     inbox/        messages awaiting processing
     outbox/       messages produced for others
     artifacts/    durable work products
-    plugins/      plugin payloads / config
+    agents/      agent payloads / config
     processed/    successfully handled inputs
     failed/       inputs that failed handling
 """
@@ -32,7 +32,7 @@ LAYOUT_DIRS: tuple[str, ...] = (
     "inbox",
     "outbox",
     "artifacts",
-    "plugins",
+    "agents",
     "processed",
     "failed",
 )

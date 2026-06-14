@@ -49,9 +49,9 @@ export function Overview({ snap }: { snap: Snapshot | null }) {
             <span className="mono">{s.pool?.pending ?? 0}</span>
           </div>
           <div className="row" style={{ justifyContent: "space-between" }}>
-            <span className="hint">plugins / tools</span>
+            <span className="hint">agents / tools</span>
             <span className="mono">
-              {c.plugins} / {c.tools}
+              {c.agents} / {c.tools}
             </span>
           </div>
         </Card>
