@@ -92,16 +92,34 @@ here needs a decision you haven't already made — just execution.
       output, publish `blog/02-deterministic-replay-vs-time-travel.md`.
 - [ ] (Optional) add the LangGraph side-by-side — see `launch/benchmark/README.md`
       (run it; never fabricate numbers).
-- [ ] Re-share blog 02 to the channels that received the launch well.
+- [ ] **Build + publish reference agent #1 — `repo-fixer`** (spec: `launch/reference-agents.md`).
+      This is your "here's a *real* agent — now replay its run byte-for-byte" proof.
+      Ship it with its deterministic eval and a 30s replay clip. **Claim only
+      reproducible/replayable/auditable — never "production-ready."**
+- [ ] Re-share blog 02 + the reference-agent clip to the channels that received the launch well.
 - [ ] Open **GitHub Discussions or a Discord**; link it from the README.
 
 ---
 
-## PHASE 4 — Weeks 3–8 (the flywheel)
+## PHASE 4 — Weeks 3–8 (the flywheel + on-ramps)
+- [ ] **Build reference agents #2 `extractor` and #3 `researcher`** (spec:
+      `launch/reference-agents.md`), one at a time. Each gets a deterministic eval, a
+      short "Build a reproducible \<X\> agent" SEO page/blog, and a README example.
+      These are recognizable on-ramps *and* design-partner conversation starters.
 - [ ] Land **3–5 design partners** — inbound from pain: when someone posts
       "my agent is non-deterministic / I can't reproduce this," reply and help.
+      (A reference agent that matches their use case is the perfect opener.)
 - [ ] Work each one hands-on + free until their agent is reproducible → case study.
 - [ ] Your AI-learning site = design-partner #1 (dogfood + case study). Get others too.
+- [ ] **Only after the three land:** spec **bring-your-own-agent** (a thin adapter so
+      people run *their* existing agent on Jaros and gain replay for free — additive,
+      not parasitic). See the follow-up note in `launch/reference-agents.md`.
+
+> ⚠️ **Reference-agent guardrail:** build the *pattern*, never clone a named project;
+> ship ≤3 done well (not 30 clones); the eval ships with the agent; and the claim is
+> always the narrow true one (reproducible/replayable/auditable/least-privilege),
+> never "the production-ready version of X." This is the same over-claiming line that
+> protects the whole project.
 
 ---
 
@@ -129,3 +147,4 @@ code. Deepen the moat (replay + capability-safety + zero-infra). Don't widen it.
 | X thread | `launch/posts/x-thread.md` |
 | Lobsters / dev.to / LinkedIn | `launch/posts/lobsters-devto-linkedin.md` |
 | Runnable benchmark | `launch/benchmark/run_reproducibility_benchmark.py` |
+| Reference agents (build spec) | `launch/reference-agents.md` |
