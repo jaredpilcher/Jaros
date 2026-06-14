@@ -8,6 +8,29 @@ here needs a decision you haven't already made — just execution.
 > decision and replays the run to byte-identical state — debug it like normal
 > software, and gate it in CI."*
 
+> **Your opening hook** (lead with it on *every* post, every platform):
+> *"When an agent 'does something wrong' — sends the wrong email, deletes the wrong
+> file — it's almost never a dumb model. We wired the model's output straight to the
+> trigger. That's a design flaw, not a model flaw — and no prompt fixes a design flaw."*
+> — your own line from the June 9 post. It's your best sentence. Reuse it everywhere.
+
+## Two goals, two channels (don't confuse them)
+
+You have two aims and they live on different platforms — track them separately:
+
+| Goal | Where | What "working" looks like |
+| --- | --- | --- |
+| **Win developers** (adoption) | Show HN · r/LocalLLaMA · r/LLMDevs · X | completed quickstarts, issues from real use, someone ships on it |
+| **Win a job** (personal brand) | LinkedIn | profile views, follower growth, eng-leaders/recruiters reaching out |
+
+**You already ran a v1 launch — on LinkedIn (June 9).** Numbers after 4 days: **818
+impressions, 412 reached, 15 reactions, 3 followers, 6 profile views — but 0 comments,
+0 reposts, 0 saves.** Read it right: the *reach* and *profile clicks* are a real, working
+**job** signal — don't dismiss it. The miss was **zero conversation** (likes, then scroll)
+and you **haven't touched the developer channels at all.** Two fixable causes baked into
+the plan below: (1) the v1 CTA sent everyone to GitHub, so nothing happened in the
+comments; (2) no demo video, no question to reply to. The relaunch fixes both.
+
 ---
 
 ## PHASE 1 — Pre-launch gate (≈1 day, do before posting anything)
@@ -61,12 +84,15 @@ here needs a decision you haven't already made — just execution.
 ## PHASE 2 — Launch week (target Tue–Thu). Times = US Eastern.
 
 > Pre-written assets: blog → `launch/blog/`, posts → `launch/posts/`.
-> Golden rule: **reply fast and kind for the first 6 hours.** That's the launch.
+> Golden rules: **open every post with the hook line above**, and **reply fast and
+> kind for the first 6 hours.** That's the launch.
+> Note: the June 9 LinkedIn post was v1 on the *job* channel. This week is the **real**
+> launch — it hits the *developer* channels you skipped, plus a stronger LinkedIn v2.
 
 ### Day 1 — Tuesday (the main launch)
 - [ ] **08:30** Publish `blog/01-flaky-agent-ci.md` on your site (URL you control).
-- [ ] **09:00** **Show HN** — `posts/show-hn.md` (title option #1). Post the prepared
-      first comment immediately. ⛔ Never ask for upvotes.
+- [ ] **09:00** **Show HN** — `posts/show-hn.md` (title option #1). Open the first
+      comment with the **"design flaw, not a model flaw"** hook. ⛔ Never ask for upvotes.
 - [ ] **09:15** **X thread** — `posts/x-thread.md`, lead with the replay clip. Pin it.
 - [ ] **09:30** **r/LocalLLaMA** — `posts/reddit.md` variant A.
 - [ ] **All day** Reply to every comment within ~15–30 min. Use the reply templates
@@ -79,7 +105,18 @@ here needs a decision you haven't already made — just execution.
 
 ### Day 3 — Thursday
 - [ ] **09:00** **r/MachineLearning** `[P]` — `posts/reddit.md` variant C (technical framing).
-- [ ] **LinkedIn** — `posts/lobsters-devto-linkedin.md` (builder story; design-partner inbound).
+- [ ] **LinkedIn v2** — your *job* channel. Make it earn **comments**, not just likes
+      (v1 got 15 reactions / **0 comments**). Fix exactly what v1 missed:
+  - Open with the **"design flaw, not a model flaw"** hook — it must live in the first
+    1–2 lines (all that shows before "…see more"; it decides who expands).
+  - **Native-upload the 30s replay video.** **No external link in the body** (LinkedIn
+    throttles outbound links); put the GitHub link in the **first comment**.
+  - **End on a question** to pull conversation *into the comments* — e.g. *"When your
+    team says 'the agent did something wrong,' are you fixing the prompt or the
+    architecture?"* (v1 sent everyone to GitHub → 0 comments.)
+  - **Seed it:** ping 5–10 relevant people right after posting; reply to every comment
+    within the hour. Early comments are what expand reach.
+  - Draft to adapt: `posts/lobsters-devto-linkedin.md` (LinkedIn section).
 
 ### Day 4–5 — cool off
 - [ ] Convert every "this is cool" into *"want me to help you try it on your agent?"*
@@ -123,10 +160,20 @@ here needs a decision you haven't already made — just execution.
 
 ---
 
-## The 3 numbers that mean it's working (not stars, not revenue)
+## The numbers that mean it's working (not stars, not revenue)
+
+**Developer axis** (adoption):
 - [ ] Strangers **complete the quickstart**.
 - [ ] Issues arrive from **real usage**, not "won't install."
 - [ ] **Someone ships on Jaros without you in the room.** ← the moment it's real.
+
+**Job axis** (the goal that's already showing signal):
+- [ ] **Profile views + followers** from posts (v1 LinkedIn already gave you 6 + 3 — amplify it).
+- [ ] **Comments** on the LinkedIn post (v1 got 0 — the metric to move with v2).
+- [ ] Inbound from **eng leaders / recruiters** who saw the project.
+
+> Reactions/likes are vanity here. The signals that matter are *people clicking through
+> to you* (job) and *people running the thing* (developers).
 
 ## The one rule for the next two months
 **Hold scope.** After Phase 1 the bottleneck is attention + design partners, not
