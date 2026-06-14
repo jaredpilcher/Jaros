@@ -3,6 +3,10 @@
 A linear path from `pip install` to a reproducible, scheduled, evaluated,
 distributed agent system. Every command here is real and tested.
 
+The core loop at a glance — submit work, check status, replay it byte-identically with zero model calls, and run the eval suite (a real session, captured verbatim):
+
+![A real Jaros CLI session: submit, status, replay --json, and a green eval suite](cli.png)
+
 > **Mental model.** Agents *propose* inert `Decision` data; a deterministic
 > Execution Plane decides whether and how to run it. The only non-determinism is
 > the model's output, captured as data — so runs **reproduce by replay** and a

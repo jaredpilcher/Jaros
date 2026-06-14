@@ -72,6 +72,10 @@ It is deliberately **not**: a hardened security sandbox, a cluster-scale distrib
 For the full day-one-to-production path (first agent → schedule → eval → replay →
 console → distributed Docker), see **[docs/getting-started.md](docs/getting-started.md)**.
 
+The whole loop from the CLI — submit work, check status, replay it byte-identically, and run the eval suite (real output, nothing faked):
+
+![A real Jaros CLI session: submit jobs, status, replay --json (0 model calls, byte-identical), and a green eval suite](docs/cli.png)
+
 ```bash
 pip install -e ".[dev]"
 ```
@@ -142,7 +146,11 @@ quickstart) make it easy to know where to start and what to do next:
 
 ![Jaros Console — the first-run tour that guides new operators through the core loop](console/docs/screenshots/tour.png)
 
-The full page gallery and a walkthrough of every page live in
+The **Overview** greets a new operator with a live get-started checklist that lights up each step as it's done, and every screen documents itself with intros and hover tooltips:
+
+![The get-started checklist on the Overview — step 1 done, "submit your first job" highlighted as the next action](console/docs/screenshots/get-started.png)
+
+The full page gallery and a walkthrough of every page (with pictures) live in
 **[docs/console.md](docs/console.md)** and the [console README](console/README.md#screenshots).
 
 ---

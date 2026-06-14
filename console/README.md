@@ -24,6 +24,14 @@ Jaros OS — everything in the Prime Directive, drivable from the browser.
 
 Live captures from a running console (regenerate with `npm run screenshots`).
 
+**First-run tour** — a brief wizard guides new operators through the core loop:
+
+![First-run tour](docs/screenshots/tour.png)
+
+**Get started** — a live checklist on the Overview shows exactly what to do next:
+
+![Get-started checklist](docs/screenshots/get-started.png)
+
 **Overview** — live status, throughput, agent pool, and the zero-infra profile:
 
 ![Overview](docs/screenshots/overview.png)
@@ -36,7 +44,13 @@ Live captures from a running console (regenerate with `npm run screenshots`).
 
 ![State Machine](docs/screenshots/state-machine.png)
 
-More under [`docs/screenshots/`](docs/screenshots/): Jobs, Agents & Tools, Harness.
+**Help & Docs** — an in-app guide: every page with pictures plus a CLI quickstart:
+
+![Help & Docs](docs/screenshots/help.png)
+
+More under [`docs/screenshots/`](docs/screenshots/): Jobs, Agents & Tools,
+Schedules, Evaluations, Harness, and a hover tooltip. A full walkthrough lives in
+[docs/console.md](../docs/console.md).
 
 ## Run it
 

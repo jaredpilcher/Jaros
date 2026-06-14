@@ -31,6 +31,19 @@ The console is built to be self-explanatory:
 
 ![The first-run tour introduces the core loop: submit a job, extend at runtime, replay](../console/docs/screenshots/tour.png)
 
+The Overview greets a new operator with a live checklist — each step lights up as
+it's completed, and the current step is highlighted with a direct link:
+
+![The get-started checklist: step 1 done, "submit your first job" highlighted as the next action](../console/docs/screenshots/get-started.png)
+
+Every screen documents itself: a one-line intro with a **Learn more →** link, and
+hover tooltips on key controls.
+
+![A hover tooltip explaining the job kind field](../console/docs/screenshots/tooltip.png)
+
+The in-app **Help & Docs** page collects all of this — every page with pictures
+plus a copy-pasteable CLI quickstart:
+
 ![The in-app Help & Docs page documents every page with pictures and a CLI quickstart](../console/docs/screenshots/help.png)
 
 ## Overview
