@@ -66,6 +66,10 @@
   .install code{color:var(--accent)}
   .install button{background:transparent;border:1px solid var(--line);color:var(--muted);border-radius:7px;padding:4px 9px;font-size:12px;cursor:pointer}
   .install button:hover{color:var(--ink);border-color:var(--accent2)}
+  .signup{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;max-width:520px}
+  .signup input{flex:1 1 240px;min-width:0;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:12px 14px;font-size:15px;font-family:var(--sans)}
+  .signup input::placeholder{color:var(--muted)}
+  .signup input:focus{outline:none;border-color:var(--accent2)}
 
   /* sections */
   section{padding:48px 0;border-bottom:1px solid var(--line)}
@@ -125,6 +129,7 @@
       <a href="#why">Why</a>
       <a href="#compare">Where it fits</a>
       <a href="#start">Quickstart</a>
+      <a href="#cloud">For teams</a>
       <a href="https://github.com/jaredpilcher/Jaros">GitHub</a>
     </div>
   </div>
@@ -262,6 +267,28 @@ replayed 2 recorded decisions (2 applied) - model calls: <span class="hl">0</spa
       </div>
     </div>
     <p class="muted" style="margin-top:18px;font-size:14px"><b>One honest caveat:</b> byte-identical replay holds because executor handlers are deterministic — so Jaros makes that a <i>checked</i> invariant (a CI guardrail fails the build if the core path stops reproducing), not something you have to trust.</p>
+  </div>
+</section>
+
+<!-- FOR TEAMS / CLOUD WAITLIST ---------------------------------------------->
+<section id="cloud">
+  <div class="wrap">
+    <h2>For teams — later</h2>
+    <p class="sub">The runtime is free and MIT, always. A hosted layer — shared, searchable,
+    retained <b>replay &amp; audit</b> history and team controls — is on the roadmap. Want a
+    heads-up when it lands? No spam, one email.</p>
+    <!-- WIRE THE FORM (2 min): point action= at a free form backend — Formspree
+         (formspree.io), Tally, Buttondown, or a Google Form. Until you do, the button
+         submits nowhere; the "talk to me" mailto below works with zero setup. -->
+    <form class="signup" action="https://formspree.io/f/YOUR_FORM_ID" method="POST">
+      <input type="email" name="email" placeholder="you@company.com" required aria-label="Email" />
+      <button class="btn primary" type="submit">Notify me</button>
+    </form>
+    <p class="muted" style="margin-top:14px;font-size:14px">
+      Running agents on a team and want to talk?
+      <!-- Replace with your contact email (a personal address is fine for a solo project). -->
+      <a href="mailto:you@example.com?subject=Jaros%20for%20teams">Email me →</a>
+    </p>
   </div>
 </section>
 
