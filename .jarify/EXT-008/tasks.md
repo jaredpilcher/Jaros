@@ -49,3 +49,37 @@ Let the operator observe the running OS purely by reading shared-FS files.
 #### Implements
 - [REQ-4] Watch and Status
 - [REQ-5] Shared-FS-Only Transport
+
+### [TASK-5] Extract reusable runtime handlers (reuse, don't duplicate)
+
+Make the executor handlers a single shared registration so replay re-uses the
+exact runtime code path, keeping byte-identity faithful.
+
+#### Steps
+1. Create `jaros/execution/handlers.py` with `register_runtime_handlers(*, harness, writer_agent, fs=None, tools_dir=None)` registering an `advance` handler that is a **pure function of `(decision, log)`** (commits each event to the `log` collaborator, returns `finalState`/`logIndices`, mutates no caller state) and an `fs.write` handler closing over `harness`/`writer_agent`; load custom tools from `tools_dir` when given.
+2. In `jaros/daemon.py`, replace the inline `_advance_handler`/`_fs_write_handler` registration + `load_custom_tools` call with `register_runtime_handlers(harness=self.harness, writer_agent=_WRITER_AGENT, fs=self.fs, tools_dir=self.fs.base_dir/"tools")`, and set `self.state` from the advance result in `_run_job` (the handler no longer mutates `self.state`).
+
+#### Implements
+- [REQ-6] Deterministic Replay Command
+
+### [TASK-6] Implement the `jaros replay` command
+
+Reconstruct a run from the decision log into an isolated sandbox and verify it.
+
+#### Steps
+1. In `jaros/cli.py`, add `cmd_replay(data_dir, *, as_json, verbose, stream=None)` that reads `state/decisions.log` via `read_decisions` (exit `2` + friendly message when empty/missing), constructs a fresh sandbox (`tempfile.mkdtemp` with a sandbox `SharedFileSystem` + `TransitionLog`), registers the runtime handlers over the sandbox (`register_runtime_handlers`, a sandbox `Harness`+writer under `FsWriteRole`), and runs `replay(decision_log, executor.apply, log=sandbox_log)` — constructing no `LlmClient`.
+2. Compare the sandbox `transitions.log` bytes to the live one and assert `recover(sandbox) == recover(live)`; print human output or, with `--json`, `{decisions, modelCalls:0, finalState, byteIdentical, ok}`; return `0` (byte-identical), `1` (divergence), or `2` (nothing). Register the `replay` subparser, dispatch it in `main()`, and add it to the module docstring.
+
+#### Implements
+- [REQ-6] Deterministic Replay Command
+
+### [TASK-7] Test replay (unit + integration + e2e) and update the quickstart
+
+Prove the guarantee and the safety properties, and surface replay in the docs.
+
+#### Steps
+1. Create `tests/test_cli_replay.py`: a real recorded run replays byte-identical (`recover(sandbox)==recover(live)`, exit 0); replay succeeds with `jaros.llm.create_llm_client` monkeypatched to raise (no model call); the live data dir is byte-unchanged after replay (side effects sandboxed); empty/missing log → exit 2; a non-deterministic handler → `byteIdentical:false` / exit 1; the `--json` shape.
+2. Add a Docker/e2e check (`tests/integration/run_replay_demo.py`) that records a run in a container, then runs `jaros replay` on the host against the shared volume and asserts byte-identical; make `jaros replay` the quickstart's closing "wow" step in `README.md` and `docs/getting-started.md`.
+
+#### Implements
+- [REQ-6] Deterministic Replay Command

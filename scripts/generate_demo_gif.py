@@ -1,182 +1,159 @@
-import sys
+"""Render the README terminal-cast GIFs with Pillow (a dev dependency).
+
+Produces two animated GIFs under ``docs/``:
+
+- ``demo.gif``   — boot the OS and run a built-in + two example plugin agents.
+- ``replay.gif`` — the headline differentiator: reproduce a run byte-for-byte by
+  replaying the recorded decision log, with no model call.
+
+Run:  python scripts/generate_demo_gif.py
+"""
+
+from __future__ import annotations
+
 from pathlib import Path
+
 from PIL import Image, ImageDraw, ImageFont
 
-def generate_gif(output_path: Path):
-    # Terminal Dimensions
-    width, height = 760, 480
-    bg_color = (30, 30, 30)      # Slate gray/dark theme
-    text_color = (220, 220, 220)  # Off-white
-    prompt_color = (78, 154, 6)   # Terminal Green
-    cmd_color = (252, 233, 79)    # Light Yellow
-    highlight_color = (114, 159, 207) # Cool Blue
-    success_color = (138, 226, 52) # Bright Green
+WIDTH, HEIGHT = 760, 480
+BG = (30, 30, 30)
+TEXT = (220, 220, 220)
+PROMPT = (78, 154, 6)       # terminal green
+CMD = (252, 233, 79)        # light yellow
+HILITE = (114, 159, 207)    # cool blue
+OK = (138, 226, 52)         # bright green
+MUTED = (150, 150, 150)
 
-    # Setup standard safe font
-    font = ImageFont.load_default()
+FONT = ImageFont.load_default()
 
-    frames = []
 
-    # Lines to write step by step
-    scripts = [
-        # Frame 0: Initial state
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("_", text_color)
-        ],
-        # Frame 1: Typing docker command
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("docker run -d --name jaros_os -v ${PWD}/.jaros-data:/data jaros", cmd_color)
-        ],
-        # Frame 2: Daemon boots up inside container
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("docker run -d --name jaros_os -v ${PWD}/.jaros-data:/data jaros\n", cmd_color),
-            ("a8f9c1e4d3b6a2b8e8f8... (Container started)\n", text_color),
-            ("operator@host:~$ ", prompt_color),
-            ("jaros status\n", cmd_color),
-            ("  State:          ", text_color), ("PENDING\n", highlight_color),
-            ("  Processed Jobs: ", text_color), ("0\n", text_color),
-            ("  Failed Jobs:    ", text_color), ("0\n", text_color),
-            ("  Active Agents:  ", text_color), ("0\n", text_color),
-            ("operator@host:~$ ", prompt_color),
-            ("_", text_color)
-        ],
-        # Frame 3: Submitting job via host CLI
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("docker run -d --name jaros_os -v ${PWD}/.jaros-data:/data jaros\n", cmd_color),
-            ("a8f9c1e4d3b6a2b8e8f8... (Container started)\n", text_color),
-            ("operator@host:~$ ", prompt_color),
-            ("jaros status\n", cmd_color),
-            ("  State:          PENDING\n", text_color),
-            ("  Processed Jobs: 0\n  Failed Jobs:    0\n  Active Agents:  0\n", text_color),
-            ("operator@host:~$ ", prompt_color),
-            ("jaros submit advance --input '{\"events\": [\"START\"]}'\n", cmd_color),
-            ("Submitted job 69d5ed8c -> .jaros-data/inbox/69d5ed8c.json\n", success_color),
-            ("operator@host:~$ ", prompt_color),
-            ("_", text_color)
-        ],
-        # Frame 4: Daemon detects and starts processing (Harness spawns agent thread)
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("jaros submit advance --input '{\"events\": [\"START\"]}'\n", cmd_color),
-            ("Submitted job 69d5ed8c -> .jaros-data/inbox/69d5ed8c.json\n", success_color),
-            ("operator@host:~$ ", prompt_color),
-            ("docker logs -f jaros_os\n", cmd_color),
-            ("JAROS_HEARTBEAT tick=1 state=PENDING active=0 processed=0 failed=0\n", text_color),
-            ("[ingest] detected job 69d5ed8c (kind: advance)\n", highlight_color),
-            ("[harness] spawning agent thread: advance_agent_thread\n", text_color),
-            ("[harness] granted capabilities: queue_send, fs_write\n", text_color),
-            ("_", text_color)
-        ],
-        # Frame 5: Decision gate validation and state transitions
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("docker logs -f jaros_os\n", cmd_color),
-            ("JAROS_HEARTBEAT tick=1 state=PENDING active=0 processed=0 failed=0\n", text_color),
-            ("[ingest] detected job 69d5ed8c (kind: advance)\n", highlight_color),
-            ("[harness] spawning agent thread: advance_agent_thread\n", text_color),
-            ("[harness] granted capabilities: queue_send, fs_write\n", text_color),
-            ("[executor] validating decision... ", text_color), ("ACCEPTED\n", success_color),
-            ("[state] transition: PENDING -> RUNNING\n", highlight_color),
-            ("[state] transition: RUNNING -> DONE\n", highlight_color),
-            ("_", text_color)
-        ],
-        # Frame 6: Mediatied I/O, writing output, tearing down agent
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("docker logs -f jaros_os\n", cmd_color),
-            ("JAROS_HEARTBEAT tick=1 state=PENDING active=0 processed=0 failed=0\n", text_color),
-            ("[ingest] detected job 69d5ed8c (kind: advance)\n", highlight_color),
-            ("[harness] spawning agent thread: advance_agent_thread\n", text_color),
-            ("[harness] granted capabilities: queue_send, fs_write\n", text_color),
-            ("[executor] validating decision... ACCEPTED\n", text_color),
-            ("[state] transition: PENDING -> RUNNING\n", highlight_color),
-            ("[state] transition: RUNNING -> DONE\n", highlight_color),
-            ("[harness] writing result atomically to outbox/69d5ed8c.json\n", text_color),
-            ("[harness] tearing down agent thread and revoking grants\n", text_color),
-            ("JAROS_HEARTBEAT tick=2 state=DONE active=0 processed=1 failed=0\n", text_color),
-            ("operator@host:~$ ", prompt_color),
-            ("_", text_color)
-        ],
-        # Frame 7: Inspecting final status
-        [
-            ("operator@host:~$ ", prompt_color),
-            ("docker logs -f jaros_os\n", cmd_color),
-            ("JAROS_HEARTBEAT tick=2 state=DONE active=0 processed=1 failed=0\n", text_color),
-            ("operator@host:~$ ", prompt_color),
-            ("jaros status\n", cmd_color),
-            ("  State:          ", text_color), ("DONE\n", success_color),
-            ("  Processed Jobs: ", text_color), ("1\n", text_color),
-            ("  Failed Jobs:    ", text_color), ("0\n", text_color),
-            ("  Active Agents:  ", text_color), ("0\n", text_color),
-            ("  Last Result:    ", text_color), ("outbox/69d5ed8c.json\n", success_color),
-            ("\n", text_color),
-            ("PASS: Jaros OS container execution complete.\n", success_color),
-            ("operator@host:~$ ", prompt_color),
-            ("_", text_color)
-        ]
-    ]
-
+def _render(scripts: list[list[tuple[str, tuple[int, int, int]]]],
+            output_path: Path,
+            title: str,
+            slow_frames: set[int]) -> None:
+    frames: list[tuple[Image.Image, int]] = []
     for frame_idx, elements in enumerate(scripts):
-        # Create a fresh image frame
-        img = Image.new("RGB", (width, height), bg_color)
+        img = Image.new("RGB", (WIDTH, HEIGHT), BG)
         draw = ImageDraw.Draw(img)
 
-        # Draw Terminal Chrome Header
-        draw.rectangle([(0, 0), (width, 30)], fill=(45, 45, 45))
-        # Draw Window Controls (Fake buttons)
+        # Terminal chrome.
+        draw.rectangle([(0, 0), (WIDTH, 30)], fill=(45, 45, 45))
         draw.ellipse([(15, 10), (25, 20)], fill=(255, 95, 86))
         draw.ellipse([(35, 10), (45, 20)], fill=(255, 189, 46))
         draw.ellipse([(55, 10), (65, 20)], fill=(39, 201, 63))
-        # Draw Title text
-        draw.text((width // 2 - 80, 8), "Jaros OS Terminal - operator@host:~/.jaros-data", fill=(160, 160, 160), font=font)
+        draw.text((WIDTH // 2 - 120, 8), title, fill=MUTED, font=FONT)
+        draw.rectangle([(0, 0), (WIDTH - 1, HEIGHT - 1)], outline=(60, 60, 60), width=1)
 
-        # Draw Frame border
-        draw.rectangle([(0, 0), (width - 1, height - 1)], outline=(60, 60, 60), width=1)
-
-        # Write lines
-        x_offset = 15
-        y_offset = 45
-        line_height = 16
-
+        x_offset, y_offset, line_height = 15, 45, 16
         for text, color in elements:
             parts = text.split("\n")
             for idx, part in enumerate(parts):
                 if part:
-                    draw.text((x_offset, y_offset), part, fill=color, font=font)
-                    # We only advance x_offset if there is more on this physical line
+                    draw.text((x_offset, y_offset), part, fill=color, font=FONT)
                     if idx < len(parts) - 1:
                         y_offset += line_height
                         x_offset = 15
                     else:
-                        x_offset += draw.textlength(part, font=font)
-                else:
-                    if idx < len(parts) - 1:
-                        y_offset += line_height
-                        x_offset = 15
+                        x_offset += draw.textlength(part, font=FONT)
+                elif idx < len(parts) - 1:
+                    y_offset += line_height
+                    x_offset = 15
 
-        # Duplicate key frames to give the user time to read them
-        duration = 1500 if frame_idx in [2, 3, 6, 7] else 800
-        frames.append((img, duration))
+        frames.append((img, 1700 if frame_idx in slow_frames else 850))
 
-    # Save animated GIF
-    img_list = [f[0] for f in frames]
+    imgs = [f[0] for f in frames]
     durations = [f[1] for f in frames]
-
-    img_list[0].save(
-        output_path,
-        save_all=True,
-        append_images=img_list[1:],
-        optimize=True,
-        duration=durations,
-        loop=0
+    imgs[0].save(
+        output_path, save_all=True, append_images=imgs[1:],
+        optimize=True, duration=durations, loop=0,
     )
-    print(f"Demo GIF successfully created at: {output_path}")
+    print(f"GIF created: {output_path}")
+
+
+def demo_script() -> list:
+    return [
+        [("operator@host:~$ ", PROMPT), ("_", TEXT)],
+        [
+            ("operator@host:~$ ", PROMPT),
+            ("docker run -d --name jaros_os -v ${PWD}/data:/data jaros\n", CMD),
+            ("# no database, no broker, no server  -  just files + threads\n", MUTED),
+            ("_", TEXT),
+        ],
+        [
+            ("operator@host:~$ ", PROMPT),
+            ("jaros submit advance --input '{}'\n", CMD),
+            ("jaros submit echo    --input '{\"msg\": \"hi\"}'\n", CMD),
+            ("jaros submit greeter --input '{\"name\": \"Jaros\"}'\n", CMD),
+            ("submitted 3 jobs -> data/inbox/\n", OK),
+            ("_", TEXT),
+        ],
+        [
+            ("operator@host:~$ ", PROMPT),
+            ("docker logs -f jaros_os\n", CMD),
+            ("[ingest] advance  -> agent thread  (capabilities: fs_write)\n", HILITE),
+            ("[ingest] echo     -> plugin agent  (loaded at runtime)\n", HILITE),
+            ("[ingest] greeter  -> plugin agent  -> custom tool demo.greet\n", HILITE),
+            ("[gate]   3 decisions ACCEPTED (inert data)\n", TEXT),
+            ("[log]    recorded 3 decisions -> state/decisions.log\n", OK),
+            ("_", TEXT),
+        ],
+        [
+            ("operator@host:~$ ", PROMPT),
+            ("jaros status\n", CMD),
+            ("  State:          ", TEXT), ("DONE\n", OK),
+            ("  Processed Jobs: ", TEXT), ("3\n", TEXT),
+            ("  Failed Jobs:    ", TEXT), ("0\n", TEXT),
+            ("  Active Agents:  ", TEXT), ("0\n", TEXT),
+            ("\n", TEXT),
+            ("PASS: built-in + 2 plugin agents + a custom tool, zero infra.\n", OK),
+            ("operator@host:~$ ", PROMPT), ("_", TEXT),
+        ],
+    ]
+
+
+def replay_script() -> list:
+    return [
+        [("operator@host:~$ ", PROMPT), ("_", TEXT)],
+        [
+            ("operator@host:~$ ", PROMPT),
+            ("# An agent run misbehaved in prod. Reproduce it byte-for-byte.\n", MUTED),
+            ("cat data/state/decisions.log\n", CMD),
+            ("_", TEXT),
+        ],
+        [
+            ("operator@host:~$ ", PROMPT),
+            ("cat data/state/decisions.log\n", CMD),
+            ("{\"index\":1,\"decision\":{\"kind\":\"advance\",\"payload\":{...}}}\n", TEXT),
+            ("{\"index\":2,\"decision\":{\"kind\":\"demo.greet\",\"payload\":{...}}}\n", TEXT),
+            ("# the model's outputs, captured as inert data\n", MUTED),
+            ("_", TEXT),
+        ],
+        [
+            ("operator@host:~$ ", PROMPT),
+            ("python -m replay data/state/decisions.log\n", CMD),
+            (">>> replay(decisions, executor.apply, log=fresh)\n", HILITE),
+            ("[replay] re-executing recorded decisions  (no model call)\n", TEXT),
+            ("[state]  PENDING -> RUNNING -> DONE\n", HILITE),
+            ("_", TEXT),
+        ],
+        [
+            ("operator@host:~$ ", PROMPT),
+            (">>> recover(fresh) == recover(original)\n", HILITE),
+            ("True\n", OK),
+            (">>> fresh.read_bytes() == original.read_bytes()\n", HILITE),
+            ("True\n", OK),
+            ("\n", TEXT),
+            ("Reproducible by replay: same decisions -> byte-identical state.\n", OK),
+            ("No model call. Deterministic. Debuggable like any program.\n", OK),
+            ("operator@host:~$ ", PROMPT), ("_", TEXT),
+        ],
+    ]
+
 
 if __name__ == "__main__":
     out_dir = Path(__file__).resolve().parents[1] / "docs"
     out_dir.mkdir(exist_ok=True)
-    generate_gif(out_dir / "demo.gif")
+    _render(demo_script(), out_dir / "demo.gif",
+            "Jaros OS  -  operator@host", slow_frames={1, 3, 4})
+    _render(replay_script(), out_dir / "replay.gif",
+            "Jaros OS  -  reproducibility by replay", slow_frames={1, 2, 4})

@@ -16,27 +16,27 @@
   "REQ-4": [
     {
       "file": "jaros/comms/queue.py",
-      "startLine": 29,
-      "endLine": 36
+      "startLine": 33,
+      "endLine": 40
     },
     {
       "file": "jaros/comms/fs.py",
-      "startLine": 38,
-      "endLine": 45
+      "startLine": 41,
+      "endLine": 48
     }
   ],
   "REQ-1": [
     {
       "file": "jaros/comms/queue.py",
-      "startLine": 39,
-      "endLine": 109
+      "startLine": 43,
+      "endLine": 113
     }
   ],
   "REQ-2": [
     {
       "file": "jaros/comms/fs.py",
-      "startLine": 25,
-      "endLine": 134
+      "startLine": 28,
+      "endLine": 137
     }
   ]
 }

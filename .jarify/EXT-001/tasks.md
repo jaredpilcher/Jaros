@@ -70,3 +70,16 @@ Let developers extend what the system does per decision kind.
 
 #### Implements
 - [REQ-6] Pluggable Executor Handlers
+
+### [TASK-7] Make the executor recordable for deterministic replay
+
+Expose the accepted decision so the durable log can record it, and assert the
+executor is a pure function of the decision (no hidden reasoning state).
+
+#### Steps
+1. In `jaros/execution/executor.py`, have `apply(d, ...)` surface the validated/accepted `Decision` on its `ExecutionResult` (e.g. add an `accepted: Decision | None` field) so a caller can record it before effects are observable; keep `apply` free of any `jaros.llm`/`reasoning_boundary` import (still enforced by `scripts/check_planes.py`).
+2. Add an optional `on_accept: Callable[[Decision], None]` record hook to `apply` (invoked after the gate accepts and before the handler runs) that the daemon/state layer wires to the durable decision log (EXT-002 / REQ-6).
+3. Wrap the additions in the existing `#EXT-001-REQ-6`/new `#EXT-001-REQ-7` comments, update `.jarify/EXT-001/index.json`, and add a test proving two runs over identical decisions produce identical results with the model never invoked.
+
+#### Implements
+- [REQ-7] Decision Is the Sole Replayable Non-Deterministic Input

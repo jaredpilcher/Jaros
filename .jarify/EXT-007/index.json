@@ -1,40 +1,9 @@
 {
-  "REQ-1": [
+  "REQ-6": [
     {
-      "file": "jaros/daemon.py",
-      "startLine": 52,
-      "endLine": 138
-    },
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 380,
-      "endLine": 448
-    }
-  ],
-  "REQ-2": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 142,
-      "endLine": 190
-    },
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 251,
-      "endLine": 326
-    }
-  ],
-  "REQ-5": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 194,
-      "endLine": 249
-    }
-  ],
-  "REQ-4": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 330,
-      "endLine": 376
+      "file": "scripts/check_zero_infra.py",
+      "startLine": 23,
+      "endLine": 84
     }
   ],
   "REQ-3": [
@@ -42,6 +11,44 @@
       "file": "jaros/registry.py",
       "startLine": 33,
       "endLine": 163
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 61,
+      "endLine": 167
+    },
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 455,
+      "endLine": 527
+    }
+  ],
+  "REQ-5": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 171,
+      "endLine": 278
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 280,
+      "endLine": 363
+    },
+    {
+      "file": "jaros/execution/handlers.py",
+      "startLine": 29,
+      "endLine": 88
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 367,
+      "endLine": 417
     }
   ]
 }

@@ -35,3 +35,16 @@ Make queues + shared FS the only inter-agent paths, structurally.
 #### Implements
 - [REQ-3] Exclusive Communication Channels
 - [REQ-5] No Direct Agent-to-Agent Calls (Enforced)
+
+### [TASK-4] Assert the comms fabric needs no external broker
+
+Verify the queue + shared FS introduce no broker/queue-service/network
+dependency, as the comms-layer half of zero-infrastructure.
+
+#### Steps
+1. Confirm `jaros/comms/queue.py` is purely in-process and `jaros/comms/fs.py` touches only local/mounted files; add a one-line "no external broker" note to each module docstring.
+2. Ensure `scripts/check_zero_infra.py` (created under EXT-007 / TASK-5) includes `jaros/comms/**` in its scan and that the deny-list covers broker/queue-service clients (`redis`, `pika`, `kafka`, `confluent_kafka`, `nats`).
+3. Add a test asserting `check_zero_infra` passes for `jaros/comms/**` and fails a negative fixture that imports a broker client.
+
+#### Implements
+- [REQ-6] No External Broker Dependency

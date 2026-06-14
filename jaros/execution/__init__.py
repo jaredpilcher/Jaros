@@ -6,3 +6,11 @@ enforced structurally by ``scripts/check_planes.py``.
 """
 
 from __future__ import annotations
+
+from jaros.execution.determinism import (
+    NonDeterministicHandlerError,
+    digest,
+    replays_agree,
+)
+
+__all__ = ["digest", "replays_agree", "NonDeterministicHandlerError"]

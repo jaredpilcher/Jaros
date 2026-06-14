@@ -1,7 +1,7 @@
 ---
 id: EXT-001
 title: Reasoning / Execution Boundary
-status: covered
+status: partial
 priority: high
 implementation:
   - jaros/core/json_value.py
@@ -72,3 +72,28 @@ The executor dispatches an accepted decision to a handler registered for its `ki
 - [ ] The executor exposes a registration API (e.g. `register_handler(kind, fn)`) mapping a decision `kind` to a deterministic handler.
 - [ ] `apply` validates via the gate, then dispatches to the handler for the decision's `kind`; a decision whose `kind` has no registered handler is refused with a clear reason and causes no side effect.
 - [ ] Handlers are invoked only with the validated decision and execution-plane collaborators (state machine, granted handles) — never the LLM/reasoning side.
+
+### [REQ-7] Decision Is the Sole Replayable Non-Deterministic Input
+
+The accepted `Decision` is the *only* non-deterministic input to a run, and it
+is captured as inert, fully-serializable data. The executor must therefore be
+re-runnable from recorded decisions alone — given the same accepted decisions in
+order, it produces identical effects with no model call. This is the EXT-001
+half of reproducibility-by-replay ([PRIME-001 / P1]); the durable recording and
+replay driver live in EXT-002 ([REQ-6]).
+
+#### Acceptance Criteria
+- [ ] An accepted `Decision` carries everything the executor needs to act — no
+      out-of-band reasoning state, no handles, nothing non-serializable (already
+      guaranteed by [REQ-1]); replay never re-consults the model.
+- [ ] `apply` is a deterministic function of the validated decision plus
+      execution-plane collaborators: identical decisions yield identical results
+      and effects.
+- [ ] The executor exposes a hook (or returns the accepted decision) so the
+      durable log (EXT-002 / REQ-6) can record each accepted `Decision` in commit
+      order before its effects are observable.
+- [ ] Handler determinism — the precondition for byte-identical replay — is
+      checkable, not assumed: `jaros.execution.replays_agree` confirms that
+      replaying the same recorded decisions into isolated state agrees, and
+      divergence flags a non-deterministic handler (surfaced as replay's
+      `deterministic` result).

@@ -14,6 +14,8 @@ Commands::
     jaros status                           -> print status.json
     jaros watch [--interval S]             -> live status + new outbox results
     jaros logs                             -> print the daemon log (if present)
+    jaros eval                             -> run the agent eval suite (evals/)
+    jaros replay [--json]                  -> reconstruct + verify a run (byte-identical, no model call)
 
     global: --data-dir DIR (else $JAROS_DATA_DIR, else ./.jaros-data)
 
@@ -246,6 +248,137 @@ def cmd_logs(data_dir: Path, stream=None) -> int:
 # #EXT-008-REQ-4 End
 
 
+# #EXT-013-REQ-4 Start
+def cmd_eval(data_dir: Path, stream=None) -> int:
+    """Run the agent eval suite in ``<data>/evals`` and print a pass/fail report.
+
+    Assembles a deterministic eval environment from the data dir — built-in +
+    plugin agents and the read-only/custom tool handlers — then runs every case
+    in ``evals/*.json``. Returns 0 iff all cases pass. Reads/loads only the shared
+    FS; no network.
+    """
+    out = stream if stream is not None else sys.stdout
+    from jaros.eval import load_cases, run_suite
+    from jaros.execution.tools import load_custom_tools
+    from jaros.llm import LlmConfig, create_llm_client
+    from jaros.registry import AgentRegistry, load_plugins, register_builtins
+
+    llm = create_llm_client(LlmConfig(provider="default"))
+    registry = AgentRegistry()
+    register_builtins(registry, llm)
+    load_plugins(registry, data_dir / "plugins", llm)
+    load_custom_tools(data_dir / "tools")  # register tool handlers for result checks
+
+    cases = load_cases(data_dir / "evals")
+    if not cases:
+        print(f"no eval cases found in {data_dir / 'evals'}", file=out)
+        return 1
+
+    report = run_suite(cases, registry)
+    for r in report.results:
+        print(f"[{'PASS' if r.passed else 'FAIL'}] {r.case}", file=out)
+        if not r.passed:
+            if r.error:
+                print(f"       error: {r.error}", file=out)
+            for c in r.checks:
+                if not c.ok:
+                    print(f"       - {c.name}: {c.detail}", file=out)
+    print(f"\n{report.passed}/{report.total} eval cases passed", file=out)
+    return 0 if report.ok else 1
+# #EXT-013-REQ-4 End
+
+
+# #EXT-008-REQ-6 Start
+def cmd_replay(data_dir: Path, *, as_json: bool = False, verbose: bool = False, stream=None) -> int:
+    """Reconstruct a run from the recorded decision log + verify it, no daemon.
+
+    Re-applies ``<data>/state/decisions.log`` through the deterministic executor —
+    constructing **no** ``LlmClient`` and making zero model calls — into a FRESH
+    temp sandbox (its own transition log + ``SharedFileSystem``), so nothing in
+    the live data dir is touched and re-running is safe. The same runtime handlers
+    are reused over the sandbox, so byte-identity is faithful.
+
+    Exit codes: ``0`` byte-identical (reproducible), ``1`` divergence detected,
+    ``2`` nothing to replay.
+    """
+    out = stream if stream is not None else sys.stdout
+    import shutil
+    import tempfile
+
+    from jaros.comms.fs import SharedFileSystem
+    from jaros.execution import executor
+    from jaros.execution.handlers import register_runtime_handlers
+    from jaros.harness import GrantSpec, Harness
+    from jaros.state import DecisionLog, TransitionLog, read_decisions, recover, replay
+
+    data_dir = Path(data_dir)
+    decision_log = DecisionLog(data_dir / "state")
+    decisions = read_decisions(decision_log)
+    if not decisions:
+        if as_json:
+            print(json.dumps({"decisions": 0, "ok": False, "reason": "empty"}), file=out)
+        else:
+            print(
+                f"nothing to replay: no recorded decisions in "
+                f"{data_dir / 'state' / 'decisions.log'} (run `jaros submit ...` first)",
+                file=out,
+            )
+        return 2
+
+    sandbox = Path(tempfile.mkdtemp(prefix="jaros-replay-"))
+    try:
+        sandbox_fs = SharedFileSystem(sandbox)
+        sandbox_fs.ensure_layout()
+        sandbox_log = TransitionLog(sandbox / "state")
+        sandbox_harness = Harness()
+        writer = "replay-writer"
+        sandbox_harness.spawn(writer, GrantSpec(role="FsWriteRole", fs=sandbox_fs))
+
+        # Reuse the runtime handlers over the SANDBOX — no model is constructed.
+        executor.reset_handlers()
+        register_runtime_handlers(harness=sandbox_harness, writer_agent=writer, tools_dir=data_dir / "tools")
+
+        results = replay(decision_log, executor.apply, log=sandbox_log)
+        applied = sum(1 for r in results if getattr(r, "applied", False))
+        final_state = recover(sandbox_log)
+
+        live_log = data_dir / "state" / "transitions.log"
+        sandbox_bytes = sandbox_log.path.read_bytes() if sandbox_log.path.exists() else b""
+        live_bytes = live_log.read_bytes() if live_log.exists() else b""
+        byte_identical = sandbox_bytes == live_bytes
+        try:
+            live_state = recover(TransitionLog(data_dir / "state"))
+        except Exception:
+            live_state = None
+        states_match = final_state == live_state if live_state is not None else byte_identical
+        ok = byte_identical and states_match
+    finally:
+        shutil.rmtree(sandbox, ignore_errors=True)
+
+    report = {
+        "decisions": len(decisions),
+        "modelCalls": 0,
+        "finalState": final_state,
+        "byteIdentical": byte_identical,
+        "ok": ok,
+    }
+    if as_json:
+        print(json.dumps(report), file=out)
+        return 0 if ok else 1
+
+    print(f"replayed {len(decisions)} recorded decisions ({applied} applied) - model calls: 0", file=out)
+    print(f"  reconstructed state : {final_state}", file=out)
+    print(f"  byte-identical      : {'yes' if byte_identical else 'NO - divergence detected'}", file=out)
+    if verbose and live_state is not None and not states_match:
+        print(f"  recovered state differs: sandbox={final_state} live={live_state}", file=out)
+    if ok:
+        print("reproducible: the recorded decisions reconstruct the run exactly, with no model call.", file=out)
+    else:
+        print("DIVERGENCE: replay did not reproduce the run byte-identically (a non-deterministic handler?).", file=out)
+    return 0 if ok else 1
+# #EXT-008-REQ-6 End
+
+
 # #EXT-008-REQ-1 Start
 def _build_parser() -> argparse.ArgumentParser:
     """Construct the argparse parser with ``--data-dir`` + subcommands.
@@ -300,6 +433,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     add_command("logs", "print the daemon log file if present")
+    add_command("eval", "run the agent eval suite in evals/")
+
+    p_replay = add_command("replay", "reconstruct + verify a run from the decision log")
+    p_replay.add_argument("--json", dest="as_json", action="store_true", help="emit a one-line JSON report")
+    p_replay.add_argument("--verbose", dest="verbose", action="store_true", help="show extra detail on divergence")
     return parser
 
 
@@ -377,6 +515,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "logs":
         return cmd_logs(data_dir)
+
+    if args.command == "eval":
+        return cmd_eval(data_dir)
+
+    if args.command == "replay":
+        return cmd_replay(
+            data_dir,
+            as_json=getattr(args, "as_json", False),
+            verbose=getattr(args, "verbose", False),
+        )
 
     parser.error(f"unknown command: {args.command!r}")  # pragma: no cover
     return 2  # pragma: no cover

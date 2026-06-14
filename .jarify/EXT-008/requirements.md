@@ -5,6 +5,7 @@ status: covered
 priority: high
 implementation:
   - jaros/cli.py
+  - jaros/execution/handlers.py
 ---
 
 # Host Control CLI and Shared-FS Ingestion
@@ -55,3 +56,29 @@ The CLI uses exclusively the shared file system as its transport to the OS.
 - [ ] Every command's effect is a read or write within the shared data directory.
 - [ ] No command depends on the daemon being reachable over a network.
 - [ ] The `check:comms` architecture check (EXT-006) passes for the CLI (no network/RPC).
+
+### [REQ-6] Deterministic Replay Command
+
+`jaros replay` reconstructs an entire run from the recorded decision log in one
+command — without a running daemon — and verifies the differentiator: the same
+recorded decisions reproduce **byte-identical state with zero model calls**. This
+exposes EXT-002 / REQ-6 (deterministic decision-log replay) on the host control
+plane, and reuses the runtime's own executor handlers so the guarantee is real,
+not a re-implementation.
+
+#### Acceptance Criteria
+- [ ] `jaros replay [--data-dir D] [--json]` resolves the data dir like every
+      other command and re-applies `state/decisions.log` through the deterministic
+      executor — constructing **no** `LlmClient` and making zero model calls.
+- [ ] Replay reconstructs into a **fresh, isolated sandbox** (a temp dir with its
+      own `TransitionLog` + sandbox `SharedFileSystem`); it writes nothing to the
+      live data dir, so re-running it is safe and idempotent.
+- [ ] It reuses the runtime's handlers (a single shared `register_runtime_handlers`
+      / collaborator-`log` `advance` handler) — not a duplicated copy — so
+      byte-identity is faithful as handlers evolve.
+- [ ] It compares the sandbox `transitions.log` to the live one and asserts
+      `recover(sandbox) == recover(live)`; final state is `recover(sandbox)`.
+- [ ] Exit codes: `0` reproducible (byte-identical), `1` divergence detected,
+      `2` nothing to replay (empty/missing decision log, with a friendly message).
+- [ ] `--json` emits `{decisions, modelCalls, finalState, byteIdentical, ok}` for
+      the console/CI; the default output is human-readable.

@@ -20,11 +20,19 @@ Guarantees:
 - **Developer-configurable (REQ-5)**: ``Harness(rules=...)`` accepts an override
   rule set at boot; absent one, the built-in defaults apply. The result is
   frozen after construction.
+
+Security boundary (REQ-6): the harness's default-deny mediation and capability
+scoping are **structural least-privilege** and auditability properties — not an
+adversarial sandbox. Isolation against hostile code is delegated to the host
+(process, container, VPC).
 """
 
 from __future__ import annotations
 
+import json
+import time
 from dataclasses import dataclass
+from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Mapping
 
@@ -93,7 +101,11 @@ class AgentContext:
 class Harness:
     """Mediates and validates every agent action; rules are not agent-mutable."""
 
-    def __init__(self, rules: Mapping[str, type[Capability]] | None = None) -> None:
+    def __init__(
+        self,
+        rules: Mapping[str, type[Capability]] | None = None,
+        audit_path: str | "Path | None" = None,
+    ) -> None:
         """Construct the harness.
 
         Args:
@@ -102,6 +114,9 @@ class Harness:
                 the built-in :data:`~jaros.harness.rules.DEFAULT_RULES` apply.
                 Provided rules override defaults per action type, and may add new
                 action types or tighten existing ones (REQ-5).
+            audit_path: Optional path to a durable, append-only audit log. When
+                set, every mediated action (allowed and denied) is recorded there
+                (REQ-7) — the auditable record the Prime Directive demands (P2).
 
         The effective rule set is deep-frozen after construction; there is no
         agent-reachable API to mutate it at runtime.
@@ -116,6 +131,7 @@ class Harness:
 
         self._grants: dict[str, Grants] = {}
         self._denied: list[tuple[str, str, str]] = []  # (agent_id, action_type, reason)
+        self._audit_path: Path | None = Path(audit_path) if audit_path else None
 
     # -- lifecycle ----------------------------------------------------------
 
@@ -159,7 +175,9 @@ class Harness:
         # Resolve the granted handle for the required capability. If the agent
         # was not granted it, deny — no side effect.
         try:
-            return self._perform(agent_id, action, required, grants)
+            result = self._perform(agent_id, action, required, grants)
+            self._audit(agent_id, action.type, True, None)
+            return result
         except _CapabilityNotGranted as exc:
             return self._deny(agent_id, action.type, str(exc))
 
@@ -199,9 +217,34 @@ class Harness:
 
     def _deny(self, agent_id: str, action_type: str, reason: str) -> ActionResult:
         self._denied.append((agent_id, action_type, reason))
+        self._audit(agent_id, action_type, False, reason)
         return ActionResult(allowed=False, value=None, reason=reason)
 
     # -- audit --------------------------------------------------------------
+
+    # #EXT-005-REQ-7 Start
+    def _audit(self, agent_id: str, action_type: str, allowed: bool, reason: str | None) -> None:
+        """Append one durable audit record for a mediated action (allowed/denied).
+
+        Best-effort and append-only: a failure to write the audit log must never
+        break mediation. No-op when no ``audit_path`` was configured.
+        """
+        if self._audit_path is None:
+            return
+        entry = {
+            "ts": round(time.time(), 3),
+            "agent": agent_id,
+            "action": action_type,
+            "allowed": allowed,
+            "reason": reason,
+        }
+        try:
+            self._audit_path.parent.mkdir(parents=True, exist_ok=True)
+            with open(self._audit_path, "a", encoding="utf-8", newline="") as fh:
+                fh.write(json.dumps(entry, sort_keys=True) + "\n")
+        except OSError:
+            pass
+    # #EXT-005-REQ-7 End
 
     def describe_rules(self) -> Mapping[str, str]:
         """Return an immutable snapshot of the active configured rule set."""
@@ -211,6 +254,27 @@ class Harness:
     def denied(self) -> tuple[tuple[str, str, str], ...]:
         """Immutable record of refused actions, for audit/tests."""
         return tuple(self._denied)
+
+
+# #EXT-005-REQ-7 Start
+def read_audit(audit_path: str | Path) -> list[dict[str, Any]]:
+    """Read the durable harness audit log (newline-delimited JSON), in order.
+
+    Tolerates a torn trailing line; returns an empty list when the log is absent.
+    """
+    path = Path(audit_path)
+    if not path.is_file():
+        return []
+    out: list[dict[str, Any]] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    return out
+# #EXT-005-REQ-7 End
 
 
 class _CapabilityNotGranted(Exception):

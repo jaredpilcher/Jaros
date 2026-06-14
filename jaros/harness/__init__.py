@@ -30,6 +30,7 @@ from jaros.harness.harness import (
     ActionResult,
     AgentContext,
     Harness,
+    read_audit,
 )
 from jaros.harness.rules import DEFAULT_RULES, describe_rules, freeze_rules
 
@@ -59,4 +60,5 @@ __all__ = [
     "Action",
     "ActionResult",
     "AgentContext",
+    "read_audit",
 ]

@@ -1,18 +1,20 @@
-"""Tests for dynamic custom execution plane tools and role-based permissions (EXT-009)."""
+"""Tests for dynamic custom Execution Plane tools (EXT-009).
+
+Covers dynamic discovery/registration of a custom tool and that its own
+deterministic ``validate()``/``execute()`` are wired into the gate and executor.
+The former role-based permission enforcer (EXT-009 / REQ-3) is deprecated and
+removed; capability-safety is structural least-privilege via harness handles
+(EXT-005), not an authorization policy.
+"""
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
 import pytest
 
 from jaros.comms.fs import SharedFileSystem
-from jaros.comms.queue import Queue
 from jaros.core.decision import create_decision
 from jaros.core.decision_gate import validate_decision, reset_validators
 from jaros.execution import executor
-from jaros.harness.capabilities import GrantSpec
-from jaros.harness.harness import Harness
 from jaros.execution.tools import load_custom_tools, reset_tools_registry
 
 
@@ -49,131 +51,64 @@ def cleanup():
     reset_tools_registry()
 
 
-def test_dynamic_tool_loader_and_permission_checks(tmp_path):
-    # Set up directories
+def test_dynamic_tool_loads_and_registers(tmp_path):
     fs = SharedFileSystem(tmp_path)
     fs.ensure_layout()
-    
+
     tools_dir = tmp_path / "tools"
     tools_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Drop custom tool into tools directory
-    tool_file = tools_dir / "account_reader.py"
-    tool_file.write_text(TOOL_SOURCE, encoding="utf-8")
-    
-    # Setup permissions configuration
-    permissions_path = tmp_path / "permissions.json"
-    permissions_policy = {
-        "roles": {
-            "AccountAuditor": {
-                "description": "Allowed to read account records",
-                "actions": ["db.accounts.read"]
-            },
-            "GuestRole": {
-                "description": "Guest only",
-                "actions": ["fs.read"]
-            }
-        }
-    }
-    permissions_path.write_text(json.dumps(permissions_policy), encoding="utf-8")
-    
-    # Initialize Harness and load tools
-    harness = Harness()
-    loaded_tools = load_custom_tools(tools_dir, harness, permissions_path)
-    
+
+    # Drop a custom tool into the tools directory and load it.
+    (tools_dir / "account_reader.py").write_text(TOOL_SOURCE, encoding="utf-8")
+    loaded_tools = load_custom_tools(tools_dir)
     assert "db.accounts.read" in loaded_tools
-    
-    # 1. Spawn authorized and unauthorized agents
-    harness.spawn("auditor", GrantSpec(role="AccountAuditor", fs=fs))
-    harness.spawn("guest", GrantSpec(role="GuestRole", fs=fs))
-    
-    # 2. Test unauthorized access
-    unauth_decision = create_decision(
-        id="dec-unauth-1",
-        source="guest",
-        kind="db.accounts.read",
-        payload={"account_id": "acc_123"}
-    )
-    
-    gate_unauth = validate_decision(unauth_decision)
-    assert not gate_unauth.ok
-    assert "is not authorized" in gate_unauth.reason
-    
-    # 3. Test authorized access but with missing/invalid parameters (custom gate fails)
-    bad_param_decision = create_decision(
+
+
+def test_custom_tool_validate_rejects_bad_payload(tmp_path):
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir(parents=True, exist_ok=True)
+    (tools_dir / "account_reader.py").write_text(TOOL_SOURCE, encoding="utf-8")
+    load_custom_tools(tools_dir)
+
+    # The tool's own validate() runs in the gate: missing account_id -> rejected.
+    bad = create_decision(
         id="dec-bad-1",
         source="auditor",
         kind="db.accounts.read",
-        payload={}  # missing account_id!
+        payload={},
     )
-    
-    gate_bad = validate_decision(bad_param_decision)
-    assert not gate_bad.ok
-    assert "Missing account_id" in gate_bad.reason
-    
-    # 4. Test fully authorized and valid call (should pass gate and execute successfully)
-    valid_decision = create_decision(
+    gated_bad = validate_decision(bad)
+    assert not gated_bad.ok
+    assert "Missing account_id" in gated_bad.reason
+
+
+def test_custom_tool_validate_and_execute(tmp_path):
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir(parents=True, exist_ok=True)
+    (tools_dir / "account_reader.py").write_text(TOOL_SOURCE, encoding="utf-8")
+    load_custom_tools(tools_dir)
+
+    ok = create_decision(
         id="dec-ok-1",
         source="auditor",
         kind="db.accounts.read",
-        payload={"account_id": "acc_123"}
+        payload={"account_id": "acc_123"},
     )
-    
-    gate_ok = validate_decision(valid_decision)
-    assert gate_ok.ok
-    
-    execution_outcome = executor.apply(valid_decision)
-    assert execution_outcome.applied
-    assert execution_outcome.output["account_id"] == "acc_123"
-    assert execution_outcome.output["balance"] == 1500.0
+    gated_ok = validate_decision(ok)
+    assert gated_ok.ok
+
+    outcome = executor.apply(ok)
+    assert outcome.applied
+    assert outcome.output["account_id"] == "acc_123"
+    assert outcome.output["balance"] == 1500.0
 
 
-def test_policy_manager_local_override(tmp_path: Path):
-    from jaros.execution.tools import PolicyManager
-    
-    main_path = tmp_path / "permissions.json"
-    local_path = tmp_path / "permissions.local.json"
-    
-    main_config = {
-        "roles": {
-            "DefaultRole": {
-                "description": "Default role description",
-                "actions": ["fs.read"]
-            }
-        },
-        "assignments": {
-            "advance": "AdminRole"
-        }
-    }
-    
-    local_config = {
-        "roles": {
-            "DefaultRole": {
-                "actions": ["fs.read", "db.query"]
-            },
-            "LocalRole": {
-                "description": "Only in local config",
-                "actions": ["fs.write"]
-            }
-        },
-        "assignments": {
-            "custom": "LocalRole"
-        }
-    }
-    
-    main_path.write_text(json.dumps(main_config), encoding="utf-8")
-    local_path.write_text(json.dumps(local_config), encoding="utf-8")
-    
-    pm = PolicyManager(main_path)
-    policy = pm.get_policy()
-    
-    # Assert merged roles
-    assert "DefaultRole" in policy["roles"]
-    assert "LocalRole" in policy["roles"]
-    assert policy["roles"]["DefaultRole"]["actions"] == ["fs.read", "db.query"]
-    assert policy["roles"]["DefaultRole"]["description"] == "Default role description"
-    assert policy["roles"]["LocalRole"]["actions"] == ["fs.write"]
-    
-    # Assert merged assignments
-    assert policy["assignments"]["advance"] == "AdminRole"
-    assert policy["assignments"]["custom"] == "LocalRole"
+def test_loader_is_idempotent(tmp_path):
+    tools_dir = tmp_path / "tools"
+    tools_dir.mkdir(parents=True, exist_ok=True)
+    (tools_dir / "account_reader.py").write_text(TOOL_SOURCE, encoding="utf-8")
+
+    first = load_custom_tools(tools_dir)
+    second = load_custom_tools(tools_dir)
+    assert first == ["db.accounts.read"]
+    assert second == []  # already loaded -> not re-registered

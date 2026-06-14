@@ -24,7 +24,11 @@ Hook the custom tool loading system into the core composition root during OS sta
 #### Implements
 - [REQ-1] Dynamic Tool Loader
 
-### [TASK-3] Enforce role-based permission gate
+### [TASK-3] Enforce role-based permission gate — SUPERSEDED
+
+> **SUPERSEDED by [TASK-5].** Implemented the `role_permission_gate` /
+> `PolicyManager` authorization layer against the now-deprecated [REQ-3]. Retired
+> by [TASK-5]. Do not extend this task.
 
 Enforce strict security boundaries preventing agents from running custom actions unless their active role possesses permission.
 
@@ -46,3 +50,17 @@ Wire dynamic tool classes up as first-class citizens in the Execution Plane's va
 
 #### Implements
 - [REQ-2] Decoupled Gate & Executor Registration
+
+### [TASK-5] Remove the role-based permission enforcer
+
+Retire the authorization-gateway layer so the system aligns with the directive's
+"not a governance product" boundary. This is the deprecation task for [REQ-3].
+
+#### Steps
+1. In `jaros/execution/tools.py`, delete the `#EXT-009-REQ-3` block (`PolicyManager`), the global `policy_manager`, `register_permission_gate`/`role_permission_gate`, and the `_permission_gate_registered` flag; simplify `load_custom_tools(tools_dir)` to scan + register tool validators/handlers only (drop the `harness` and `permissions_path` params and the gate registration call).
+2. In `jaros/daemon.py`, update both `load_custom_tools(...)` calls to pass only the tools dir; replace the `policy_manager.get_policy()["assignments"]` role lookup with a fixed least-privilege default role (`GuestRole`) for spawned job kinds; remove the now-unused `policy_manager` import.
+3. `git rm config/permissions.json` (and stop referencing `config/permissions.local.json`); update `tests/test_dynamic_tools.py` to drop the permission-gate and `PolicyManager` tests and the `permissions_path` argument; remove `REQ-3` from `.jarify/EXT-009/index.json`.
+4. Update `docs/building-agents.md` and `docs/agent-playbook.md` to remove the role-permission/`permissions.json` enforcement sections, reframing capability-safety as structural least-privilege via harness handles. Run `pytest`.
+
+#### Implements
+- [REQ-3] Role-Based Permission Enforcer

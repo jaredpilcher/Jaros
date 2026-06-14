@@ -1,7 +1,7 @@
 ---
 id: EXT-006
 title: Communication Fabric (Queues + Shared File System)
-status: covered
+status: partial
 priority: high
 implementation:
   - jaros/comms/queue.py
@@ -58,3 +58,19 @@ The absence of direct agent-to-agent communication is enforced structurally, not
 - [ ] An automated architecture check fails the build on any direct agent-to-agent call path.
 - [ ] The check covers in-memory references, RPC, and network calls between agents.
 - [ ] The only inter-agent dependencies that pass the check are the queue and file system APIs.
+
+### [REQ-6] No External Broker Dependency
+
+The communication fabric is the in-process queue and the shared file system —
+nothing else. It introduces **no message broker, queue service, or network
+transport** to run, making it the comms-layer half of the zero-infrastructure
+tenet ([PRIME-001 / P3]; see EXT-007 / REQ-6).
+
+#### Acceptance Criteria
+- [ ] The `Queue` is an in-process structure and the shared FS is local/mounted
+      files; neither requires nor contacts an external broker or queue service.
+- [ ] No module under `jaros/comms/**` imports a broker/queue-service or network
+      client (e.g. `redis`, `pika`, `kafka`, `confluent_kafka`, `nats`,
+      `socket`, `http.client`).
+- [ ] `scripts/check_zero_infra.py` (EXT-007 / REQ-6) covers `jaros/comms/**` and
+      passes on the current tree.

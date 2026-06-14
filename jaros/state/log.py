@@ -118,7 +118,10 @@ class TransitionLog:
         """
         self.dir.mkdir(parents=True, exist_ok=True)
         line = entry.to_json() + "\n"
-        with open(self.path, "a", encoding="utf-8") as fh:
+        # newline="" disables OS newline translation, so the on-disk bytes are
+        # "\n" on every platform — the durable log is byte-identical cross-OS,
+        # which the replay byte-identity guarantee depends on (EXT-002 / REQ-6).
+        with open(self.path, "a", encoding="utf-8", newline="") as fh:
             fh.write(line)
             fh.flush()
             os.fsync(fh.fileno())

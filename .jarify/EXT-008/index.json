@@ -2,39 +2,51 @@
   "REQ-1": [
     {
       "file": "jaros/cli.py",
-      "startLine": 48,
-      "endLine": 63
+      "startLine": 50,
+      "endLine": 65
     },
     {
       "file": "jaros/cli.py",
-      "startLine": 249,
-      "endLine": 329
+      "startLine": 382,
+      "endLine": 467
     },
     {
       "file": "jaros/cli.py",
-      "startLine": 306,
-      "endLine": 383
+      "startLine": 444,
+      "endLine": 531
     }
   ],
   "REQ-2": [
     {
       "file": "jaros/cli.py",
-      "startLine": 78,
-      "endLine": 107
+      "startLine": 80,
+      "endLine": 109
     }
   ],
   "REQ-3": [
     {
       "file": "jaros/cli.py",
-      "startLine": 110,
-      "endLine": 161
+      "startLine": 112,
+      "endLine": 163
     }
   ],
   "REQ-4": [
     {
       "file": "jaros/cli.py",
-      "startLine": 164,
-      "endLine": 246
+      "startLine": 166,
+      "endLine": 248
+    }
+  ],
+  "REQ-6": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 291,
+      "endLine": 379
+    },
+    {
+      "file": "jaros/execution/handlers.py",
+      "startLine": 29,
+      "endLine": 88
     }
   ]
 }

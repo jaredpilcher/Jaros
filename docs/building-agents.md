@@ -88,7 +88,7 @@ class GreeterAgent(ReasoningBoundary):
 
 ---
 
-## Step 2 — Get Capabilities from the Harness (Sandboxing)
+## Step 2 — Get Capabilities from the Harness (Capability Scoping)
 
 The OS spawner mints **only** the scoped handles you grant. The agent has no ambient access to anything else.
 
@@ -189,7 +189,7 @@ if not applied.applied:
 
 payload = applied.output
 
-# 3. Distributed State Machine (EXT-002: drive durable, validated state transitions)
+# 3. Durable, Replayable State Machine (EXT-002: drive durable, validated state transitions)
 log = TransitionLog(fs.base_dir / "state", "transition.log")
 log.ensure()
 state = INITIAL_STATE
@@ -214,7 +214,7 @@ harness.teardown("greeter")
 
 ---
 
-## Agent Constraints & Sandboxing
+## Agent Constraints & Capability Scoping
 
 Security in Jaros is enforced in layers inside the Execution Plane, completely outside the LLM.
 
@@ -275,29 +275,27 @@ register_validator(allowlist_gate)
 ### 3. Harness Capability Grants
 The agent can only perform mediated requests (`harness.request`) if it possesses a corresponding Capability grant inside its `Grants` bundle. The Harness enforces rules (`DEFAULT_RULES`) mapping action types to required Capabilities in a strict, **default-deny** manner.
 
-### 4. Bounded Agent Roles & Configurable Permissions
-You group multiple capabilities into logical **Agent Roles** entirely on the host side using [**`config/permissions.json`**](../config/permissions.json) to enforce the principle of least privilege:
-*   **Role Configuration**: Define logical roles and their allowed action string keys (e.g. `AnalystRole` allowed `"fs.read"` and `"db.query"`).
-*   **Agent-Role Assignments**: Map agent kind registration keys directly to logical roles (e.g., `"custom_agent"` bound to `"AnalystRole"`).
-*   **Decoupled & Dynamic Enforcement**:
-    The daemon automatically looks up the role from the config assignments at trigger time, spawns the agent context under that role inside the Harness, validates actions dynamically, and safely tears down the context upon job completion.
-*   **Zero-Restart Cached Reloading**:
-    A high-performance `PolicyManager` monitors file modification times on the host, refreshing the policy memory cache instantly when `permissions.json` changes without requiring a daemon restart.
-*   **Layered Local Overrides**:
-    To allow local customization without affecting Git history or repository-wide defaults, operators can create a `config/permissions.local.json` file (ignored by Git). The `PolicyManager` automatically detects this file and deep-merges it with `permissions.json` at runtime.
+### 4. Bounded Agent Roles (Structural Least-Privilege)
+A **role** is simply a named bundle of capabilities (`BUILTIN_ROLES` in
+`jaros/harness/capabilities.py`). Spawning an agent under a role grants it only
+those scoped handles — nothing else is reachable. This is **structural
+least-privilege** for correctness and blast-radius control; it is *not* an
+authorization policy or governance gateway. (Real isolation against hostile code
+is the host's job: process, container, or VPC.)
 
 ```python
-# 1. Spawn-teardown lifecycle automatically driven by the Daemon:
-# (Automatically resolves 'ReporterRole' from config assignments)
 from jaros.harness import GrantSpec
 
-# 2. Spawner binds the agent to its assigned role
+# Spawn binds the agent to a role = a fixed bundle of capability handles.
+# 'ReporterRole' grants FsWrite + QueueSend; the agent can reach nothing else.
 harness.spawn("custom_agent", GrantSpec(role="ReporterRole", fs=fs, queue=queue))
 
-# 3. Teardown clears the grants upon completion
+# Teardown revokes the grants upon completion.
 harness.teardown("custom_agent")
 ```
-If the agent attempts to propose a decision for an action not permitted by its assigned role in `permissions.json`, the validation gate immediately blocks it (fails-closed).
+If an agent requests an action it lacks the capability handle for, the Harness
+refuses it (default-deny) and records the refusal for audit. Jaros does not load
+or enforce an external action-allowlist policy.
 
 ---
 
@@ -368,7 +366,7 @@ If an agent needs to query a database like PostgreSQL, it must never open direct
 If an operator or agent needs a specialized action (e.g. `"db.accounts.read"`), they define a custom Python class dropped into the `.jaros-data/tools/` directory on the host:
 1. **Tool Class Signature**: Conforms to the custom tool signature (`NAME`, `validate(decision) -> ValidationResult`, `execute(decision) -> Any`).
 2. **Dynamic Ingestion**: The daemon re-scans the `tools/` folder dynamically on tick heartbeats, dynamically loading and registering new tools at runtime without restarts.
-3. **Validation & Role Permission**: The tool's `validate()` gate and the role permission check are automatically wired into the Validation Gate, fail-closing immediately if the agent's assigned role is not permitted to call that action namespace inside `permissions.json`.
+3. **Validation**: The tool's deterministic `validate()` is automatically wired into the Validation Gate, fail-closing on any payload it rejects. (Capability-safety is structural least-privilege via the agent's granted handles — there is no separate action-allowlist policy.)
 4. **Deterministic Execution**: The `execute()` method runs on the host-side Execution Plane to execute side-effects and return the serialized output back.
 
 ---
@@ -379,7 +377,7 @@ Use this checklist to ensure your agent complies with the decoupling seam. The a
 
 - [ ] **Data-Only Seam**: The agent is a `ReasoningBoundary` whose `decide()` returns only inert `Decision` data.
 - [ ] **No Direct Side Effects**: It performs no I/O or state mutation itself — only the harness/executor does on its behalf.
-- [ ] **Strict Sandboxing**: It uses only the capability-scoped handles granted by the harness; no raw or ambient file system, queue, or socket access.
+- [ ] **Strict Capability Scoping**: It uses only the capability-scoped handles granted by the harness; no raw or ambient file system, queue, or socket access.
 - [ ] **Decoupled Comms**: It never references or imports another agent directly (all communication occurs through `Queue` or `SharedFileSystem` layout).
 - [ ] **Zero Footprint**: It does not open any listening socket, HTTP server, or process port.
 - [ ] **Decoupled LLM**: Its model use is restricted to `LlmClient` interface wrappers, and the LLM has no control over system logic or execution.

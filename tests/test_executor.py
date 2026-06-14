@@ -1,4 +1,4 @@
-"""Tests for the executor and pluggable handlers (EXT-001 / REQ-4, REQ-6)."""
+"""Tests for the executor and pluggable handlers (EXT-001 / REQ-4, REQ-6, REQ-7)."""
 
 from __future__ import annotations
 
@@ -75,3 +75,39 @@ def test_custom_validator_rejection_blocks_handler():
     assert result.applied is False
     assert result.reason == "nope"
     assert ran == []
+
+
+# --- EXT-001 / REQ-7: the accepted decision is surfaced + recordable ----------
+
+def test_accepted_decision_surfaced_on_result():
+    register_handler("write", lambda d, **_: "ok")
+    d = create_decision(id="d1", source="a", kind="write", payload={"k": "v"})
+    result = apply(d)
+    assert result.applied is True
+    assert result.accepted is not None
+    assert result.accepted.id == "d1"
+
+
+def test_on_accept_fires_before_handler_and_only_when_accepted():
+    order: list[str] = []
+    register_handler("write", lambda d, **_: order.append("handler"))
+
+    d = create_decision(id="d1", source="a", kind="write", payload={})
+    apply(d, on_accept=lambda x: order.append(f"record:{x.id}"))
+    # Recorded before the handler ran (record before effects are observable).
+    assert order == ["record:d1", "handler"]
+
+    # A gate-rejected decision must NOT fire on_accept (no effect, nothing to record).
+    order.clear()
+    rejected = Decision(id="", source="a", kind="write", payload={})
+    apply(rejected, on_accept=lambda x: order.append("record"))
+    assert order == []
+
+
+def test_apply_is_deterministic_over_identical_decisions():
+    outputs: list[object] = []
+    register_handler("write", lambda d, **_: d.payload)
+    d = create_decision(id="d1", source="a", kind="write", payload={"n": 1})
+    outputs.append(apply(d).output)
+    outputs.append(apply(d).output)
+    assert outputs[0] == outputs[1]

@@ -1,7 +1,7 @@
 ---
 id: EXT-009
 title: Dynamic Custom Tools and Namespaced Actions
-status: covered
+status: partial
 priority: high
 implementation:
   - jaros/execution/tools.py
@@ -30,7 +30,23 @@ Once a tool is loaded, its `validate` and `execute` methods are dynamically regi
 - [ ] If validation fails, the gate rejects the decision and halts execution.
 - [ ] Validated decisions are dispatched to the tool's `execute()` handler inside the pluggable executor.
 
-### [REQ-3] Role-Based Permission Enforcer
+### [REQ-3] Role-Based Permission Enforcer — DEPRECATED
+
+> **DEPRECATED (PRIME-001 revision — scope honesty, P2 framing).** This
+> requirement built an action-allowlist *authorization gateway*: a
+> `role_permission_gate` validator that loaded `config/permissions.json`, mapped
+> each agent's role to a list of permitted action namespaces, and rejected any
+> decision outside that list ("Security Gate"). The revised Prime Directive is
+> explicit that Jaros is **not an agent-authorization gateway or governance
+> product** — "it does not compete with policy gateways (AWS Bedrock AgentCore,
+> Permit.io); it is a runtime that happens to be auditable." Capability-safety in
+> Jaros is **structural least-privilege** via scoped handles (EXT-005), not a
+> policy-engine permission layer. The enforcer (`role_permission_gate`,
+> `PolicyManager`, `config/permissions.json`) is removed by the task linked
+> below. Role-to-capability *grants* remain in EXT-005 (`BUILTIN_ROLES`,
+> `GrantSpec`) as structural least-privilege; only the governance-style
+> action-allowlist enforcement is retired. Retained here only as the deprecation
+> anchor.
 
 Custom actions are strictly governed by the agent's role. An agent can only execute a custom action if its spawned role permits that action key in `config/permissions.json`.
 

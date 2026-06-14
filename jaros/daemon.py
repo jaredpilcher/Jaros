@@ -28,6 +28,8 @@ import os
 import signal
 import threading
 import time
+import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -36,11 +38,18 @@ from jaros.comms.queue import Queue
 from jaros.core import Decision
 from jaros.core.decision_gate import validate_decision
 from jaros.execution import executor
+from jaros.execution.handlers import register_runtime_handlers
 from jaros.harness import Action, GrantSpec, Harness
 from jaros.llm import LlmConfig, create_llm_client
 from jaros.registry import AgentRegistry, load_plugins, register_builtins
 from jaros.runtime import AgentPool, AgentThread
-from jaros.state import INITIAL_STATE, TransitionLog, commit
+from jaros.scheduling import Scheduler, load_schedules
+from jaros.state import (
+    INITIAL_STATE,
+    DecisionLog,
+    TransitionLog,
+    record_decision,
+)
 
 #: The built-in agent kind the daemon registers an executor handler for.
 ADVANCE_KIND = "advance"
@@ -84,7 +93,9 @@ class Daemon:
             except ValueError:
                 pass
         self._lock = threading.RLock()
-        self.harness = Harness()
+        # Durable audit log: every mediated action (allowed/denied) is recorded
+        # to state/audit.log — the auditable record the directive demands (P2).
+        self.harness = Harness(audit_path=self.fs.base_dir / "state" / "audit.log")
         self.pool = AgentPool(bound=max(1, pool_bound))
         # Grant the daemon's own writer a scoped FsWrite handle so even the
         # daemon's result writes flow through the harness (mediated side effect).
@@ -103,21 +114,38 @@ class Daemon:
         # append-only record of every committed transition.
         self.log = TransitionLog(self.fs.base_dir / "state")
         self.log.ensure()
+        # Durable decision log: records each accepted Decision (the run's only
+        # non-deterministic input) so a run can be re-executed deterministically
+        # by replay (EXT-002 / REQ-6).
+        self.decision_log = DecisionLog(self.fs.base_dir / "state")
+        self.decision_log.ensure()
 
-        # Register the deterministic executor handler for the built-in kinds.
-        executor.register_handler(ADVANCE_KIND, self._advance_handler)
-        executor.register_handler("fs.write", self._fs_write_handler)
+        # Native scheduler (EXT-011): operator schedules under schedules/ are
+        # evaluated each tick; last-fire state is persisted for crash-safety.
+        self._schedules_dir = self.fs.base_dir / "schedules"
+        self._schedules_dir.mkdir(parents=True, exist_ok=True)
+        self.scheduler = Scheduler(self.fs.base_dir / "state" / "schedules.state.json")
 
-        # Load and wire up dynamic custom execution tools
-        from jaros.execution.tools import load_custom_tools
-        load_custom_tools(
-            self.fs.base_dir / "tools",
-            self.harness,
-            Path("config/permissions.json")
+        # Register the shared runtime handlers (advance + fs.write) and load any
+        # custom tools. `jaros replay` registers these SAME handlers over a
+        # sandbox, so replay re-uses this exact code path (EXT-008 / REQ-6).
+        register_runtime_handlers(
+            harness=self.harness,
+            writer_agent=_WRITER_AGENT,
+            tools_dir=self.fs.base_dir / "tools",
         )
 
         # --- run-loop bookkeeping -----------------------------------------
         self._active_jobs: set[str] = set()
+        # Names of claims THIS node is actively processing. Heartbeated each tick
+        # so a live node never reclaims its own in-flight work; a crashed node
+        # stops heartbeating, so its claims go stale and a sibling reclaims them.
+        self._processing: set[str] = set()
+        lease_ms = os.environ.get("JAROS_CLAIM_LEASE_MS")
+        try:
+            self._claim_lease_s = (int(lease_ms) if lease_ms else 60000) / 1000.0
+        except ValueError:
+            self._claim_lease_s = 60.0
         # Reference counts for per-kind harness grants, so concurrent jobs of the
         # same kind share one grant (torn down only when the last finishes).
         self._grant_refs: dict[str, int] = {}
@@ -133,87 +161,84 @@ class Daemon:
         self.tick_count = 0
         self.processed = 0
         self.failed = 0
+        self.scheduled = 0
         self.last_result: dict[str, Any] | None = None
         self.state = INITIAL_STATE
     # #EXT-007-REQ-1 End
 
-    # -- executor handler ---------------------------------------------------
-
-    # #EXT-007-REQ-2 Start
-    def _advance_handler(self, decision: Decision, **collaborators: Any) -> dict[str, Any]:
-        """Deterministically drive a per-job PENDING->RUNNING->DONE sequence.
-
-        Runs in the Execution Plane: given the *validated* ``advance`` decision,
-        it commits each declared event to the durable transition log and returns
-        the inert result that the daemon then writes to ``outbox/<id>.json``.
-        It performs no reasoning and touches no LLM.
-        """
-        payload = decision.payload if isinstance(decision.payload, dict) else {}
-        events = payload.get("events") or ["start", "complete"]
-        note = payload.get("note")
-
-        state = INITIAL_STATE
-        indices: list[int] = []
-        for event in events:
-            result = commit(self.log, state, event)
-            state = result.state
-            indices.append(result.index)
-        self.state = state
-        return {
-            "decision": decision.id,
-            "source": decision.source,
-            "kind": decision.kind,
-            "finalState": state,
-            "events": list(events),
-            "logIndices": indices,
-            "note": note,
-        }
-
-    def _fs_write_handler(self, decision: Decision, **collaborators: Any) -> dict[str, Any]:
-        """Deterministically write a file to the shared file system.
-
-        Runs in the Execution Plane: given the *validated* ``fs.write`` decision,
-        it uses the harness writer to write the data to the specified path.
-        """
-        payload = decision.payload if isinstance(decision.payload, dict) else {}
-        path = payload.get("path")
-        data = payload.get("data", "")
-        if not path:
-            raise RuntimeError("Missing path in fs.write decision payload")
-            
-        action = Action(type="fs.write", path=path, data=data)
-        ar = self.harness.request(_WRITER_AGENT, action)
-        if not ar.allowed:
-            raise RuntimeError(f"Harness denied fs.write: {ar.reason}")
-            
-        return {"path": path, "bytes": len(data)}
-    # #EXT-007-REQ-2 End
-
     # -- inbox ingestion + fault isolation ----------------------------------
 
     # #EXT-007-REQ-5 Start
-    def _process_inbox(self) -> None:
-        """Process every job descriptor currently in ``inbox/`` in parallel.
+    # #EXT-002-REQ-7 Start
+    def _claim_maintenance(self) -> None:
+        """Heartbeat this node's in-flight claims; reclaim siblings' stale ones.
 
-        For each ``inbox/*.json`` ``{id, kind, input}``: submit the job execution
-        lifecycle to the bounded thread pool. Running slots are reaped and new
-        work is admitted up to the configurable concurrency bound.
+        A claim is a file in ``claimed/`` whose mtime is its lease. Each tick this
+        node **touches** (refreshes) the claims it is actively processing, so as
+        long as it is alive its claims never expire. Any *other* claim whose lease
+        has expired (``> JAROS_CLAIM_LEASE_MS``, default 60s) is assumed orphaned
+        by a crashed node and moved back to ``inbox/`` for re-processing. This is
+        crash recovery for distribution: exactly-once in the happy path,
+        at-least-once under node failure (so agents must be idempotent).
+        """
+        claimed = self.fs.base_dir / "claimed"
+        if not claimed.is_dir():
+            return
+        inbox = self.fs.base_dir / "inbox"
+        now = time.time()
+        with self._lock:
+            active = set(self._processing)
+        for job_path in sorted(claimed.glob("*.json")):
+            if job_path.name in active:
+                try:
+                    os.utime(job_path, None)  # heartbeat: refresh our lease
+                except OSError:
+                    pass
+                continue
+            try:
+                age = now - job_path.stat().st_mtime
+            except OSError:
+                continue
+            if age > self._claim_lease_s:  # orphaned by a crashed node -> recover
+                try:
+                    inbox.mkdir(parents=True, exist_ok=True)
+                    os.replace(job_path, inbox / job_path.name)
+                    print(f"JAROS_RECLAIM stale claim job={job_path.name} age={age:.0f}s", flush=True)
+                except OSError:
+                    pass
+    # #EXT-002-REQ-7 End
+
+    def _process_inbox(self) -> None:
+        """Atomically claim each inbox job (multi-node safe) and process it.
+
+        The claim is an atomic rename ``inbox/<id> -> claimed/<id>``. On a shared
+        volume only ONE daemon wins that rename for a given job; sibling nodes get
+        ``ENOENT`` and skip it, so the same job is never processed twice across
+        containers — bounded multi-node coordination over the shared file system
+        (EXT-002 / REQ-7). The winner runs the job, then moves ``claimed/ ->
+        processed/`` or ``failed/``. Work admitted up to the pool's bound.
         """
         inbox = self.fs.base_dir / "inbox"
+        claimed_dir = self.fs.base_dir / "claimed"
+        claimed_dir.mkdir(parents=True, exist_ok=True)
         for job_path in sorted(inbox.glob("*.json")):
-            job_name = job_path.name
+            # #EXT-002-REQ-7 Start
+            claimed = claimed_dir / job_path.name
+            try:
+                os.replace(job_path, claimed)  # atomic claim; the loser gets ENOENT
+            except OSError:
+                continue  # another node already claimed it (or it vanished)
+            try:
+                os.utime(claimed, None)  # stamp the claim time — the lease clock
+            except OSError:
+                pass
             with self._lock:
-                if job_name in self._active_jobs:
-                    continue
-                self._active_jobs.add(job_name)
+                self._processing.add(claimed.name)
+            # #EXT-002-REQ-7 End
 
-            def _job_runner_factory(path=job_path, name=job_name):
+            def _job_runner_factory(path=claimed):
                 def _body():
-                    try:
-                        self._execute_job_lifecycle(path)
-                    finally:
-                        with self._lock:
-                            self._active_jobs.discard(name)
+                    self._execute_job_lifecycle(path)
                 return AgentThread.spawn(f"job-{path.stem}", _body)
 
             self.pool.submit(_job_runner_factory)
@@ -229,7 +254,7 @@ class Daemon:
                 self._write_status()
         except FileNotFoundError:
             # The job file vanished between scan and processing (e.g. cleared by an
-            # operator, or already handled). That's benign — skip it silently rather
+            # operator, or reclaimed). That's benign — skip it silently rather
             # than recording a spurious failure.
             return
         except Exception as exc:
@@ -246,6 +271,10 @@ class Daemon:
                 self.failed += 1
                 self.last_result = {"error": reason, "job": job_path.name}
                 self._write_status()
+        finally:
+            # Release the claim's lease — we are no longer heartbeating it.
+            with self._lock:
+                self._processing.discard(job_path.name)
     # #EXT-007-REQ-5 End
 
     # #EXT-007-REQ-2 Start
@@ -259,10 +288,10 @@ class Daemon:
 
         boundary = self.registry.resolve(kind)  # KeyError -> failed/ (REQ-5)
 
-        # Look up role assignment for this agent kind from config
-        from jaros.execution.tools import policy_manager
-        policy = policy_manager.get_policy()
-        role_name = policy.get("assignments", {}).get(kind, "GuestRole")
+        # Spawn each job kind under a fixed least-privilege role. Capability-safety
+        # is structural least-privilege via the harness-granted handles (EXT-005);
+        # Jaros enforces no authorization policy of its own.
+        role_name = "GuestRole"
 
         # Spawn in the harness under its assigned role before running reasoning.
         # Reference-counted so concurrent jobs of the same kind share one grant
@@ -287,12 +316,20 @@ class Daemon:
                 if not gated.ok:
                     raise RuntimeError(f"decision rejected by gate: {gated.reason}")
 
-                outcome = executor.apply(decision, log=self.log)
+                outcome = executor.apply(
+                    decision,
+                    on_accept=lambda d: record_decision(self.decision_log, d),
+                    log=self.log,
+                )
                 if not outcome.applied:
                     raise RuntimeError(f"executor refused decision: {outcome.reason}")
 
                 result = outcome.output
                 self.last_result = result if isinstance(result, dict) else {"output": result}
+                # The advance handler is now pure; the daemon reflects the final
+                # machine state it reports (the handler no longer mutates state).
+                if isinstance(result, dict) and isinstance(result.get("finalState"), str):
+                    self.state = result["finalState"]
 
                 # Write the per-job result to outbox via the harness (mediated fs.write).
                 payload = json.dumps(
@@ -351,6 +388,10 @@ class Daemon:
                 },
                 "processed": self.processed,
                 "failed": self.failed,
+                "scheduled": self.scheduled,
+                "schedules": self.scheduler.describe(
+                    load_schedules(self._schedules_dir), datetime.now()
+                ),
                 "lastResult": self.last_result,
                 "tick": self.tick_count,
                 "uptimeSec": round(time.monotonic() - self._started_at, 3),
@@ -375,6 +416,40 @@ class Daemon:
             )
     # #EXT-007-REQ-4 End
 
+    # -- native scheduling --------------------------------------------------
+
+    # #EXT-011-REQ-4 Start
+    def _dispatch_schedules(self) -> None:
+        """Submit any due scheduled jobs to the inbox (atomic), each contained.
+
+        Reads the operator schedules, prunes durable state for removed ones, and
+        for every due schedule writes one ``inbox/<id>.json`` and records the
+        dispatch so a restart neither double-fires nor skips it. A failure on one
+        schedule never affects the others or the daemon.
+        """
+        now = datetime.now()
+        schedules = load_schedules(self._schedules_dir)
+        self.scheduler.prune({s.id for s in schedules})
+        for sch in self.scheduler.due(schedules, now):
+            try:
+                job_id = f"{sch.id}-{int(now.timestamp())}-{uuid.uuid4().hex[:6]}"
+                inbox = self.fs.base_dir / "inbox"
+                inbox.mkdir(parents=True, exist_ok=True)
+                tmp = inbox / f".tmp-{job_id}"
+                dest = inbox / f"{job_id}.json"
+                tmp.write_text(
+                    json.dumps({"id": job_id, "kind": sch.kind, "input": sch.input}),
+                    encoding="utf-8",
+                )
+                os.replace(tmp, dest)
+                self.scheduler.mark_fired(sch, now)
+                with self._lock:
+                    self.scheduled += 1
+                print(f"JAROS_SCHED fired schedule={sch.id} kind={sch.kind} job={job_id}", flush=True)
+            except Exception as exc:
+                print(f"JAROS_SCHED FAILED schedule={sch.id}: {exc}", flush=True)
+    # #EXT-011-REQ-4 End
+
     # -- tick + run loop ----------------------------------------------------
 
     # #EXT-007-REQ-1 Start
@@ -391,12 +466,16 @@ class Daemon:
             load_plugins(self.registry, self.fs.base_dir / "plugins", self.llm)
             # Idempotently scan and register any new custom tools dropped at runtime
             from jaros.execution.tools import load_custom_tools
-            load_custom_tools(
-                self.fs.base_dir / "tools",
-                self.harness,
-                Path("config/permissions.json")
-            )
+            load_custom_tools(self.fs.base_dir / "tools")
         except Exception:  # a bad plugin/tool must never kill the loop
+            pass
+        try:
+            self._dispatch_schedules()
+        except Exception:  # a bad schedule must never kill the loop
+            pass
+        try:
+            self._claim_maintenance()  # heartbeat ours; reclaim siblings' stale claims
+        except Exception:
             pass
         self._process_inbox()
         self.pool.drain()

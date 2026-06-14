@@ -1,0 +1,37 @@
+{
+  "REQ-4": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 405,
+      "endLine": 435
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "jaros/scheduling/scheduler.py",
+      "startLine": 25,
+      "endLine": 89
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "jaros/scheduling/scheduler.py",
+      "startLine": 92,
+      "endLine": 158
+    }
+  ],
+  "REQ-6": [
+    {
+      "file": "jaros/scheduling/scheduler.py",
+      "startLine": 160,
+      "endLine": 195
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/scheduling/cron.py",
+      "startLine": 19,
+      "endLine": 74
+    }
+  ]
+}
