@@ -240,7 +240,7 @@ class Harness:
         }
         try:
             self._audit_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self._audit_path, "a", encoding="utf-8") as fh:
+            with open(self._audit_path, "a", encoding="utf-8", newline="") as fh:
                 fh.write(json.dumps(entry, sort_keys=True) + "\n")
         except OSError:
             pass

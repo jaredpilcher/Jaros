@@ -16,39 +16,39 @@
   "REQ-1": [
     {
       "file": "jaros/daemon.py",
-      "startLine": 58,
-      "endLine": 145
+      "startLine": 61,
+      "endLine": 167
     },
     {
       "file": "jaros/daemon.py",
-      "startLine": 391,
-      "endLine": 455
-    }
-  ],
-  "REQ-2": [
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 149,
-      "endLine": 197
-    },
-    {
-      "file": "jaros/daemon.py",
-      "startLine": 258,
-      "endLine": 337
+      "startLine": 455,
+      "endLine": 527
     }
   ],
   "REQ-5": [
     {
       "file": "jaros/daemon.py",
-      "startLine": 201,
-      "endLine": 256
+      "startLine": 171,
+      "endLine": 278
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/daemon.py",
+      "startLine": 280,
+      "endLine": 363
+    },
+    {
+      "file": "jaros/execution/handlers.py",
+      "startLine": 29,
+      "endLine": 88
     }
   ],
   "REQ-4": [
     {
       "file": "jaros/daemon.py",
-      "startLine": 341,
-      "endLine": 387
+      "startLine": 367,
+      "endLine": 417
     }
   ]
 }

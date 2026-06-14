@@ -38,6 +38,7 @@ from jaros.comms.queue import Queue
 from jaros.core import Decision
 from jaros.core.decision_gate import validate_decision
 from jaros.execution import executor
+from jaros.execution.handlers import register_runtime_handlers
 from jaros.harness import Action, GrantSpec, Harness
 from jaros.llm import LlmConfig, create_llm_client
 from jaros.registry import AgentRegistry, load_plugins, register_builtins
@@ -47,7 +48,6 @@ from jaros.state import (
     INITIAL_STATE,
     DecisionLog,
     TransitionLog,
-    commit,
     record_decision,
 )
 
@@ -126,13 +126,14 @@ class Daemon:
         self._schedules_dir.mkdir(parents=True, exist_ok=True)
         self.scheduler = Scheduler(self.fs.base_dir / "state" / "schedules.state.json")
 
-        # Register the deterministic executor handler for the built-in kinds.
-        executor.register_handler(ADVANCE_KIND, self._advance_handler)
-        executor.register_handler("fs.write", self._fs_write_handler)
-
-        # Load and wire up dynamic custom execution tools
-        from jaros.execution.tools import load_custom_tools
-        load_custom_tools(self.fs.base_dir / "tools")
+        # Register the shared runtime handlers (advance + fs.write) and load any
+        # custom tools. `jaros replay` registers these SAME handlers over a
+        # sandbox, so replay re-uses this exact code path (EXT-008 / REQ-6).
+        register_runtime_handlers(
+            harness=self.harness,
+            writer_agent=_WRITER_AGENT,
+            tools_dir=self.fs.base_dir / "tools",
+        )
 
         # --- run-loop bookkeeping -----------------------------------------
         self._active_jobs: set[str] = set()
@@ -164,58 +165,6 @@ class Daemon:
         self.last_result: dict[str, Any] | None = None
         self.state = INITIAL_STATE
     # #EXT-007-REQ-1 End
-
-    # -- executor handler ---------------------------------------------------
-
-    # #EXT-007-REQ-2 Start
-    def _advance_handler(self, decision: Decision, **collaborators: Any) -> dict[str, Any]:
-        """Deterministically drive a per-job PENDING->RUNNING->DONE sequence.
-
-        Runs in the Execution Plane: given the *validated* ``advance`` decision,
-        it commits each declared event to the durable transition log and returns
-        the inert result that the daemon then writes to ``outbox/<id>.json``.
-        It performs no reasoning and touches no LLM.
-        """
-        payload = decision.payload if isinstance(decision.payload, dict) else {}
-        events = payload.get("events") or ["start", "complete"]
-        note = payload.get("note")
-
-        state = INITIAL_STATE
-        indices: list[int] = []
-        for event in events:
-            result = commit(self.log, state, event)
-            state = result.state
-            indices.append(result.index)
-        self.state = state
-        return {
-            "decision": decision.id,
-            "source": decision.source,
-            "kind": decision.kind,
-            "finalState": state,
-            "events": list(events),
-            "logIndices": indices,
-            "note": note,
-        }
-
-    def _fs_write_handler(self, decision: Decision, **collaborators: Any) -> dict[str, Any]:
-        """Deterministically write a file to the shared file system.
-
-        Runs in the Execution Plane: given the *validated* ``fs.write`` decision,
-        it uses the harness writer to write the data to the specified path.
-        """
-        payload = decision.payload if isinstance(decision.payload, dict) else {}
-        path = payload.get("path")
-        data = payload.get("data", "")
-        if not path:
-            raise RuntimeError("Missing path in fs.write decision payload")
-            
-        action = Action(type="fs.write", path=path, data=data)
-        ar = self.harness.request(_WRITER_AGENT, action)
-        if not ar.allowed:
-            raise RuntimeError(f"Harness denied fs.write: {ar.reason}")
-            
-        return {"path": path, "bytes": len(data)}
-    # #EXT-007-REQ-2 End
 
     # -- inbox ingestion + fault isolation ----------------------------------
 
@@ -377,6 +326,10 @@ class Daemon:
 
                 result = outcome.output
                 self.last_result = result if isinstance(result, dict) else {"output": result}
+                # The advance handler is now pure; the daemon reflects the final
+                # machine state it reports (the handler no longer mutates state).
+                if isinstance(result, dict) and isinstance(result.get("finalState"), str):
+                    self.state = result["finalState"]
 
                 # Write the per-job result to outbox via the harness (mediated fs.write).
                 payload = json.dumps(

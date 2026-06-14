@@ -128,7 +128,9 @@ class DecisionLog:
         """Durably append ``record`` as one JSON line, fsync, then return."""
         self.dir.mkdir(parents=True, exist_ok=True)
         line = record.to_json() + "\n"
-        with open(self.path, "a", encoding="utf-8") as fh:
+        # newline="" disables OS newline translation -> "\n" bytes on every
+        # platform, keeping the recorded log byte-identical cross-OS.
+        with open(self.path, "a", encoding="utf-8", newline="") as fh:
             fh.write(line)
             fh.flush()
             os.fsync(fh.fileno())

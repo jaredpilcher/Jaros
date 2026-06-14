@@ -96,6 +96,16 @@ jaros submit greeter --input '{"name": "Jaros"}'   --data-dir .jaros-data
 jaros watch  --data-dir .jaros-data
 ```
 
+Then the payoff — reconstruct the entire run from the recorded decisions, with **no model call**:
+
+```bash
+jaros replay --data-dir .jaros-data
+#   replayed 3 recorded decisions (3 applied) - model calls: 0
+#     reconstructed state : DONE
+#     byte-identical      : yes
+#   reproducible: the recorded decisions reconstruct the run exactly, with no model call.
+```
+
 Each accepted decision is recorded to `.jaros-data/state/decisions.log`, so the whole run is reproducible by replay. See **[`examples/`](examples/)** for the agents used above, and run the end-to-end smoke tests:
 
 ```bash

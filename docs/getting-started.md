@@ -69,11 +69,20 @@ CI-friendly and reproducible — no model-grading flakiness. See
 
 ## 6. Reproduce a run by replay
 
-The headline guarantee: replaying the recorded decisions reconstructs the run to
-**byte-identical state, with no model call** — and Jaros *verifies* the handler
-determinism it depends on (`jaros.execution.replays_agree`). Drive it from the
-[web console](../console/) (Reproducibility page) or in code via
-`jaros.state.replay`.
+The headline guarantee, in one command — reconstruct the entire run from the
+recorded decisions, **byte-identical, with no model call**:
+
+```bash
+jaros replay --data-dir $DATA          # human report; exit 0 reproducible, 1 divergence, 2 nothing
+jaros replay --data-dir $DATA --json   # { decisions, modelCalls:0, finalState, byteIdentical, ok }
+```
+
+Replay re-applies the decision log through the runtime's **own** handlers into a
+fresh sandbox (it never touches the live data dir) and compares the rebuilt
+transition log to the original. The guarantee rests on handler determinism, which
+`scripts/check_determinism.py` gates in CI; replay's divergence path (exit 1) is
+the user-facing version of that same check. Also available from the
+[web console](../console/) Reproducibility page or in code via `jaros.state.replay`.
 
 ## 7. Watch + drive everything from the browser
 
