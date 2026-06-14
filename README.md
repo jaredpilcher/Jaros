@@ -136,7 +136,14 @@ cd console && npm install
 JAROS_DATA_DIR=/tmp/jaros-demo npm run dev        # then open http://localhost:5500
 ```
 
-The full page gallery (Jobs, Agents & Tools, and more) lives in the [console README](console/README.md#screenshots).
+A brief first-run tour, a live get-started checklist, per-page intros, hover
+tooltips, and an in-app **Help & Docs** page (pictures + a copy-pasteable CLI
+quickstart) make it easy to know where to start and what to do next:
+
+![Jaros Console — the first-run tour that guides new operators through the core loop](console/docs/screenshots/tour.png)
+
+The full page gallery and a walkthrough of every page live in
+**[docs/console.md](docs/console.md)** and the [console README](console/README.md#screenshots).
 
 ---
 

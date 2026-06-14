@@ -67,7 +67,17 @@ try {
   browser = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ channel: "msedge", headless: true }));
   const page = await browser.newPage({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 2, colorScheme: "dark" });
 
-  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/schedules", "schedules"], ["/evals", "evaluations"], ["/state", "state-machine"], ["/harness", "harness"]];
+  // 1. Capture the first-run wizard (auto-opens in a fresh browser with no tour flag).
+  await page.goto(base + "/", { waitUntil: "domcontentloaded" });
+  await sleep(1400);
+  if (await page.waitForSelector(".modal", { timeout: 6000 }).catch(() => null)) {
+    await page.screenshot({ path: path.join(OUT, "tour.png") });
+    console.log("[shots] captured", "tour.png");
+  }
+  // Suppress the tour for the remaining page shots so it doesn't overlay them.
+  await page.addInitScript(() => localStorage.setItem("jaros.tour.v1", "captured"));
+
+  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/schedules", "schedules"], ["/evals", "evaluations"], ["/state", "state-machine"], ["/harness", "harness"], ["/help", "help"]];
   for (const [route, name] of routes) {
     await page.goto(base + route, { waitUntil: "domcontentloaded" });
     await sleep(1400); // settle: initial fetches + first live SSE snapshot render

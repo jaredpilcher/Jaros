@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 
 import { api, type DecisionRecord, type ReplayResult } from "../api";
-import { Card, Empty, Json, Pill } from "../components/ui";
+import { Card, Empty, Json, PageIntro, Pill, Tip } from "../components/ui";
 
 // #EXT-010-REQ-5 Start
 export function Replay() {
@@ -31,8 +31,11 @@ export function Replay() {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
+      <PageIntro icon="↻" sub="Replay runs in an isolated sandbox and never touches the live data dir." to="/help#replay">
+        Jaros's headline guarantee: rebuild any run from the decision log <b>byte-identically</b>, with <b>zero model calls</b>.
+      </PageIntro>
       <Card
-        title="Reproducibility by replay"
+        title={<>Reproducibility by replay <Tip text="The recorded decisions are the run's only non-deterministic input. Re-applying them through the same deterministic handlers reconstructs the run exactly." /></>}
         desc="the recorded decisions are the run's only non-deterministic input — re-execute them to reconstruct it exactly"
         right={
           <button className="primary" disabled={running || decisions.length === 0} onClick={runReplay}>

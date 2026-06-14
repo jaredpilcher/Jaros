@@ -179,3 +179,118 @@ tr:hover td { background: rgba(255, 255, 255, 0.015); }
 .section-title { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin: 0 0 12px; font-weight: 600; }
 .hint { color: var(--muted); font-size: 12px; }
 .mb { margin-bottom: 16px; }
+
+/* ---- tooltips ---- */
+.tip { position: relative; display: inline-flex; vertical-align: middle; }
+.tip .tip-dot {
+  width: 14px; height: 14px; margin-left: 6px; border-radius: 50%;
+  display: inline-grid; place-items: center; cursor: help;
+  font-family: var(--mono); font-size: 10px; font-weight: 700; line-height: 1;
+  color: var(--muted); background: var(--panel-2); border: 1px solid var(--border);
+}
+.tip:hover .tip-dot { color: var(--green); border-color: var(--green-dim); }
+.tip .tip-bubble {
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  width: max-content; max-width: 280px; padding: 9px 11px; z-index: 40;
+  background: var(--panel-3); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-2); font-family: var(--sans); font-size: 12px; font-weight: 400;
+  line-height: 1.5; text-transform: none; letter-spacing: 0; box-shadow: var(--shadow);
+  opacity: 0; pointer-events: none; transition: opacity 0.12s ease;
+}
+.tip .tip-bubble::after {
+  content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--border);
+}
+.tip:hover .tip-bubble { opacity: 1; }
+.tip.right .tip-bubble { left: auto; right: 0; transform: none; }
+.tip.right .tip-bubble::after { left: auto; right: 6px; transform: none; }
+
+/* ---- page intro banner ---- */
+.intro {
+  display: flex; align-items: center; gap: 13px; margin-bottom: 18px;
+  padding: 13px 16px; border-radius: var(--radius);
+  background: linear-gradient(90deg, var(--green-glow), transparent 70%), var(--panel);
+  border: 1px solid var(--border-soft);
+}
+.intro .intro-ico {
+  flex: 0 0 auto; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center;
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--green); font-size: 15px;
+}
+.intro .intro-body { min-width: 0; }
+.intro .intro-lead { font-size: 13px; color: var(--text); }
+.intro .intro-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.intro .intro-link { margin-left: auto; flex: 0 0 auto; white-space: nowrap; font-size: 12px; font-weight: 600; }
+
+/* ---- get-started checklist ---- */
+.checklist { display: grid; gap: 8px; }
+.check {
+  display: flex; align-items: center; gap: 12px; padding: 11px 13px;
+  border-radius: var(--radius-sm); border: 1px solid var(--border-soft); background: var(--panel-2);
+  text-decoration: none; color: var(--text);
+}
+a.check:hover { border-color: var(--border); background: var(--panel-3); text-decoration: none; }
+.check.done { opacity: 0.62; }
+.check .ck-box {
+  flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid var(--border); color: var(--muted); font-size: 11px; font-family: var(--mono);
+}
+.check.done .ck-box { border-color: var(--green-dim); background: var(--green-glow); color: var(--green); }
+.check.now .ck-box { border-color: var(--green); color: var(--green); animation: pulse 1.6s infinite; }
+.check .ck-title { font-weight: 600; font-size: 13px; }
+.check .ck-desc { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.check.done .ck-title { text-decoration: line-through; text-decoration-color: var(--green-dim); }
+.check .ck-cta { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--green); white-space: nowrap; }
+.check.now { border-color: var(--green-dim); box-shadow: 0 0 0 3px var(--green-glow); }
+
+/* ---- modal / wizard ---- */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 100; display: grid; place-items: center;
+  background: rgba(6, 8, 11, 0.72); backdrop-filter: blur(4px); padding: 24px;
+}
+.modal {
+  width: 100%; max-width: 560px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+}
+.modal-shot {
+  height: 188px; background: var(--bg-grid); border-bottom: 1px solid var(--border-soft);
+  display: grid; place-items: center; overflow: hidden;
+}
+.modal-shot img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.modal-body { padding: 22px 24px; }
+.modal-step { font-family: var(--mono); font-size: 11px; color: var(--green); letter-spacing: 1px; text-transform: uppercase; }
+.modal-body h2 { margin: 8px 0 6px; font-size: 19px; }
+.modal-body p { margin: 0; color: var(--text-2); font-size: 14px; line-height: 1.6; }
+.modal-foot {
+  display: flex; align-items: center; gap: 10px; padding: 16px 24px;
+  border-top: 1px solid var(--border-soft); background: var(--panel-2);
+}
+.modal-dots { display: flex; gap: 6px; }
+.modal-dots .d { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.modal-dots .d.on { background: var(--green); }
+.modal-foot .grow { flex: 1; }
+.link-btn { background: none; border: none; color: var(--muted); padding: 8px 6px; font-weight: 500; }
+.link-btn:hover { background: none; color: var(--text); text-decoration: underline; }
+
+/* ---- topbar help button ---- */
+.help-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; font-size: 12px;
+  border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); color: var(--text-2);
+}
+.help-btn:hover { color: var(--green); border-color: var(--green-dim); background: var(--panel-2); }
+
+/* ---- in-app docs ---- */
+.doc { max-width: 880px; }
+.doc h2 { font-size: 17px; margin: 30px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border-soft); }
+.doc h2:first-child { margin-top: 0; }
+.doc p { color: var(--text-2); line-height: 1.65; margin: 0 0 12px; }
+.doc ol, .doc ul { color: var(--text-2); line-height: 1.7; padding-left: 22px; }
+.doc figure { margin: 14px 0 20px; }
+.doc figure img { width: 100%; border-radius: var(--radius); border: 1px solid var(--border); display: block; }
+.doc figcaption { color: var(--muted); font-size: 12px; margin-top: 7px; text-align: center; }
+.doc pre.cli {
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.6; background: var(--bg-grid);
+  border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 13px 15px;
+  color: var(--text); overflow-x: auto; margin: 0 0 14px;
+}
+.doc pre.cli .c { color: var(--muted); }
+.doc .anchor { scroll-margin-top: 80px; }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api, type Agents as AgentsModel } from "../api";
-import { Card, Empty } from "../components/ui";
+import { Card, Empty, PageIntro, Tip } from "../components/ui";
 
 const AGENT_TEMPLATE = `import uuid
 from jaros.core import create_decision
@@ -71,9 +71,13 @@ export function Agents() {
   }
 
   return (
+    <>
+    <PageIntro icon="◆" sub="An agent proposes inert Decision data; a tool executes a namespaced action." to="/help#agents">
+      Extend Jaros at runtime. Drop in an <b>agent</b> or a custom <b>tool</b> and the daemon loads it on the next tick — no restart.
+    </PageIntro>
     <div className="grid cols-2" style={{ alignItems: "start" }}>
       <div className="grid" style={{ gap: 16 }}>
-        <Card title="Agents" desc="loaded from agents/ at runtime — no restart" right={<span className="hint mono">{agents.agents.length}</span>}>
+        <Card title={<>Agents <Tip text="Loaded from the data dir's agents/ folder. Each declares a KIND and a build(llm) factory." /></>} desc="loaded from agents/ at runtime — no restart" right={<span className="hint mono">{agents.agents.length}</span>}>
           {agents.agents.length === 0 ? <Empty>No agents installed.</Empty> : (
             <table><tbody>{agents.agents.map((p) => <tr key={p}><td><span className="tag green">◆</span></td><td>{p}</td></tr>)}</tbody></table>
           )}
@@ -105,6 +109,7 @@ export function Agents() {
         </div>
       </Card>
     </div>
+    </>
   );
 }
 // #EXT-010-REQ-4 End

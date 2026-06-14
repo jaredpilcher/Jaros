@@ -54,5 +54,27 @@
       "startLine": 80,
       "endLine": 106
     }
+  ],
+  "REQ-9": [
+    {
+      "file": "console/src/components/ui.tsx",
+      "startLine": 4,
+      "endLine": 38
+    },
+    {
+      "file": "console/src/components/Wizard.tsx",
+      "startLine": 9,
+      "endLine": 91
+    },
+    {
+      "file": "console/src/components/GetStarted.tsx",
+      "startLine": 6,
+      "endLine": 67
+    },
+    {
+      "file": "console/src/pages/Help.tsx",
+      "startLine": 24,
+      "endLine": 165
+    }
   ]
 }

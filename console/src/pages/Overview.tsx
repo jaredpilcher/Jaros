@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { Snapshot } from "../api";
-import { Card, Json, Sparkline, Stat, StateBadge } from "../components/ui";
+import { GetStarted } from "../components/GetStarted";
+import { Card, Json, Sparkline, Stat, StateBadge, Tip } from "../components/ui";
 
 // #EXT-010-REQ-2 Start
-export function Overview({ snap }: { snap: Snapshot | null }) {
+export function Overview({ snap, onTour }: { snap: Snapshot | null; onTour: () => void }) {
   const [history, setHistory] = useState<number[]>([]);
   const lastTs = useRef(0);
 
@@ -20,13 +21,17 @@ export function Overview({ snap }: { snap: Snapshot | null }) {
   const c = snap.counts;
   const uptime = s.uptimeSec ? `${Math.round(s.uptimeSec)}s` : "—";
 
+  const allDone = snap.connected && c.processed > 0 && c.agents + c.tools > 0 && c.decisions > 0;
+
   return (
     <div className="grid" style={{ gap: 16 }}>
+      {!allDone && <GetStarted snap={snap} onTour={onTour} />}
+
       <div className="grid cols-4">
         <Stat label="Machine state" value={<StateBadge state={s.state} />} foot={`tick ${s.tick ?? 0} · up ${uptime}`} />
         <Stat label="Processed" value={c.processed} tone="green" foot={`${c.outbox} results in outbox`} />
         <Stat label="Failed" value={c.failed} tone={c.failed ? "red" : undefined} foot={c.failed ? "see Jobs → failed" : "clean"} />
-        <Stat label="Decisions logged" value={c.decisions} foot="replayable to byte-identical state" />
+        <Stat label={<>Decisions logged <Tip text="Each accepted decision is recorded to state/decisions.log — the exact input replay re-applies to rebuild the run." /></>} value={c.decisions} foot="replayable to byte-identical state" />
       </div>
 
       <div className="grid cols-3">
