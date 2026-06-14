@@ -31,6 +31,12 @@ and you **haven't touched the developer channels at all.** Two fixable causes ba
 the plan below: (1) the v1 CTA sent everyone to GitHub, so nothing happened in the
 comments; (2) no demo video, no question to reply to. The relaunch fixes both.
 
+There's also a **third, longer-horizon goal — a monetizable product someday** — and you
+want all three moving at once. The senior way: treat it as **option value**, not a third
+workstream. A handful of cheap choices now (see the *Parallel Track* below) keep
+monetization wide open without stealing the focus adoption + the job hunt need. Do **not**
+start building a paid product yet — that would drain the oxygen from the two goals above.
+
 ---
 
 ## PHASE 1 — Pre-launch gate (≈1 day, do before posting anything)
@@ -160,6 +166,43 @@ comments; (2) no demo video, no question to reply to. The relaunch fixes both.
 
 ---
 
+## PARALLEL TRACK — keep the monetization door open (cheap, non-distracting)
+
+You want a *possible* product one day. The move is **option value**: a few cheap choices
+now that keep monetization open while spending ~zero focus on it. Building a paid product
+now would steal the oxygen the two goals above need — so don't. Just don't foreclose it.
+
+**The model (proven): open-core.** The runtime stays free + MIT forever — that's what wins
+adoption *and* your job. The *paid* layer, later, is what teams pay for — never the core:
+- **Jaros Cloud** — hosted replay & audit: a team's run history, searchable, retained,
+  shareable. (Replay-as-a-service is the natural SaaS.)
+- **Team / console-pro** — shared dashboards, RBAC/SSO, retention, compliance/audit exports.
+- **Managed multi-node / support** — for the few who outgrow single-node.
+
+**Cheap moves to make now (each well under an hour; none distracts from launch):**
+- [ ] **Keep the commercial surface modular.** Core runtime = free/MIT; anything paid-shaped
+      later (cloud, console-pro, team features) lives in a *separate* component. The console
+      already is — keep it that way; don't entangle paid-shaped features into the MIT core.
+- [ ] **License discipline.** MIT the *core* (adoption). Build future paid features as **new
+      code under your own terms** — **never relicense what you already gave away** (the
+      HashiCorp / Redis backlash is the cautionary tale).
+- [ ] **Own the brand.** Claim the GitHub org, the domain, the PyPI/npm name, and the social
+      handles now; consider a "Jaros" trademark eventually. Cheap insurance.
+- [ ] **Capture demand, don't sell.** Add a one-line **"Jaros Cloud — notify me"** email
+      capture + a **"Teams / Enterprise — talk to us"** link to the landing page. Zero
+      selling; it builds a waitlist and *evidence of willingness-to-pay* for later.
+- [ ] **Write a one-paragraph business-model hypothesis** (open-core: free runtime, paid
+      cloud/team/compliance). Keep it private — it doubles as **interview gold** ("here's how
+      I'd monetize it") without doing any of the work now.
+
+> **The honest tension** (be ready to speak to it): MIT + "become the standard" + "monetize
+> later" is the Docker story — the tech can win while the company struggles, because value
+> leaks to whoever operates at scale. Open-core with a hosted layer is the proven answer, and
+> the time to set the *seams* is now (keep paid-shaped surface separable) — even though you
+> build none of it yet.
+
+---
+
 ## The numbers that mean it's working (not stars, not revenue)
 
 **Developer axis** (adoption):
@@ -171,6 +214,10 @@ comments; (2) no demo video, no question to reply to. The relaunch fixes both.
 - [ ] **Profile views + followers** from posts (v1 LinkedIn already gave you 6 + 3 — amplify it).
 - [ ] **Comments** on the LinkedIn post (v1 got 0 — the metric to move with v2).
 - [ ] Inbound from **eng leaders / recruiters** who saw the project.
+
+**Monetization signal** (option-value — watch passively, sell nothing):
+- [ ] Waitlist signups for "Jaros Cloud / team features."
+- [ ] Anyone asking "can I pay for hosted replay / audit / retention?" — write it down.
 
 > Reactions/likes are vanity here. The signals that matter are *people clicking through
 > to you* (job) and *people running the thing* (developers).
