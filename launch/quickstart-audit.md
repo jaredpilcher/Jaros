@@ -24,38 +24,31 @@ mindset. Findings below, ordered by leverage.
 
 ## Fixes, by leverage
 
-### 🔴 P0 — The quickstart doesn't end on the *wow* (the replay)
+### ✅ P0 — End the quickstart on the *wow* (the replay) — **DONE (shipped: EXT-008)**
 
-The current quickstart stops at `submit` + `watch`. That demonstrates "it runs an
-agent" — which every framework does. **It never shows the differentiator** (replay
-to byte-identical state). A visitor leaves without feeling why Jaros is different.
-
-**Fix (today, no code):** end the quickstart with the runnable benchmark, which
-already prints the wow:
-
-```bash
-python launch/benchmark/run_reproducibility_benchmark.py
-# => Jaros replay: 5x, 0 model calls, 1 distinct state hash (byte-identical)
-#    typical loop: 5x, 5 distinct outputs (not reproducible)
-```
-
-…and a one-line pointer to the **console's one-click replay** (screenshot in the README).
-
-**Fix (this week, small code — highest-leverage pre-launch task): add `jaros replay`.**
-A user who just ran `jaros submit ...` should be able to do:
+The quickstart used to stop at `submit` + `watch` — "it runs an agent," which every
+framework does, never showing the differentiator. **This is now fixed:** `jaros
+replay` ships, the README quickstart ends on it, and it's the single command that
+makes the value land:
 
 ```bash
 jaros replay --data-dir .jaros-data
-# Replays state/decisions.log through the built-in handlers into fresh state,
-# prints: decisions replayed, model calls (0), final state, and a byte-identical
-# check vs the live transition log.
+# replayed 2 recorded decisions (2 applied) - model calls: 0
+#   reconstructed state : DONE
+#   byte-identical      : yes
+# reproducible: the recorded decisions reconstruct the run exactly, with no model call.
 ```
 
-Spec: read `state/decisions.log` via `jaros.state.read_decisions`, register the
-same built-in handlers the daemon uses (`advance`, `fs.write`), call
-`jaros.state.replay(dlog, executor.apply, log=fresh_TransitionLog)`, hash both
-logs, print the comparison. This turns the wow into a single command in the path
-people already walk. **Do this before launch if you do nothing else on the code.**
+Verified end-to-end (submit → process → replay): byte-identical, exit `0`,
+`--json` emits `{decisions, modelCalls:0, finalState, byteIdentical, ok}`, empty
+log → exit `2`, divergence → exit `1`, and replay touches **nothing** in the live
+data dir (it reconstructs into an isolated sandbox, reusing the production handlers
+via `jaros/execution/handlers.py`). Tests in `tests/test_cli_replay.py`.
+
+Two supporting "wow" assets also exist and stay useful:
+- `python launch/benchmark/run_reproducibility_benchmark.py` — the 5×, 0-model-call,
+  byte-identical-vs-divergent-loop benchmark (great for the blog/posts).
+- The **console's one-click replay** (screenshot in the README) — the visual version.
 
 ### 🟠 P1 — Publish to PyPI so the try-path is `pip install jaros`
 
@@ -124,20 +117,26 @@ jaros submit greeter --input '{"name":"Jaros"}'
 jaros watch
 
 # 4. THE WOW: replay the whole run to byte-identical state, with zero model calls
-jaros replay                 # (after adding replay; until then: run the benchmark)
+jaros replay                 # ✅ ships today (EXT-008)
 ```
 
-Steps 1–3 exist today. Steps marked "(after …)" are the three small pre-launch
-fixes above — none is more than an afternoon, and together they are the difference
-between "looks interesting" and "oh, *that's* what it does."
+`jaros submit/watch/replay` (steps 3–4) all work today. The only remaining
+"(after …)" gaps are the two P1 conveniences — `pip install jaros` (PyPI) and
+`jaros init --with-examples` — each an afternoon, and neither blocks the wow.
 
 ---
 
 ## Pre-launch checklist (gate for posting)
 
-- [ ] Fresh container: install → boot → submit → **see the wow** in < 5 min.
-- [ ] No API key required anywhere in the path.
-- [ ] The wow (replay/benchmark) is the *last thing the visitor sees*, not buried.
-- [ ] `pip install jaros` works (PyPI) **or** the editable fallback is crystal clear.
-- [ ] Badges + one-paste bootstrap + second-terminal callout in place.
+- [x] **The wow is a single command in the path: `jaros replay` (EXT-008, verified).**
+- [x] No API key required anywhere in the path (default echo adapter, offline).
+- [x] The wow (`jaros replay`) is the *last thing the visitor sees* in the quickstart.
+- [ ] Fresh container: install → boot → submit → **replay** in < 5 min (re-run on a clean image).
+- [ ] `pip install jaros` works (PyPI) **or** the editable fallback is crystal clear.  ← P1
+- [ ] One-paste bootstrap (`jaros init --with-examples`) + second-terminal callout.  ← P1/P2
+- [ ] Badges (CI, PyPI, MIT, Python versions) on the README.  ← P2
 - [ ] Someone who isn't you ran it start-to-finish and hit zero surprises.
+
+**Status:** the P0 (wow-in-the-path) is done. What's left before posting is all
+non-code polish — PyPI publish, one-command bootstrap, badges, and one clean-image
+dry run.
