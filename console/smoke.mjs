@@ -1,7 +1,8 @@
 /**
- * End-to-end smoke for the Jaros Console: boot a daemon on a throwaway data dir,
- * start the bridge, then drive everything through the console API — submit jobs,
- * read the decision log, introspect the state model + harness, and run a replay.
+ * End-to-end smoke for the Jaros Console: boot a daemon + the bridge on a
+ * throwaway data dir, then drive EVERY interactive path through the console API —
+ * submit jobs, install a plugin agent and a custom tool, create/list/delete a
+ * schedule, run the eval suite, introspect the model + harness, and replay.
  *
  * Run:  node console/smoke.mjs   (from repo root, after `npm install` in console/)
  */
@@ -16,26 +17,28 @@ const REPO = path.resolve(HERE, "..");
 const API = 7399;
 const base = `http://localhost:${API}`;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const j = (path, opts) => fetch(`${base}${path}`, opts).then((r) => r.json());
+const post = (path, body) => j(path, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
 
 async function waitFor(fn, timeout = 30000) {
   const end = Date.now() + timeout;
-  while (Date.now() < end) {
-    try { if (await fn()) return true; } catch { /* retry */ }
-    await sleep(400);
-  }
+  while (Date.now() < end) { try { if (await fn()) return true; } catch { /* retry */ } await sleep(400); }
   return false;
 }
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), "jaros-console-"));
-fs.mkdirSync(path.join(data, "plugins"), { recursive: true });
-fs.mkdirSync(path.join(data, "tools"), { recursive: true });
-for (const f of fs.readdirSync(path.join(REPO, "examples", "plugins"))) fs.copyFileSync(path.join(REPO, "examples", "plugins", f), path.join(data, "plugins", f));
-for (const f of fs.readdirSync(path.join(REPO, "examples", "tools"))) fs.copyFileSync(path.join(REPO, "examples", "tools", f), path.join(data, "tools", f));
+for (const area of ["plugins", "tools", "evals"]) fs.mkdirSync(path.join(data, area), { recursive: true });
+// Stage the example + read-only library so jobs, tools, and the eval suite work.
+for (const [area, root] of [["plugins", "examples/plugins"], ["tools", "examples/tools"], ["plugins", "examples/readonly/plugins"], ["tools", "examples/readonly/tools"], ["evals", "examples/readonly/evals"]]) {
+  const src = path.join(REPO, root);
+  for (const f of fs.readdirSync(src)) if (f.endsWith(".py") || f.endsWith(".json")) fs.copyFileSync(path.join(src, f), path.join(data, area, f));
+}
 console.log("[smoke] data dir:", data);
 
 const env = { ...process.env, JAROS_DATA_DIR: data, JAROS_TICK_MS: "150", JAROS_CONSOLE_API_PORT: String(API) };
 const daemon = spawn("python", ["-m", "jaros.cli", "--data-dir", data, "serve"], { cwd: REPO, env, stdio: "ignore" });
-const bridge = spawn("npx", ["tsx", "server/index.ts"], { cwd: HERE, env, stdio: "ignore", shell: process.platform === "win32" });
+// Single killable node process (no shell wrapper), so kill() actually stops it.
+const bridge = spawn(process.execPath, ["--import", "tsx", "server/index.ts"], { cwd: HERE, env, stdio: "ignore" });
 
 let code = 1;
 try {
@@ -43,35 +46,49 @@ try {
   if (!(await waitFor(async () => (await fetch(`${base}/api/health`)).ok))) throw new Error("bridge did not start");
   console.log("[smoke] daemon + bridge up");
 
+  // 1. Submit jobs (Jobs page).
   for (const [kind, input] of [["advance", "{}"], ["echo", '{"msg":"hi"}'], ["greeter", '{"name":"Jaros"}']]) {
-    const r = await (await fetch(`${base}/api/jobs`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ kind, input }) })).json();
-    if (r.error) throw new Error(`submit ${kind}: ${r.error}`);
+    if ((await post("/api/jobs", { kind, input })).error) throw new Error(`submit ${kind} failed`);
   }
-  console.log("[smoke] submitted 3 jobs via the console API");
+  await waitFor(async () => (await j("/api/snapshot")).counts.processed >= 3);
 
-  if (!(await waitFor(async () => (await (await fetch(`${base}/api/snapshot`)).json()).counts.processed >= 3))) throw new Error("jobs not processed");
+  // 2. Install a plugin agent + a custom tool (Agents & Tools page).
+  const installPlugin = await post("/api/agents", { name: "smoke_agent.py", source: 'import uuid\nfrom jaros.core import create_decision\nKIND="smoke"\nclass B:\n  def __init__(self, llm): pass\n  def decide(self, c): return [create_decision(id=f"s-{uuid.uuid4().hex}", source="smoke", kind="advance", payload={"events":["start","complete"]})]\ndef build(llm): return B()\n' });
+  const installTool = await post("/api/tools", { name: "smoke_tool.py", source: 'from jaros.core.decision_gate import ValidationResult\nclass T:\n  NAME="smoke.noop"\n  def validate(self, d): return ValidationResult.accept(d)\n  def execute(self, d, **k): return {"ok": True}\n' });
+  const agents = await j("/api/agents");
 
-  const snap = await (await fetch(`${base}/api/snapshot`)).json();
-  const decisions = await (await fetch(`${base}/api/decisions`)).json();
-  const model = await (await fetch(`${base}/api/model`)).json();
-  const harness = await (await fetch(`${base}/api/harness`)).json();
-  const replay = await (await fetch(`${base}/api/replay`, { method: "POST" })).json();
+  // 3. Create / list / delete a schedule (Schedules page).
+  const createSched = await post("/api/schedules", { name: "smoke-sched", schedule: { id: "smoke-sched", kind: "advance", input: {}, every_seconds: 3600, enabled: true } });
+  const schedAfterCreate = await j("/api/schedules");
+  await fetch(`${base}/api/schedules?name=smoke-sched`, { method: "DELETE" });
+  const schedAfterDelete = await j("/api/schedules");
+
+  // 4. Run the eval suite (Evaluations page).
+  const evals = await post("/api/evals", {});
+
+  // 5. Reproducibility + introspection.
+  const decisions = await j("/api/decisions");
+  const model = await j("/api/model");
+  const harness = await j("/api/harness");
+  const replay = await post("/api/replay", {});
+  const snap = await j("/api/snapshot");
 
   const checks = {
-    "processed >= 3": snap.counts.processed >= 3,
-    "no failures": snap.counts.failed === 0,
-    "decisions logged >= 3": decisions.length >= 3,
+    "submit jobs -> processed >= 3": snap.counts.processed >= 3 && snap.counts.failed === 0,
+    "install plugin (POST /api/agents)": !!installPlugin.path && agents.plugins.includes("smoke_agent.py"),
+    "install tool (POST /api/tools)": !!installTool.path && agents.tools.includes("smoke_tool.py"),
+    "create schedule (POST /api/schedules)": !!createSched.name && schedAfterCreate.some((s) => s.id === "smoke-sched"),
+    "delete schedule (DELETE)": !schedAfterDelete.some((s) => s.id === "smoke-sched"),
+    "run evals (POST /api/evals)": evals.ok === true && evals.total >= 4,
+    "decisions logged": decisions.length >= 3,
     "state model introspected": Array.isArray(model.states) && model.states.includes("DONE"),
     "harness rules introspected": harness.rules && Object.keys(harness.rules).length > 0,
-    "replay ok": replay.ok === true,
-    "replay reconstructs DONE": replay.finalState === "DONE",
-    "replay no model call": replay.modelCalls === 0,
+    "replay reproducible (deterministic + byte-identical)": replay.ok === true && replay.deterministic === true && replay.modelCalls === 0,
   };
   let allOk = true;
   for (const [name, ok] of Object.entries(checks)) { console.log(`        [${ok ? "PASS" : "FAIL"}] ${name}`); if (!ok) allOk = false; }
-  console.log(`[smoke] replay -> ${JSON.stringify(replay)}`);
   code = allOk ? 0 : 1;
-  console.log(allOk ? "PASS: console stack drives a live Jaros end-to-end." : "FAIL: some checks failed.");
+  console.log(allOk ? "PASS: the console drives every interactive path against a live Jaros." : "FAIL: some console paths failed.");
 } catch (e) {
   console.error("[smoke] error:", e.message);
 } finally {
