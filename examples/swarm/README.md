@@ -20,18 +20,38 @@ This is a support-ticket triage hive:
               byte-identical swarm state  +  "which agent, which decision"
 ```
 
-- **`agents/planner_agent.py`** (`planner`) — classifies the ticket.
-- **`agents/worker_agent.py`** (`worker`) — drafts a reply and **hands it off** to
-  the reviewer. Submitting `{"bad": true}` seeds a **bad handoff**.
-- **`agents/reviewer_agent.py`** (`reviewer`) — reviews and finalizes.
+The model's answer **drives** each decision — it isn't a cosmetic note. The LLM
+decides *what* (a verdict); the decision bakes that verdict into the events, and
+the deterministic executor decides *how* (the transitions):
+
+- **`agents/planner_agent.py`** (`planner`) — an LLM triage gate. **ACCEPT** advances
+  the ticket to `DONE`; **REJECT** (spam/abuse) drives it to `FAILED`.
+- **`agents/worker_agent.py`** (`worker`) — drafts a reply, then the LLM judges its own
+  confidence. A confident **YES** hands off cleanly; an unsure **NO** is a bad handoff.
+  Submitting `{"bad": true}` also forces a bad handoff for the demo.
+- **`agents/reviewer_agent.py`** (`reviewer`) — an LLM reviewer. **APPROVE** advances to
+  `DONE`; **REVISE** drives the job to `BLOCKED` (needs revision).
 - **`tools/handoff_tool.py`** (`swarm.handoff`) — the reviewer accepting a draft. A
   bad handoff is recorded (it is valid data) but **rejected on execution**, so
   replay reproduces it AND attributes it.
 
-Every agent reaches the model through the one `LlmClient` interface; the demo uses
-the **deterministic mock** by default (no model server needed). Point it at a real
+So a different model judgment yields a different recorded decision and a different
+reconstructed state — and replay reproduces whichever the model chose, with no
+model call. Every agent reaches the model through the one `LlmClient` interface;
+the demo uses the **deterministic mock** by default (no model server — the mock
+takes the happy path, so outcomes are deterministic for CI). Point it at a real
 small model by setting `config/llm.json` to `{"provider":"ollama"}` (and running
 `ollama serve`) — no code change.
+
+For example, with a real model the planner gates spam to `FAILED` and a genuine
+request to `DONE`, purely from the LLM's verdict:
+
+```text
+$ jaros submit planner --input '{"ticket":"BUY CHEAP CRYPTO NOW!!! claim your prize"}'
+   planner verdict=reject  events=[start, fail]      -> FAILED
+$ jaros submit planner --input '{"ticket":"can't log in after a password reset"}'
+   planner verdict=accept  events=[start, complete]  -> DONE
+```
 
 ## Run it
 
