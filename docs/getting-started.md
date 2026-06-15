@@ -84,7 +84,37 @@ transition log to the original. The guarantee rests on handler determinism, whic
 the user-facing version of that same check. Also available from the
 [web console](../console/) Reproducibility page or in code via `jaros.state.replay`.
 
-## 7. Watch + drive everything from the browser
+## 7. Reproduce a whole *swarm* — and find the culprit
+
+The same guarantee scales from one agent to a **hive**. Stand up a swarm
+(planner -> worker -> reviewer), seed a bad handoff, and replay the *whole* run —
+byte-identical, no model call — with every decision attributed to the agent that
+made it. Every agent reaches the model through the one `LlmClient` interface; the
+demo uses the deterministic **mock** by default (no model server). Point it at a
+real small model by setting `config/llm.json` to `{"provider":"ollama"}`.
+
+```bash
+cp examples/swarm/plugins/*.py $DATA/plugins/
+cp examples/swarm/tools/*.py   $DATA/tools/
+for t in "login fails" "double charge"; do
+  jaros submit planner  --input "{\"ticket\":\"$t\"}" --data-dir $DATA
+  jaros submit worker   --input "{\"ticket\":\"$t\"}" --data-dir $DATA
+  jaros submit reviewer --input "{\"ticket\":\"$t\"}" --data-dir $DATA
+done
+jaros submit worker --input '{"ticket":"refund","bad":true}' --data-dir $DATA  # seed a bad handoff
+
+jaros replay --data-dir $DATA          # per-agent summary + the attributed agent/decision
+jaros replay --data-dir $DATA --json   # adds byAgent + attribution (modelCalls:0, byteIdentical)
+```
+
+`jaros replay` reconstructs every member's decisions in recorded order to
+byte-identical state and, for the seeded bad handoff, pinpoints the exact agent
+and decision that produced it — by recorded fact, from the one ordered,
+hash-chained, per-agent decision log. End-to-end in Docker:
+`python tests/integration/run_swarm_replay_demo.py`. See
+[examples/swarm/](../examples/swarm/) and [EXT-015](../.jarify/EXT-015/requirements.md).
+
+## 8. Watch + drive everything from the browser
 
 ```bash
 cd console && npm install
@@ -95,7 +125,7 @@ Submit jobs, install agents/tools, manage schedules, run evals, browse + replay
 the decision log, and inspect the state machine and harness — all over the shared
 file system; the node stays serverless. See the [console README](../console/README.md).
 
-## 8. Deploy in Docker (one node, then many)
+## 9. Deploy in Docker (one node, then many)
 
 ```bash
 docker build -t jaros .
