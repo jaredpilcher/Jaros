@@ -162,10 +162,20 @@ def replay_swarm(data_dir: str | Path) -> SwarmReplayResult:
 
     data_dir = Path(data_dir)
     decision_log = DecisionLog(data_dir / "state")
-    decisions = read_decisions(decision_log)
 
+    # Verify the tamper-evident hash chain FIRST. A tampered *mid-log* record makes
+    # read_decisions raise (corruption before the trailing record is unrecoverable),
+    # so checking the chain up front lets replay *report* the break gracefully
+    # (chain_ok=False, ok=False) instead of throwing (EXT-015 / REQ-4).
     chain = verify_chain(decision_log)
+    if not chain.ok:
+        return SwarmReplayResult(
+            decisions=chain.length, by_agent=[], final_state=None,
+            byte_identical=False, model_calls=0, chain_ok=False,
+            chain_reason=chain.reason, attribution=None, ok=False,
+        )
 
+    decisions = read_decisions(decision_log)
     if not decisions:
         return SwarmReplayResult(
             decisions=0, by_agent=[], final_state=None, byte_identical=False,

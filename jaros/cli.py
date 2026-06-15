@@ -347,7 +347,8 @@ def cmd_replay(data_dir: Path, *, as_json: bool = False, verbose: bool = False, 
     for t in res.by_agent:
         print(f"    {t.source:<18}{t.decisions} decision(s)", file=out)
     print(f"  reconstructed state : {res.final_state}", file=out)
-    print(f"  byte-identical      : {'yes' if res.byte_identical else 'NO - divergence detected'}", file=out)
+    _bi = "yes" if res.byte_identical else ("no" if not res.chain_ok else "NO - divergence detected")
+    print(f"  byte-identical      : {_bi}", file=out)
     print(
         f"  tamper-evident chain: {'intact' if res.chain_ok else 'BROKEN - ' + (res.chain_reason or '')}",
         file=out,
@@ -361,6 +362,13 @@ def cmd_replay(data_dir: Path, *, as_json: bool = False, verbose: bool = False, 
         print("reproducible: the whole swarm reconstructs byte-identically, with no model call.", file=out)
     elif res.ok and res.attribution is not None:
         print("reproduced byte-identically; a member's handoff failed - attributed to the exact agent above.", file=out)
+    elif not res.chain_ok:
+        print(
+            "TAMPERED: the decision log's hash chain is broken - the recorded account "
+            "was altered, so the run cannot be trusted or replayed. "
+            f"{res.chain_reason or ''}",
+            file=out,
+        )
     else:
         print("DIVERGENCE: replay did not reproduce the run byte-identically (a non-deterministic handler?).", file=out)
     return 0 if res.ok else 1

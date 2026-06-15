@@ -248,6 +248,31 @@ def test_model_output_drives_decisions_and_replays_with_no_model_call(tmp_path: 
     assert "FAILED" in states and "BLOCKED" in states and "DONE" in states  # all model-chosen outcomes reproduced
 
 
+def test_replay_reports_tamper_gracefully_without_raising(tmp_path: Path):
+    # A real 3-agent run, then a mid-log edit that breaks the hash chain.
+    _run_swarm(tmp_path, [_adv("a", 1), _adv("b", 2), _adv("c", 3)], stage_handoff_tool=False)
+    log = tmp_path / "state" / "decisions.log"
+    lines = log.read_text().splitlines()
+    lines[1] = lines[1].replace('"note":"b 2"', '"note":"b TAMPERED"')  # edit record #2's payload
+    log.write_text("\n".join(lines) + "\n")
+
+    # replay_swarm must REPORT the break (chain_ok=False, ok=False), never raise.
+    res = replay_swarm(tmp_path)
+    assert res.chain_ok is False and res.ok is False and res.byte_identical is False
+
+    # the CLI surfaces it: exit 1, chainOk:false in JSON, "TAMPERED" in human output — no traceback.
+    import io
+    import json as _json
+
+    from jaros.cli import cmd_replay
+    jb = io.StringIO()
+    assert cmd_replay(tmp_path, as_json=True, stream=jb) == 1
+    assert _json.loads(jb.getvalue())["chainOk"] is False
+    hb = io.StringIO()
+    assert cmd_replay(tmp_path, stream=hb) == 1
+    assert "TAMPERED" in hb.getvalue()
+
+
 def test_swarm_attributes_divergence_to_a_decision(tmp_path: Path):
     decisions = [_adv("planner", 1), _adv("worker", 1)]
     _run_swarm(tmp_path, decisions, stage_handoff_tool=False)
