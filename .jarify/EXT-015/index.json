@@ -1,8 +1,44 @@
 {
-  "REQ-1": [],
-  "REQ-2": [],
-  "REQ-3": [],
-  "REQ-4": [],
-  "REQ-5": [],
-  "REQ-6": []
+  "REQ-6": [
+    {
+      "file": "tests/integration/run_swarm_replay_demo.py",
+      "startLine": 66,
+      "endLine": 148
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "jaros/state/swarm.py",
+      "startLine": 73,
+      "endLine": 81
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "jaros/state/swarm.py",
+      "startLine": 29,
+      "endLine": 232
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/state/swarm.py",
+      "startLine": 28,
+      "endLine": 233
+    }
+  ],
+  "REQ-4": [
+    {
+      "file": "jaros/state/decision_log.py",
+      "startLine": 228,
+      "endLine": 276
+    }
+  ],
+  "REQ-5": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 321,
+      "endLine": 367
+    }
+  ]
 }

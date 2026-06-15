@@ -12,7 +12,19 @@ It works by decoupling non-deterministic AI reasoning from deterministic system 
 
 ## What sets Jaros apart
 
-Most agent frameworks let the model drive: a tool call *is* a side effect. That's fine for a demo and a liability in production. Jaros inverts it — the model writes recommendations on slips of paper; a deterministic clerk decides what actually happens. Two properties fall out of that design, and they're the whole point:
+Most agent frameworks let the model drive: a tool call *is* a side effect. That's fine for a demo and a liability in production. Jaros inverts it — the model writes recommendations on slips of paper; a deterministic clerk decides what actually happens. These properties fall out of that design, and they're the whole point:
+
+### 🐝 Reproducible & accountable swarms
+
+The field is moving from one super-agent to **swarms of many small, specialized agents** — and at that scale two failures dominate: you can't **reproduce** what the swarm did, and you can't say **which agent caused it**. Jaros solves both by construction. Every accepted `Decision` is recorded — in one ordered, **hash-chained** log, **tagged with its source agent** — so replaying the log re-executes the *whole hive* to **byte-identical state with zero model calls**, and any failure is **attributed to the exact agent and decision** that produced it. A single agent is just the swarm of one.
+
+![A swarm replay: reconstruct the whole hive byte-identically with no model call, and attribute the bad handoff to the exact agent](docs/swarm-replay.png)
+
+One command replays a hive and names the culprit; the console shows the same per-agent breakdown and attribution beside the durable decision log:
+
+![The console Reproducibility page replaying a swarm — per-agent provenance and the failure attributed to the exact agent/decision](console/docs/screenshots/swarm-reproducibility.png)
+
+Run it yourself: [`examples/swarm/`](examples/swarm/) (a support-triage hive with a seeded bad handoff) and `python tests/integration/run_swarm_replay_demo.py` (the same, end-to-end in Docker). Realized by [EXT-015](.jarify/EXT-015/requirements.md).
 
 ### 🔁 Reproducible by replay
 

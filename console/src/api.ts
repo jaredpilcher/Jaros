@@ -67,6 +67,13 @@ export interface EvalReport {
   results: EvalCaseResult[];
   error?: string;
 }
+export interface Attribution {
+  kind: "failure" | "divergence";
+  index: number;
+  id: string;
+  source: string;
+  reason: string;
+}
 export interface ReplayResult {
   decisions: number;
   applied: number;
@@ -75,6 +82,9 @@ export interface ReplayResult {
   deterministic: boolean;
   modelCalls: number;
   ok: boolean;
+  byAgent?: Record<string, number>;
+  chainOk?: boolean;
+  attribution?: Attribution | null;
   error?: string;
 }
 
