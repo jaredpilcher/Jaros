@@ -324,7 +324,7 @@ realize them. Every spec must stay consistent with this design and the intent.
    PRIME-001 (intent)
        |
        |  APEX PURPOSE — the central reason Jaros exists
-       +-- P5 swarm reproducibility & accountability . EXT-001+EXT-002+EXT-003 (+ swarm EXT)
+       +-- P5 swarm reproducibility & accountability . EXT-001+EXT-002+EXT-003 + EXT-015
        |
        |  PURPOSE (the ends that realize P5)
        +-- P1 reproducible by replay ........... EXT-001 + EXT-002
@@ -343,7 +343,7 @@ realize them. Every spec must stay consistent with this design and the intent.
 
 | Purpose tenet | Realized by | Means |
 | --- | --- | --- |
-| **P5 Swarm reproducibility & accountability (apex)** | EXT-001, EXT-002, EXT-003 (+ swarm EXT) | A hive of agent threads whose per-agent, tamper-evident decision log replays the whole swarm to byte-identical state and attributes any failure to the exact agent + decision. P1–P4 are how it is achieved. |
+| **P5 Swarm reproducibility & accountability (apex)** | EXT-001, EXT-002, EXT-003, EXT-015 | A hive of agent threads whose per-agent, tamper-evident decision log replays the whole swarm to byte-identical state and attributes any failure to the exact agent + decision. P1–P4 are how it is achieved. |
 | P1 Reproducible by replay | EXT-001, EXT-002 | Inert `Decision` log re-executed deterministically to identical state |
 | P2 Capability-safe by construction | EXT-005 | Least-privilege scoped handles, default-deny mediation, auditable record |
 | P3 Zero-infrastructure | EXT-006, EXT-007 | Files + threads only; no server, database, or broker required to run |
@@ -386,8 +386,7 @@ realize them. Every spec must stay consistent with this design and the intent.
 Where today's specs lag the directive, the following are the likely changes a
 reconciling pass should make. This is guidance, not an exhaustive backlog.
 
-- **Swarm replay & attribution (P5 — apex; EXT-001 / EXT-002 / EXT-003, + a new
-  swarm EXT).** Extend single-run replay to a multi-agent run: replay every
+- **Swarm replay & attribution (P5 — apex; EXT-001 / EXT-002 / EXT-003 / EXT-015).** Extend single-run replay to a multi-agent run: replay every
   member's decisions in recorded order and surface, at any divergence or failure,
   the exact decision and its `source` agent. `Decision.source` already carries the
   agent identity, so attribution is a query over the existing log — add a per-agent
