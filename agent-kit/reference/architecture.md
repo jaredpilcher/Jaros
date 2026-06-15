@@ -9,9 +9,14 @@ An **agent** reasons and returns `Decision` objects — immutable, JSON-serializ
 data carrying `id`, `source`, `kind`, and a `payload`. A decision holds **no**
 callbacks, closures, or handles. The agent performs **no** side effect.
 
-The deterministic Execution Plane validates the decision (the gate) and dispatches
-it by `kind` to a handler/tool that performs the effect. This split is the whole
-game:
+The model decides **WHAT** — and that choice must *drive* the decision: parse the
+model's answer into the `kind`, `payload`, or `events` the executor acts on, so a
+different answer yields a different outcome. (Burying the model's text in a
+cosmetic `note` while behaviour stays hardcoded means the model decided nothing.)
+The deterministic Execution Plane then decides **HOW** — it validates the decision
+(the gate) and dispatches it by `kind` to a handler/tool that performs the effect.
+Because the decision (with the model's choice in it) is recorded, replay
+reconstructs the same outcome with no model call. This split is the whole game:
 
 ```text
   job input ──► Agent.decide() ──► [Decision data] ──► gate.validate() ──► tool.execute()

@@ -187,6 +187,67 @@ def test_decisionlog_caches_tail_for_o1_appends(tmp_path: Path):
     assert r3.index == 3 and r3.prev == r2.checksum
 
 
+def _load_agent(rel: str):
+    """Import an example agent module by file path (as the runtime registry does)."""
+    import importlib.util
+    path = Path(rel).resolve()
+    spec = importlib.util.spec_from_file_location(f"swarmtest_{path.stem}", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+class _StubLlm:
+    """A deterministic stand-in model whose verdict depends on the prompt — so it
+    genuinely 'decides' (no network), letting us prove the model drives the run."""
+
+    model = "stub"
+
+    def complete(self, req):
+        from jaros.llm import LlmResponse
+        p = req.prompt.lower()
+        if "triage gate" in p:  # planner: gate spam
+            text = "REJECT" if ("crypto" in p or "prize" in p or "buy cheap" in p) else "ACCEPT"
+        elif "reviewer" in p:  # reviewer: revise anything mentioning 'typo'
+            text = "REVISE" if "typo" in p else "APPROVE"
+        elif "yes or no" in p:  # worker confidence
+            text = "YES"
+        else:
+            text = "a drafted one-sentence reply"
+        return LlmResponse(text=text, model=self.model)
+
+
+def test_model_output_drives_decisions_and_replays_with_no_model_call(tmp_path: Path, monkeypatch):
+    # 1. The MODEL drives the decision: different verdicts -> different events.
+    planner = _load_agent("examples/swarm/agents/planner_agent.py").build(_StubLlm())
+    reviewer = _load_agent("examples/swarm/agents/reviewer_agent.py").build(_StubLlm())
+    spam = planner.decide({"ticket": "BUY CHEAP CRYPTO NOW, claim your prize"})[0]
+    real = planner.decide({"ticket": "cannot log in after a password reset"})[0]
+    revise = reviewer.decide({"ticket": "reply has a typo"})[0]
+    approve = reviewer.decide({"ticket": "reply looks correct"})[0]
+    assert spam.payload["verdict"] == "reject" and spam.payload["events"] == ["start", "fail"]
+    assert real.payload["verdict"] == "accept" and real.payload["events"] == ["start", "complete"]
+    assert revise.payload["verdict"] == "revise" and revise.payload["events"] == ["start", "block"]
+    assert approve.payload["verdict"] == "approve" and approve.payload["events"] == ["start", "complete"]
+
+    # 2. Record those model-driven decisions as a real run (decisions + transitions).
+    _run_swarm(tmp_path, [spam, real, revise, approve], stage_handoff_tool=False)
+
+    # 3. Block ALL model construction, then replay: it MUST reconstruct the exact
+    #    model-driven outcomes (a FAILED, a BLOCKED, two DONE) with zero model calls.
+    import jaros.llm
+
+    def _boom(*a, **k):
+        raise AssertionError("replay constructed an LlmClient — it must not call a model")
+
+    monkeypatch.setattr(jaros.llm, "create_llm_client", _boom)
+    res = replay_swarm(tmp_path)
+    assert res.ok is True and res.byte_identical is True and res.model_calls == 0
+    from jaros.state import TransitionLog
+    states = [e.state for e in TransitionLog(tmp_path / "state").read()]
+    assert "FAILED" in states and "BLOCKED" in states and "DONE" in states  # all model-chosen outcomes reproduced
+
+
 def test_swarm_attributes_divergence_to_a_decision(tmp_path: Path):
     decisions = [_adv("planner", 1), _adv("worker", 1)]
     _run_swarm(tmp_path, decisions, stage_handoff_tool=False)

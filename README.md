@@ -24,7 +24,11 @@ One command replays a hive and names the culprit; the console shows the same per
 
 ![The console Reproducibility page replaying a swarm — per-agent provenance and the failure attributed to the exact agent/decision](console/docs/screenshots/swarm-reproducibility.png)
 
-Run it yourself: [`examples/swarm/`](examples/swarm/) (a support-triage hive with a seeded bad handoff) and `python tests/integration/run_swarm_replay_demo.py` (the same, end-to-end in Docker). Realized by [EXT-015](.jarify/EXT-015/requirements.md).
+And the agents really **let the model decide**: the LLM's verdict drives the decision's outcome (accept → `DONE`, reject → `FAILED`), yet replay reconstructs whatever the model chose with **zero model calls** — the model decides *what*, the deterministic executor does *how*:
+
+![A real small model (gemma2:2b) on jaros: the model rejects spam to FAILED and accepts a real request to DONE, then jaros replay reconstructs both byte-identically with 0 model calls](docs/swarm-llm-decisions.png)
+
+Run it yourself: [`examples/swarm/`](examples/swarm/) (a support-triage hive whose planner/worker/reviewer decisions are model-driven, with a seeded bad handoff) and `python tests/integration/run_swarm_replay_demo.py` (the same, end-to-end in Docker). Realized by [EXT-015](.jarify/EXT-015/requirements.md).
 
 ### 🔁 Reproducible by replay
 

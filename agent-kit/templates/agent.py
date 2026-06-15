@@ -29,9 +29,12 @@ KIND = "word-count"
 
 class WordCountBoundary:
     def __init__(self, llm) -> None:
-        # `llm` is the shared LlmClient. A real agent calls `self._llm.complete(...)`
-        # to decide WHAT to do; the result is captured as inert payload data so the
-        # run stays reproducible by replay. This template needs no model call.
+        # `llm` is the shared LlmClient. If you call `self._llm.complete(...)`, let
+        # the model's answer DRIVE the decision — parse it into the kind / payload /
+        # events the executor acts on, not a cosmetic note. The decision (with the
+        # model's choice baked in) is recorded, so replay reconstructs the same
+        # outcome with NO model call. See skills/jaros-build-agent. This template
+        # is deterministic and needs no model call.
         self._llm = llm
 
     def decide(self, context) -> list:
