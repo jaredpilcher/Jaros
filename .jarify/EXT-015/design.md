@@ -70,6 +70,14 @@ tail. The chain is computed over canonical JSON with `\n` endings so the log sta
 byte-identical across OSes (matching EXT-002's cross-platform guarantee). This is the
 practical, EU-AI-Act-Article-12-shaped accountability — without crypto or blockchain.
 
+> **Log format note.** Adding `prev` to the checksum changes the `decisions.log`
+> record format. A `decisions.log` written *before* EXT-015 will not pass
+> `verify_chain` (its records have no `prev`); the log is per-run, so start a fresh
+> data dir rather than mixing formats. Appends stay O(1): `DecisionLog` caches the
+> last checksum + count in memory and updates them on append, so a hive of thousands
+> of decisions never re-reads the whole log per record (`read`/`verify_chain` still
+> do a full read, which is correct there).
+
 ## Invariants
 
 - One node, one ordered, hash-chained decision log; a swarm replays as that one log.

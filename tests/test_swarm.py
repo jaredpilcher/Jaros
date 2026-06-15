@@ -153,6 +153,40 @@ def test_swarm_attributes_bad_handoff_to_the_exact_agent(tmp_path: Path):
     assert "reject" in res.attribution.reason.lower() or "handoff" in res.attribution.reason.lower()
 
 
+def test_long_swarm_log_verifies_and_replays(tmp_path: Path):
+    # A long multi-agent run (O(1) appends): the cached-tail chaining must still
+    # produce a valid hash chain and a byte-identical swarm replay.
+    sources = ["planner", "worker", "reviewer"]
+    decisions = [_adv(sources[i % 3], i) for i in range(150)]
+    _run_swarm(tmp_path, decisions, stage_handoff_tool=False)
+    from jaros.state import DecisionLog, read_decisions, verify_chain
+    dl = DecisionLog(tmp_path / "state")
+    assert len(read_decisions(dl)) == 150
+    chain = verify_chain(dl)
+    assert chain.ok and chain.length == 150
+    res = replay_swarm(tmp_path)
+    assert res.ok is True and res.byte_identical is True and res.model_calls == 0
+    assert res.decisions == 150
+    assert {t.source: t.decisions for t in res.by_agent} == {"planner": 50, "worker": 50, "reviewer": 50}
+
+
+def test_decisionlog_caches_tail_for_o1_appends(tmp_path: Path):
+    # record_decision must not re-read the whole log per append; it uses the cached
+    # tail. The cache stays correct: prev links chain and indices stay continuous.
+    from jaros.state import DecisionLog, GENESIS_PREV, record_decision
+    dl = DecisionLog(tmp_path / "state")
+    dl.ensure()
+    r1 = record_decision(dl, _adv("a", 1))
+    r2 = record_decision(dl, _adv("b", 2))
+    assert r1.prev == GENESIS_PREV and r1.index == 1
+    assert r2.prev == r1.checksum and r2.index == 2
+    assert dl._count == 2 and dl._last_checksum == r2.checksum  # cache stayed current
+    # A freshly-constructed log over the same file lazily reloads the tail correctly.
+    dl2 = DecisionLog(tmp_path / "state")
+    r3 = record_decision(dl2, _adv("c", 3))
+    assert r3.index == 3 and r3.prev == r2.checksum
+
+
 def test_swarm_attributes_divergence_to_a_decision(tmp_path: Path):
     decisions = [_adv("planner", 1), _adv("worker", 1)]
     _run_swarm(tmp_path, decisions, stage_handoff_tool=False)

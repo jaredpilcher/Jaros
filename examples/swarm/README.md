@@ -58,7 +58,9 @@ jaros replay --data-dir $DATA
 #   reconstructed state : DONE
 #   byte-identical      : yes
 #   tamper-evident chain: intact
-#   attribution [FAILURE] : agent 'worker' produced decision #7  (reviewer rejected the handoff)
+#   attribution [FAILURE] : agent 'worker' - the bad-handoff decision  (reviewer rejected the handoff)
+#   (the exact decision index varies with how the concurrent jobs interleave;
+#    what's stable is the attributed agent + reason.)
 ```
 
 End-to-end in Docker (builds the image, runs the hive in a container, replays on

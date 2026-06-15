@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -129,6 +130,14 @@ class DecisionLog:
         self.dir: Path = Path(dir)
         self.filename: str = filename
         self.path: Path = self.dir / filename
+        # In-memory tail cache so appends are O(1), not O(n) (which would be O(n^2)
+        # over a run — the exact cost a swarm of thousands of decisions can't pay).
+        # ``read``/``verify_chain`` still do a full read (correct there); only the
+        # append hot path uses the cache. Loaded lazily from disk on first use and
+        # kept current on every append, under a lock so concurrent agents serialize.
+        self._lock = threading.Lock()
+        self._count: int | None = None
+        self._last_checksum: str | None = None
 
     def ensure(self) -> None:
         """Create the parent directory and an empty log file if absent (idempotent)."""
@@ -138,16 +147,56 @@ class DecisionLog:
                 fh.flush()
                 os.fsync(fh.fileno())
 
-    def append(self, record: DecisionRecord) -> None:
-        """Durably append ``record`` as one JSON line, fsync, then return."""
+    def _write_raw(self, record: DecisionRecord) -> None:
+        """Durably write one JSON line + fsync (newline="" -> "\\n" bytes cross-OS)."""
         self.dir.mkdir(parents=True, exist_ok=True)
         line = record.to_json() + "\n"
-        # newline="" disables OS newline translation -> "\n" bytes on every
-        # platform, keeping the recorded log byte-identical cross-OS.
         with open(self.path, "a", encoding="utf-8", newline="") as fh:
             fh.write(line)
             fh.flush()
             os.fsync(fh.fileno())
+
+    def _load_tail_locked(self) -> None:
+        """Populate the count + last-checksum cache from disk once (caller holds lock)."""
+        if self._count is not None:
+            return
+        count = 0
+        last = GENESIS_PREV
+        for rec in self.read():
+            count += 1
+            last = rec.checksum
+        self._count = count
+        self._last_checksum = last
+
+    def append(self, record: DecisionRecord) -> None:
+        """Durably append ``record`` as one JSON line, fsync, then return.
+
+        Thread-safe; keeps the tail cache current when it is already loaded.
+        """
+        with self._lock:
+            self._write_raw(record)
+            if self._count is not None:
+                self._count += 1
+                self._last_checksum = record.checksum
+
+    def append_decision(self, decision: dict[str, Any]) -> "DecisionRecord":
+        """Atomically append the next chained record in O(1) (amortized), thread-safe.
+
+        Uses the cached tail (last checksum + count) instead of re-reading the whole
+        log on every append, so a hive emitting thousands of decisions stays linear.
+        Concurrent agents serialize on the lock, so the one log is a faithful,
+        ordered transcript (EXT-015 / REQ-1).
+        """
+        with self._lock:
+            self._load_tail_locked()
+            assert self._count is not None
+            index = self._count + 1
+            prev = self._last_checksum or GENESIS_PREV
+            record = DecisionRecord.make(index, decision, prev=prev)
+            self._write_raw(record)
+            self._count = index
+            self._last_checksum = record.checksum
+            return record
 
     def read(self) -> Iterator[DecisionRecord]:
         """Yield records in append order, tolerating a torn trailing line."""
@@ -192,13 +241,9 @@ def record_decision(log: DecisionLog, decision: Decision) -> DecisionRecord:
     hook (EXT-001 / REQ-7), so the decision is recorded before its effects are
     observable. The new record is chained to the previous one's checksum
     (EXT-015 / REQ-4), making the per-agent account tamper-evident end-to-end.
+    Appends in O(1) via the log's cached tail (no full re-read per decision).
     """
-    records = list(log.read())
-    next_index = len(records) + 1
-    prev = records[-1].checksum if records else GENESIS_PREV
-    record = DecisionRecord.make(next_index, _decision_to_dict(decision), prev=prev)
-    log.append(record)
-    return record
+    return log.append_decision(_decision_to_dict(decision))
 
 
 def read_decisions(log: DecisionLog) -> list[Decision]:
