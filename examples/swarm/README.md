@@ -20,10 +20,10 @@ This is a support-ticket triage hive:
               byte-identical swarm state  +  "which agent, which decision"
 ```
 
-- **`plugins/planner_agent.py`** (`planner`) — classifies the ticket.
-- **`plugins/worker_agent.py`** (`worker`) — drafts a reply and **hands it off** to
+- **`agents/planner_agent.py`** (`planner`) — classifies the ticket.
+- **`agents/worker_agent.py`** (`worker`) — drafts a reply and **hands it off** to
   the reviewer. Submitting `{"bad": true}` seeds a **bad handoff**.
-- **`plugins/reviewer_agent.py`** (`reviewer`) — reviews and finalizes.
+- **`agents/reviewer_agent.py`** (`reviewer`) — reviews and finalizes.
 - **`tools/handoff_tool.py`** (`swarm.handoff`) — the reviewer accepting a draft. A
   bad handoff is recorded (it is valid data) but **rejected on execution**, so
   replay reproduces it AND attributes it.
@@ -37,8 +37,8 @@ small model by setting `config/llm.json` to `{"provider":"ollama"}` (and running
 
 ```bash
 DATA=/tmp/jaros-swarm
-mkdir -p $DATA/plugins $DATA/tools
-cp examples/swarm/plugins/*.py $DATA/plugins/
+mkdir -p $DATA/agents $DATA/tools
+cp examples/swarm/agents/*.py $DATA/agents/
 cp examples/swarm/tools/*.py   $DATA/tools/
 
 JAROS_LLM_PROVIDER=default jaros serve --data-dir $DATA &

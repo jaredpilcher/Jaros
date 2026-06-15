@@ -7,12 +7,13 @@ import { Pill } from "./ui";
 const NAV: { to: string; label: string; ico: string; badge?: (s: Snapshot | null) => number | undefined }[] = [
   { to: "/", label: "Overview", ico: "◎" },
   { to: "/jobs", label: "Jobs", ico: "▣", badge: (s) => s?.counts.inbox },
-  { to: "/agents", label: "Agents & Tools", ico: "◆", badge: (s) => (s ? s.counts.plugins + s.counts.tools : undefined) },
+  { to: "/agents", label: "Agents & Tools", ico: "◆", badge: (s) => (s ? s.counts.agents + s.counts.tools : undefined) },
   { to: "/replay", label: "Reproducibility", ico: "↻", badge: (s) => s?.counts.decisions },
   { to: "/schedules", label: "Schedules", ico: "⏱" },
   { to: "/evals", label: "Evaluations", ico: "✓" },
   { to: "/state", label: "State Machine", ico: "⬡" },
   { to: "/harness", label: "Harness", ico: "▤" },
+  { to: "/help", label: "Help & Docs", ico: "?" },
 ];
 
 export function Layout({
@@ -20,11 +21,13 @@ export function Layout({
   title,
   crumb,
   children,
+  onOpenGuide,
 }: {
   snap: Snapshot | null;
   title: string;
   crumb?: string;
   children: ReactNode;
+  onOpenGuide?: () => void;
 }) {
   const connected = !!snap?.connected;
   const state = snap?.status?.state;
@@ -50,6 +53,10 @@ export function Layout({
           );
         })}
         <div className="sidebar-foot">
+          <NavLink to="/help" className="nav-item" style={{ padding: "7px 11px", marginBottom: 8 }}>
+            <span className="ico">◇</span>
+            <span>Guide &amp; CLI docs</span>
+          </NavLink>
           zero-infrastructure runtime
           <br />
           files + threads · no server
@@ -61,6 +68,9 @@ export function Layout({
           <h1>{title}</h1>
           {crumb && <span className="crumb">/ {crumb}</span>}
           <div className="spacer" />
+          {onOpenGuide && (
+            <button className="help-btn" onClick={onOpenGuide} title="Replay the first-run tour">? Guide</button>
+          )}
           {state && <Pill tone={state === "FAILED" ? "bad" : "ok"}>state · {state}</Pill>}
           <Pill tone={active > 0 ? "warn" : "idle"}>{active} active</Pill>
           <Pill tone={connected ? "ok" : "bad"}>{connected ? "connected" : "no data dir"}</Pill>

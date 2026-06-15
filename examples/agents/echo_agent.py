@@ -1,11 +1,11 @@
-"""Example plugin agent: ``echo``.
+"""Example agent: ``echo``.
 
-Drop this file into the shared-FS ``plugins/`` folder; the daemon imports and
+Drop this file into the shared-FS ``agents/`` folder; the daemon imports and
 registers it at runtime with no restart (EXT-007 / REQ-3). The agent reasons
 (here, trivially) and emits a single inert ``advance`` Decision that drives a
 job PENDING -> RUNNING -> DONE, attaching an echoed note from the job input.
 
-A plugin module must expose a module-level ``KIND: str`` and a
+An agent module must expose a module-level ``KIND: str`` and a
 ``build(llm) -> ReasoningBoundary``.
 """
 

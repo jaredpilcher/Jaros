@@ -1,4 +1,4 @@
-"""Read-only plugin agent: ``system-health``.
+"""Read-only agent: ``system-health``.
 
 Proposes a `sys.info` decision — a host platform snapshot. The agent only emits
 inert data; the read happens in the read-only `sys.info` tool. Pair with

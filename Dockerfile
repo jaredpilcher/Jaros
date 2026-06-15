@@ -1,5 +1,5 @@
 # Jaros runs as a long-running daemon (the OS) inside one container = one node.
-# Agents are threads inside it; work + plugins arrive only via the /data volume.
+# Agents are threads inside it; work + agents arrive only via the /data volume.
 FROM python:3.12-slim
 
 WORKDIR /app

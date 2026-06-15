@@ -1,4 +1,4 @@
-"""Read-only plugin agent: ``disk-monitor``.
+"""Read-only agent: ``disk-monitor``.
 
 Proposes a `fs.disk_usage` decision for a path (default ``.``). Read-only —
 reports free/used bytes via the `fs.disk_usage` tool.

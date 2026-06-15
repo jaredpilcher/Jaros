@@ -8,10 +8,10 @@ implementation:
   - examples/readonly/tools/disk_usage_tool.py
   - examples/readonly/tools/dir_stat_tool.py
   - examples/readonly/tools/text_count_tool.py
-  - examples/readonly/plugins/system_health_agent.py
-  - examples/readonly/plugins/disk_monitor_agent.py
-  - examples/readonly/plugins/inventory_agent.py
-  - examples/readonly/plugins/text_metrics_agent.py
+  - examples/readonly/agents/system_health_agent.py
+  - examples/readonly/agents/disk_monitor_agent.py
+  - examples/readonly/agents/inventory_agent.py
+  - examples/readonly/agents/text_metrics_agent.py
 ---
 
 # Read-Only Agent Library
@@ -43,7 +43,7 @@ A library of distinct read-only agents covers several operational purposes.
 #### Acceptance Criteria
 - [x] Includes `system-health` (`sys.info`), `disk-monitor` (`fs.disk_usage`),
       `inventory` (`fs.stat`), and `text-metrics` (`text.count`).
-- [x] Each agent is a drop-in plugin (`KIND` + `build(llm)`) and each tool a
+- [x] Each agent is a drop-in agent (`KIND` + `build(llm)`) and each tool a
       drop-in module (`NAME` + `validate` + `execute`), loadable at runtime.
 - [x] Each agent proposes the decision kind its tool handles, end to end.
 
@@ -62,7 +62,7 @@ Many of these agents run at once under a single daemon, as lightweight threads.
 Operators can configure and run the library every way Jaros supports.
 
 #### Acceptance Criteria
-- [x] `examples/readonly/README.md` documents staging the plugins/tools/schedules
+- [x] `examples/readonly/README.md` documents staging the agents/tools/schedules
       into a data dir and running on demand, on a schedule, and in Docker.
 - [x] Example schedule files demonstrate interval and cron triggers for read-only
       agents (`schedules/system-health.json`, `schedules/disk-monitor.json`).

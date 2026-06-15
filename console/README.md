@@ -15,7 +15,7 @@ Jaros OS — everything in the Prime Directive, drivable from the browser.
 | --- | --- |
 | **Overview** | Live machine state, processed/failed, throughput sparkline, agent pool, zero-infra profile, last result. |
 | **Jobs** | Submit jobs to the inbox (atomic write); inspect inbox/processed/failed and outbox results. |
-| **Agents & Tools** | List loaded plugin agents and custom tools; install new ones into the watched folders at runtime. |
+| **Agents & Tools** | List loaded agents and custom tools; install new ones into the watched folders at runtime. |
 | **Reproducibility** | Browse the durable decision log; **replay** it through the deterministic executor and see it reconstruct the run to byte-identical state — no model call. |
 | **State Machine** | The real state model (introspected from `jaros`) and the live durable transition log. |
 | **Harness** | Capability-safety: mediation rules, role→capability bundles, and the refusal/failure audit. |
@@ -23,6 +23,14 @@ Jaros OS — everything in the Prime Directive, drivable from the browser.
 ## Screenshots
 
 Live captures from a running console (regenerate with `npm run screenshots`).
+
+**First-run tour** — a brief wizard guides new operators through the core loop:
+
+![First-run tour](docs/screenshots/tour.png)
+
+**Get started** — a live checklist on the Overview shows exactly what to do next:
+
+![Get-started checklist](docs/screenshots/get-started.png)
 
 **Overview** — live status, throughput, agent pool, and the zero-infra profile:
 
@@ -36,7 +44,13 @@ Live captures from a running console (regenerate with `npm run screenshots`).
 
 ![State Machine](docs/screenshots/state-machine.png)
 
-More under [`docs/screenshots/`](docs/screenshots/): Jobs, Agents & Tools, Harness.
+**Help & Docs** — an in-app guide: every page with pictures plus a CLI quickstart:
+
+![Help & Docs](docs/screenshots/help.png)
+
+More under [`docs/screenshots/`](docs/screenshots/): Jobs, Agents & Tools,
+Schedules, Evaluations, Harness, and a hover tooltip. A full walkthrough lives in
+[docs/console.md](../docs/console.md).
 
 ## Run it
 

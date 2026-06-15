@@ -1,0 +1,15 @@
+[
+  {
+    "name": "word-count emits an accepted text.wordcount decision",
+    "kind": "word-count",
+    "input": { "path": "README.md" },
+    "expect": {
+      "decision_count": 1,
+      "decision_kind": "text.wordcount",
+      "source": "word-count",
+      "payload_contains": { "path": "README.md" },
+      "gate": "accept",
+      "result_contains": { "tool": "text.wordcount", "path": "README.md" }
+    }
+  }
+]

@@ -17,7 +17,7 @@ Provide schema-validated message passing between agents.
 Expose a fixed, validated layout as the durable exchange surface.
 
 #### Steps
-1. Create `jaros/comms/fs.py` with a `SharedFileSystem(base_dir)` defining canonical layout dirs (`state`, `inbox`, `outbox`, `artifacts`, `plugins`, `processed`, `failed`); `ensure_layout()` creates them.
+1. Create `jaros/comms/fs.py` with a `SharedFileSystem(base_dir)` defining canonical layout dirs (`state`, `inbox`, `outbox`, `artifacts`, `agents`, `processed`, `failed`); `ensure_layout()` creates them.
 2. Implement `read(path)`/`write(path, data)` resolving workspace-relative paths within `base_dir` and refusing `..` traversal and absolute escapes with a typed `LayoutViolationError`; add `validate_layout()`.
 
 #### Implements
@@ -29,7 +29,7 @@ Expose a fixed, validated layout as the durable exchange surface.
 Make queues + shared FS the only inter-agent paths, structurally.
 
 #### Steps
-1. Create `scripts/check_comms.py` that scans `jaros/runtime/**` and agent/plugin code and fails (exit non-zero) on direct agent-to-agent imports, RPC, or network calls (`socket`, `http.client`, `urllib.request`, `requests`, `grpc`, `asyncio.open_connection`).
+1. Create `scripts/check_comms.py` that scans `jaros/runtime/**` and agent/agent code and fails (exit non-zero) on direct agent-to-agent imports, RPC, or network calls (`socket`, `http.client`, `urllib.request`, `requests`, `grpc`, `asyncio.open_connection`).
 2. Allow only `jaros.comms.queue` and `jaros.comms.fs` as cross-agent dependencies; ensure it exits 0 on the current tree and add positive/negative tests.
 
 #### Implements

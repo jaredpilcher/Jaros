@@ -3,6 +3,10 @@
 A linear path from `pip install` to a reproducible, scheduled, evaluated,
 distributed agent system. Every command here is real and tested.
 
+The core loop at a glance — submit work, check status, replay it byte-identically with zero model calls, and run the eval suite (a real session, captured verbatim):
+
+![A real Jaros CLI session: submit, status, replay --json, and a green eval suite](cli.png)
+
 > **Mental model.** Agents *propose* inert `Decision` data; a deterministic
 > Execution Plane decides whether and how to run it. The only non-determinism is
 > the model's output, captured as data — so runs **reproduce by replay** and a
@@ -37,7 +41,7 @@ Drop in the [read-only library](../examples/readonly/) — agents that only read
 (health, disk, inventory, text), safe to run anywhere:
 
 ```bash
-cp examples/readonly/plugins/*.py $DATA/plugins/
+cp examples/readonly/agents/*.py $DATA/agents/
 cp examples/readonly/tools/*.py   $DATA/tools/
 jaros submit system-health                       --data-dir $DATA
 jaros submit disk-monitor --input '{"path":"."}' --data-dir $DATA
@@ -149,5 +153,5 @@ once** and siblings skip it — no broker, no consensus service. Proven by
   `scripts/check_zero_infra.py`); single-node-first with bounded multi-node
   coordination over the shared FS. Not a cluster-scale replacement for
   Temporal/Dapr — by design.
-- **Day-one flexibility** — drop-in plugin agents and tools, native scheduling,
+- **Day-one flexibility** — drop-in agents and tools, native scheduling,
   built-in evals, a config-swappable LLM, and a console, all on `pip install`.

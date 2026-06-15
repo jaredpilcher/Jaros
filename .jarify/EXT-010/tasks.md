@@ -18,7 +18,7 @@ Provide a file-system-only access layer the bridge uses to read and write the
 shared data directory.
 
 #### Steps
-1. Create `console/server/jarosData.ts` with `resolveDataDir()` (from `--data-dir=`/`JAROS_DATA_DIR`/default) and safe readers: `getStatus()`, `getDecisions()`/`getTransitions()` (newline-delimited JSON, torn-trailing tolerant), `getJobs()` (inbox/processed/failed + `.reason`), `getOutbox()`, `getPlugins()`/`getTools()`.
+1. Create `console/server/jarosData.ts` with `resolveDataDir()` (from `--data-dir=`/`JAROS_DATA_DIR`/default) and safe readers: `getStatus()`, `getDecisions()`/`getTransitions()` (newline-delimited JSON, torn-trailing tolerant), `getJobs()` (inbox/processed/failed + `.reason`), `getOutbox()`, `getAgents()`/`getTools()`.
 2. Add atomic writers: `submitJob(kind, input)` (temp file + `renameSync` into `inbox/`) and `installModule(area, name, source)` with a name guard rejecting `/`, `\\`, and leading `.` to prevent traversal.
 
 #### Implements
@@ -79,7 +79,7 @@ The live dashboard and the job lifecycle workflow.
 The runtime-extension, reproducibility, and introspection surfaces.
 
 #### Steps
-1. Create `console/src/pages/Agents.tsx` (list loaded plugins/tools; install a plugin or tool by name + source via `/api/agents`/`/api/tools`, with templates) and `console/src/pages/Replay.tsx` (decision-log table with expandable payloads + a Replay button rendering the `/api/replay` result: decisions, reconstructed state, byte-identical, model calls).
+1. Create `console/src/pages/Agents.tsx` (list loaded agents/tools; install an agent or tool by name + source via `/api/agents`/`/api/tools`, with templates) and `console/src/pages/Replay.tsx` (decision-log table with expandable payloads + a Replay button rendering the `/api/replay` result: decisions, reconstructed state, byte-identical, model calls).
 2. Create `console/src/pages/StateMachine.tsx` (introspected states/transitions + live transition log) and `console/src/pages/Harness.tsx` (mediation rules, role→capability bundles, and the refusal/failure audit).
 
 #### Implements

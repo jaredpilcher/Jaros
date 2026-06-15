@@ -10,7 +10,7 @@ Commands::
 
     jaros serve                            run the daemon (inside the container)
     jaros submit <kind> [--input JSON]     -> inbox/<id>.json
-    jaros add-agent <file.py> [--name K]   -> plugins/<name-or-file>.py
+    jaros add-agent <file.py> [--name K]   -> agents/<name-or-file>.py
     jaros status                           -> print status.json
     jaros watch [--interval S]             -> live status + new outbox results
     jaros logs                             -> print the daemon log (if present)
@@ -20,7 +20,7 @@ Commands::
     global: --data-dir DIR (else $JAROS_DATA_DIR, else ./.jaros-data)
 
 Writes are atomic (temp file + :func:`os.replace`), so the daemon never observes a
-partial job or plugin. This module lives directly under ``jaros/`` (not under an
+partial job or agent. This module lives directly under ``jaros/`` (not under an
 agent package), so the structural comms / no-server checks correctly treat it as a
 host orchestrator rather than an agent.
 """
@@ -111,9 +111,9 @@ def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
 
 # #EXT-008-REQ-3 Start
 def _discover_kind(source: str) -> str | None:
-    """Statically read a plugin module's top-level ``KIND`` string, if any.
+    """Statically read an agent module's top-level ``KIND`` string, if any.
 
-    Parses the source with :mod:`ast` (no import, so no plugin side effects run on
+    Parses the source with :mod:`ast` (no import, so no agent side effects run on
     the host) and returns the literal value of a module-level ``KIND = "..."``
     assignment, or ``None`` when it is absent / not a string literal.
     """
@@ -137,27 +137,27 @@ def _discover_kind(source: str) -> str | None:
 
 
 def cmd_add_agent(path: str, name: str | None, data_dir: Path) -> tuple[Path, str | None]:
-    """Install an agent plugin module into the watched ``plugins/`` folder.
+    """Install an agent module into the watched ``agents/`` folder.
 
     Validates the source ``*.py`` exists and is readable, then copies it to
-    ``plugins/.tmp-<file>`` and ``os.replace``-s it to
-    ``plugins/<name-or-filename>.py`` so the daemon never loads a partial module.
+    ``agents/.tmp-<file>`` and ``os.replace``-s it to
+    ``agents/<name-or-filename>.py`` so the daemon never loads a partial module.
     The destination filename defaults to the source filename; ``name`` overrides
     its stem. Returns ``(installed_path, discovered_kind)``.
     """
     source = Path(path)
     if not source.is_file():
-        raise FileNotFoundError(f"source plugin not found or not a file: {path}")
+        raise FileNotFoundError(f"source agent not found or not a file: {path}")
     try:
         content = source.read_text(encoding="utf-8")
     except OSError as exc:
-        raise OSError(f"source plugin is not readable: {path} ({exc})") from exc
+        raise OSError(f"source agent is not readable: {path} ({exc})") from exc
 
     if name:
         filename = name if name.endswith(".py") else f"{name}.py"
     else:
         filename = source.name
-    target = data_dir / "plugins" / filename
+    target = data_dir / "agents" / filename
     _atomic_write(target, content)
     return target, _discover_kind(content)
 # #EXT-008-REQ-3 End
@@ -253,7 +253,7 @@ def cmd_eval(data_dir: Path, stream=None) -> int:
     """Run the agent eval suite in ``<data>/evals`` and print a pass/fail report.
 
     Assembles a deterministic eval environment from the data dir — built-in +
-    plugin agents and the read-only/custom tool handlers — then runs every case
+    agents and the read-only/custom tool handlers — then runs every case
     in ``evals/*.json``. Returns 0 iff all cases pass. Reads/loads only the shared
     FS; no network.
     """
@@ -261,12 +261,12 @@ def cmd_eval(data_dir: Path, stream=None) -> int:
     from jaros.eval import load_cases, run_suite
     from jaros.execution.tools import load_custom_tools
     from jaros.llm import LlmConfig, create_llm_client
-    from jaros.registry import AgentRegistry, load_plugins, register_builtins
+    from jaros.registry import AgentRegistry, load_agents, register_builtins
 
     llm = create_llm_client(LlmConfig(provider="default"))
     registry = AgentRegistry()
     register_builtins(registry, llm)
-    load_plugins(registry, data_dir / "plugins", llm)
+    load_agents(registry, data_dir / "agents", llm)
     load_custom_tools(data_dir / "tools")  # register tool handlers for result checks
 
     cases = load_cases(data_dir / "evals")
@@ -404,7 +404,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--input", dest="input", default=None, help="job input as a JSON string"
     )
 
-    p_add = add_command("add-agent", "install a plugin module into plugins/")
+    p_add = add_command("add-agent", "install an agent module into agents/")
     p_add.add_argument("path", help="path to the agent module (*.py)")
     p_add.add_argument(
         "--name", dest="name", default=None, help="override the installed kind/filename"

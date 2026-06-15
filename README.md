@@ -2,7 +2,7 @@
 
 > A zero-infrastructure runtime that makes agent systems **reproducible, testable, and capability-safe by construction** — a durable, replayable state machine that orchestrates AI agents as **lightweight computing threads**, not bloated microservices.
 
-![Jaros OS demo: boot, run a built-in agent + two plugin agents + a custom tool, zero infra](docs/demo.gif)
+![Jaros OS demo: boot, run a built-in agent + two agents + a custom tool, zero infra](docs/demo.gif)
 
 Jaros is the runtime you reach for **the day your agent leaves the demo** — when non-determinism has made it impossible to reproduce, and ambient power has made it unsafe to ship. It delivers that without a server, a database, or a broker: just **files and threads**.
 
@@ -75,7 +75,7 @@ It is deliberately **not**: a hardened security sandbox, a cluster-scale distrib
 - **Contain the blast radius.** Least-privilege handles mean a misbehaving agent touches only what you granted it — and you can audit every action.
 - **Stand up nothing.** No infra to provision; `pip install` and run, or one Docker container per node.
 - **Swap models freely.** The LLM lives behind one `LlmClient` interface; change provider/model by config, with zero harness changes.
-- **Extend at runtime.** Drop a plugin agent into `plugins/` or a custom tool into `tools/` and the daemon loads it on the next tick — no restart, no core edits.
+- **Extend at runtime.** Drop an agent into `agents/` or a custom tool into `tools/` and the daemon loads it on the next tick — no restart, no core edits.
 
 ---
 
@@ -83,6 +83,10 @@ It is deliberately **not**: a hardened security sandbox, a cluster-scale distrib
 
 For the full day-one-to-production path (first agent → schedule → eval → replay →
 console → distributed Docker), see **[docs/getting-started.md](docs/getting-started.md)**.
+
+The whole loop from the CLI — submit work, check status, replay it byte-identically, and run the eval suite (real output, nothing faked):
+
+![A real Jaros CLI session: submit jobs, status, replay --json (0 model calls, byte-identical), and a green eval suite](docs/cli.png)
 
 ```bash
 pip install -e ".[dev]"
@@ -92,8 +96,8 @@ Stand up the OS on a data directory, then drive it from another shell — work e
 
 ```bash
 # stage the example agents into the shared volume (see examples/)
-mkdir -p .jaros-data/plugins .jaros-data/tools
-cp examples/plugins/*.py .jaros-data/plugins/
+mkdir -p .jaros-data/agents .jaros-data/tools
+cp examples/agents/*.py .jaros-data/agents/
 cp examples/tools/*.py   .jaros-data/tools/
 
 # boot the long-running daemon (the OS)
@@ -130,7 +134,7 @@ python tests/integration/run_container_demo.py    # full Docker container run
 ## Web console
 
 A TypeScript + React administrative and monitoring interface for a running Jaros
-OS lives in **[`console/`](console/)** — submit jobs, install plugin agents and
+OS lives in **[`console/`](console/)** — submit jobs, install agents and
 custom tools, watch live status, browse the durable decision log, and **replay
 it to byte-identical state** from the browser. It's a host-side companion (a thin
 file-system bridge + SPA); the Jaros node itself stays serverless.
@@ -148,7 +152,18 @@ cd console && npm install
 JAROS_DATA_DIR=/tmp/jaros-demo npm run dev        # then open http://localhost:5500
 ```
 
-The full page gallery (Jobs, Agents & Tools, and more) lives in the [console README](console/README.md#screenshots).
+A brief first-run tour, a live get-started checklist, per-page intros, hover
+tooltips, and an in-app **Help & Docs** page (pictures + a copy-pasteable CLI
+quickstart) make it easy to know where to start and what to do next:
+
+![Jaros Console — the first-run tour that guides new operators through the core loop](console/docs/screenshots/tour.png)
+
+The **Overview** greets a new operator with a live get-started checklist that lights up each step as it's done, and every screen documents itself with intros and hover tooltips:
+
+![The get-started checklist on the Overview — step 1 done, "submit your first job" highlighted as the next action](console/docs/screenshots/get-started.png)
+
+The full page gallery and a walkthrough of every page (with pictures) live in
+**[docs/console.md](docs/console.md)** and the [console README](console/README.md#screenshots).
 
 ---
 
@@ -185,7 +200,7 @@ Because the model holds no control, recording its outputs and replaying them thr
 
 ## Build an agent
 
-An agent is a `ReasoningBoundary`: **data in → `Decision` data out**, no side effects, no handles. Drop the module into the shared-FS `plugins/` folder and the daemon registers it at runtime.
+An agent is a `ReasoningBoundary`: **data in → `Decision` data out**, no side effects, no handles. Drop the module into the shared-FS `agents/` folder and the daemon registers it at runtime.
 
 ```python
 import uuid
@@ -207,7 +222,7 @@ class GreeterBoundary:
             payload={"events": ["start", "complete"], "note": f"hello {name}"},
         )]
 
-def build(llm):                                   # plugin factory the daemon calls
+def build(llm):                                   # agent factory the daemon calls
     return GreeterBoundary(llm)
 ```
 
@@ -221,6 +236,10 @@ ctx = harness.spawn("greeter", GrantSpec(role="FsWriteRole", fs=shared_fs))
 ```
 
 A *custom tool* extends what the system can *do*: drop a class exposing `NAME`, `validate()`, and `execute()` into `tools/`, and an agent proposes a decision of that `kind`. See **[`examples/tools/greet_tool.py`](examples/tools/greet_tool.py)** and the full guide in **[docs/building-agents.md](docs/building-agents.md)**.
+
+### Building with an AI agent
+
+Jaros is made to be extended by coding agents. Point any AI coding agent at **[`AGENTS.md`](AGENTS.md)** → **[`agent-kit/`](agent-kit/)** and it has the whole project in one folder: the mental model, a skill for each artifact (agent, tool, eval, schedule), accurate API reference, and runnable templates that pass `jaros eval` unmodified. It can author new Jaros agents and tools and verify them on its own.
 
 ---
 
@@ -272,7 +291,7 @@ Structural constraints are enforced by automated checks (run with `pytest`), so 
 | Architectural Harness | [EXT-005](.jarify/EXT-005/requirements.md) | Mediated actions, default-deny rules, capability-scoped handles |
 | Communication Fabric | [EXT-006](.jarify/EXT-006/requirements.md) | Rigid typed queues, shared FS layout, exclusivity enforcement |
 | Runtime Daemon (OS Boot) | [EXT-007](.jarify/EXT-007/requirements.md) | Boot, file monitoring, atomic inbox ingestion, zero-infra boot |
-| Host Control CLI | [EXT-008](.jarify/EXT-008/requirements.md) | Command-line management, atomic job submission, plugin installer |
+| Host Control CLI | [EXT-008](.jarify/EXT-008/requirements.md) | Command-line management, atomic job submission, agent installer |
 | Dynamic Custom Tools | [EXT-009](.jarify/EXT-009/requirements.md) | Runtime-loaded namespaced tools (`NAME`/`validate`/`execute`) |
 | Admin & Monitoring Console | [EXT-010](.jarify/EXT-010/requirements.md) | Host-side TypeScript + React console: monitor, submit, install, replay |
 | Native Agent Scheduling | [EXT-011](.jarify/EXT-011/requirements.md) | File-based cron + interval + one-shot scheduling, crash-safe, no external cron |
@@ -294,10 +313,10 @@ jaros/
   llm/         EXT-004  LlmClient interface + pluggable adapters + factory
   harness/     EXT-005  capabilities, rules, Harness (mediates all I/O)
   comms/       EXT-006  Queue, SharedFileSystem
-  registry.py  EXT-007  agent registration + plugin loading
+  registry.py  EXT-007  agent registration + agent loading
   daemon.py    EXT-007  runtime daemon (the OS boot engine)
   cli.py       EXT-008  Host Control CLI
-examples/               drop-in example plugin agents + a custom tool
+examples/               drop-in example agents + a custom tool
 scripts/                architecture checks (planes / no-server / comms / zero-infra)
 tests/                  unit + integration test suites
 .jarify/                Jarify specifications (the source of intent)

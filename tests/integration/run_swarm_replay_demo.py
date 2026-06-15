@@ -48,8 +48,8 @@ def _wait(predicate, timeout=90, interval=0.5) -> bool:
 
 
 def _stage_swarm(data: Path) -> None:
-    """Drop the swarm plugins + the handoff tool into the mounted volume."""
-    for area, src in (("plugins", "examples/swarm/plugins"), ("tools", "examples/swarm/tools")):
+    """Drop the swarm agents + the handoff tool into the mounted volume."""
+    for area, src in (("agents", "examples/swarm/agents"), ("tools", "examples/swarm/tools")):
         (data / area).mkdir(parents=True, exist_ok=True)
         for f in (REPO_ROOT / src).glob("*.py"):
             shutil.copy(f, data / area / f.name)

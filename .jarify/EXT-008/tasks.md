@@ -27,15 +27,15 @@ Write a job descriptor into the daemon inbox atomically.
 
 ### [TASK-3] Implement `add-agent`
 
-Install a new agent plugin module into the watched folder.
+Install a new agent module into the watched folder.
 
 #### Steps
 1. In `jaros/cli.py`, implement `cmd_add_agent(path, name, data_dir)` that validates the source `*.py` exists and reads it.
-2. Copy it to `plugins/.tmp-<file>` then `os.replace()` to `plugins/<name-or-filename>.py` (atomic install).
-3. Print the installed plugin path and the kind it will register (if discoverable).
+2. Copy it to `agents/.tmp-<file>` then `os.replace()` to `agents/<name-or-filename>.py` (atomic install).
+3. Print the installed agent path and the kind it will register (if discoverable).
 
 #### Implements
-- [REQ-3] Add Agent Plugins
+- [REQ-3] Add Agent Agents
 
 ### [TASK-4] Implement `status`, `watch`, and `logs`
 

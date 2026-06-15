@@ -1,0 +1,7 @@
+{
+  "id": "word-count-hourly",
+  "kind": "word-count",
+  "input": { "path": "README.md" },
+  "every_seconds": 3600,
+  "enabled": true
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api, type Job, type OutboxResult } from "../api";
-import { Card, Empty, Json } from "../components/ui";
+import { Card, Empty, Json, PageIntro, Tip } from "../components/ui";
 
 const PRESETS: { kind: string; input: string }[] = [
   { kind: "advance", input: "{}" },
@@ -41,9 +41,13 @@ export function Jobs() {
   const byArea = (a: Job["area"]) => jobs.filter((j) => j.area === a);
 
   return (
+    <>
+    <PageIntro icon="▣" sub="Pick a preset for a one-click start, or enter any agent kind." to="/help#jobs">
+      Submit a job and watch it flow <b>inbox → processed → outbox</b>. A job is the only way work enters Jaros.
+    </PageIntro>
     <div className="grid cols-2" style={{ alignItems: "start" }}>
       <div className="grid" style={{ gap: 16 }}>
-        <Card title="Submit a job" desc="written atomically to the shared inbox — the only entry point">
+        <Card title={<>Submit a job <Tip text="The kind selects which agent reasons over the job; the JSON input is passed to it as context." /></>} desc="written atomically to the shared inbox — the only entry point">
           <label className="field">Agent kind</label>
           <div className="row" style={{ marginBottom: 12, flexWrap: "wrap" }}>
             <input value={kind} onChange={(e) => setKind(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
@@ -116,6 +120,7 @@ export function Jobs() {
         )}
       </Card>
     </div>
+    </>
   );
 }
 // #EXT-010-REQ-3 End

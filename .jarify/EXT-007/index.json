@@ -6,13 +6,6 @@
       "endLine": 84
     }
   ],
-  "REQ-3": [
-    {
-      "file": "jaros/registry.py",
-      "startLine": 33,
-      "endLine": 163
-    }
-  ],
   "REQ-1": [
     {
       "file": "jaros/daemon.py",
@@ -37,11 +30,6 @@
       "file": "jaros/daemon.py",
       "startLine": 280,
       "endLine": 363
-    },
-    {
-      "file": "jaros/execution/handlers.py",
-      "startLine": 29,
-      "endLine": 88
     }
   ],
   "REQ-4": [
@@ -49,6 +37,13 @@
       "file": "jaros/daemon.py",
       "startLine": 367,
       "endLine": 417
+    }
+  ],
+  "REQ-3": [
+    {
+      "file": "jaros/registry.py",
+      "startLine": 33,
+      "endLine": 163
     }
   ]
 }

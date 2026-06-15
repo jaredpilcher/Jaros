@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api, type StateModel, type TransitionEntry } from "../api";
-import { Card, Empty, StateBadge } from "../components/ui";
+import { Card, Empty, PageIntro, StateBadge } from "../components/ui";
 
 // #EXT-010-REQ-6 Start
 export function StateMachine() {
@@ -21,6 +21,9 @@ export function StateMachine() {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
+      <PageIntro icon="⬡" sub="The transition log is exactly what replay rebuilds." to="/help#state">
+        The single source of truth. Jobs advance through a <b>declared</b> state machine; only declared transitions are permitted.
+      </PageIntro>
       <Card title="States" desc={`single source of truth · initial = ${model.initial}`}>
         <div className="row" style={{ flexWrap: "wrap", gap: 12 }}>
           {model.states.map((st) => (

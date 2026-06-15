@@ -114,18 +114,18 @@ def test_submit_no_partial_temp_file_left(tmp_path):
 
 # --- add-agent -------------------------------------------------------------
 
-def _write_plugin(tmp_path, body='KIND = "greet"\n\ndef build(llm):\n    return None\n'):
+def _write_agent(tmp_path, body='KIND = "greet"\n\ndef build(llm):\n    return None\n'):
     src = tmp_path / "greet_src.py"
     src.write_text(body, encoding="utf-8")
     return src
 
 
-def test_add_agent_installs_module_into_plugins(tmp_path, capsys):
-    src = _write_plugin(tmp_path)
+def test_add_agent_installs_module_into_agents(tmp_path, capsys):
+    src = _write_agent(tmp_path)
     rc = cli.main(_data_args(tmp_path) + ["add-agent", str(src)])
     assert rc == 0
 
-    installed = tmp_path / "plugins" / "greet_src.py"
+    installed = tmp_path / "agents" / "greet_src.py"
     assert installed.is_file()
     assert installed.read_text(encoding="utf-8") == src.read_text(encoding="utf-8")
     # discovered KIND is surfaced
@@ -133,9 +133,9 @@ def test_add_agent_installs_module_into_plugins(tmp_path, capsys):
 
 
 def test_add_agent_name_override(tmp_path):
-    src = _write_plugin(tmp_path)
+    src = _write_agent(tmp_path)
     cli.main(_data_args(tmp_path) + ["add-agent", str(src), "--name", "renamed"])
-    assert (tmp_path / "plugins" / "renamed.py").is_file()
+    assert (tmp_path / "agents" / "renamed.py").is_file()
 
 
 def test_add_agent_missing_source_errors(tmp_path, capsys):
@@ -143,8 +143,8 @@ def test_add_agent_missing_source_errors(tmp_path, capsys):
     assert rc == 2
     assert "not found" in capsys.readouterr().err
     # nothing installed
-    plugins = tmp_path / "plugins"
-    assert not plugins.exists() or list(plugins.iterdir()) == []
+    agents = tmp_path / "agents"
+    assert not agents.exists() or list(agents.iterdir()) == []
 
 
 def test_discover_kind_handles_missing(tmp_path):
