@@ -416,3 +416,21 @@ reconciling pass should make. This is guidance, not an exhaustive backlog.
 - **Language.** Purge "unbreakable" and unqualified "distributed" from specs and
   docs in favor of "durable, crash-recoverable, deterministically replayable" and
   "single-node-first, bounded multi-node."
+
+## Future Directions (recorded — not in current scope)
+
+The architecture enables directions beyond the apex; they are recorded so they are
+not lost, and explicitly **not** in the current build queue (the swarm apex and the
+launch come first). Adding scope here before the apex ships would violate the
+project's standing discipline.
+
+- **Build Mode → Locked Mode (EXT-016, planned).** Use an AI supervisor to author
+  and mutate the deterministic system at *build time*, verify it (evals +
+  byte-identical replay + determinism check), then **freeze** it into a sealed,
+  hash-verified, replayable, attributable production artifact — after which prod is
+  immutable, reproducible, and the LLM is demoted to inert proposals (or removed).
+  The freeze is the safety boundary for self-improvement: *mutate under test, then
+  seal for production.* It composes existing primitives (EXT-005/008/013/014/015)
+  plus one new idea — the seal/manifest and the mode switch. Differentiated from
+  DSPy (which freezes the *prompt program*; the LLM still drives at runtime) and from
+  ADAS (generation only): EXT-016 freezes the *deterministic execution* itself.
