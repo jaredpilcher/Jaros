@@ -49,7 +49,7 @@ def _font(bold: bool = False):
 
 def _capture() -> list[tuple[str, tuple[int, int, int]]]:
     data = Path(tempfile.mkdtemp(prefix="jaros-swarm-img-"))
-    for area, src in (("plugins", "examples/swarm/plugins"), ("tools", "examples/swarm/tools")):
+    for area, src in (("agents", "examples/swarm/agents"), ("tools", "examples/swarm/tools")):
         (data / area).mkdir(parents=True, exist_ok=True)
         for f in (REPO / src).glob("*.py"):
             shutil.copy(f, data / area / f.name)

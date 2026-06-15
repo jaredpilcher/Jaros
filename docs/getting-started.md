@@ -98,7 +98,7 @@ demo uses the deterministic **mock** by default (no model server). Point it at a
 real small model by setting `config/llm.json` to `{"provider":"ollama"}`.
 
 ```bash
-cp examples/swarm/plugins/*.py $DATA/plugins/
+cp examples/swarm/agents/*.py $DATA/agents/
 cp examples/swarm/tools/*.py   $DATA/tools/
 for t in "login fails" "double charge"; do
   jaros submit planner  --input "{\"ticket\":\"$t\"}" --data-dir $DATA
