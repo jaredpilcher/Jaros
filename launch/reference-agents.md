@@ -21,7 +21,7 @@ this?" into "oh, I'd build *that*." They are the on-ramps **and** the proof.
 - **Each agent is least-privilege:** grant only the handles it needs (read-only on
   inputs, write only to its output dir), and the audit log shows every action.
 
-Each agent = a `ReasoningBoundary` plugin in `plugins/`, an executor handler/tool in
+Each agent = a `ReasoningBoundary` plugin in `agents/`, an executor handler/tool in
 `tools/`, an eval in `evals/`, and a short README with the honest one-liner.
 
 ---
