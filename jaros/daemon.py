@@ -362,16 +362,18 @@ class Daemon:
         return dest
     # #EXT-007-REQ-2 End
 
-    # -- observable status + heartbeat --------------------------------------
+    # -- observable status ---------------------------------------------------
 
     # #EXT-007-REQ-4 Start
     def _write_status(self) -> None:
-        """Serialize live state to ``<data>/status.json`` atomically + heartbeat.
+        """Serialize live state to ``<data>/status.json`` atomically.
 
         Writes the current machine state, an agent-pool snapshot, processed /
         failed counts, the last result, the tick number, and uptime. The write
-        is atomic (temp file + ``os.replace``). A one-line ``JAROS_HEARTBEAT``
-        record is also printed to stdout so an operator can watch via logs.
+        is atomic (temp file + ``os.replace``). This runs every tick but stays
+        silent on stdout — only meaningful events (a job completing or failing,
+        a schedule firing) are logged, so the console / ``jaros watch`` follow
+        ``status.json`` rather than a per-tick heartbeat.
         """
         try:
             snapshot = self.pool.snapshot()

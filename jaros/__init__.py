@@ -3,4 +3,4 @@ testable, and capability-safe by construction: a durable, crash-recoverable,
 deterministically replayable state machine that orchestrates AI agents as
 lightweight threads. See .jarify/PRIME-001 for the system intent."""
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
