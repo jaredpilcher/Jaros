@@ -1,4 +1,4 @@
-"""Tests for the runtime agent registry + plugin loading (EXT-007 / REQ-3)."""
+"""Tests for the runtime agent registry + agent loading (EXT-007 / REQ-3)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from jaros.core import Decision, ReasoningBoundary
 from jaros.llm import LlmConfig, create_llm_client
 from jaros.registry import (
     AgentRegistry,
-    load_plugins,
+    load_agents,
     register_builtins,
 )
 
@@ -63,8 +63,8 @@ def test_builtin_advance_kind_emits_advance_decision():
     assert "note" in d.payload
 
 
-def _write_plugin(plugins_dir: Path, name: str, kind: str) -> None:
-    (plugins_dir / f"{name}.py").write_text(
+def _write_agent(agents_dir: Path, name: str, kind: str) -> None:
+    (agents_dir / f"{name}.py").write_text(
         "from jaros.core import create_decision\n"
         "import uuid\n"
         f"KIND = {kind!r}\n"
@@ -73,25 +73,25 @@ def _write_plugin(plugins_dir: Path, name: str, kind: str) -> None:
         "        def decide(self, context):\n"
         "            return [create_decision(id='p-'+uuid.uuid4().hex,\n"
         f"                source={kind!r}, kind='advance',\n"
-        "                payload={'events': ['start', 'complete'], 'note': 'plugin'})]\n"
+        "                payload={'events': ['start', 'complete'], 'note': 'agent'})]\n"
         "    return _B()\n",
         encoding="utf-8",
     )
 
 
-def test_load_plugins_registers_dropped_module(tmp_path: Path):
-    plugins = tmp_path / "plugins"
-    plugins.mkdir()
+def test_load_agents_registers_dropped_module(tmp_path: Path):
+    agents = tmp_path / "agents"
+    agents.mkdir()
     reg = AgentRegistry()
     llm = _llm()
 
     # Nothing yet.
-    assert load_plugins(reg, plugins, llm) == []
+    assert load_agents(reg, agents, llm) == []
     assert not reg.has("greeter")
 
-    # Drop a plugin and rescan -> it becomes resolvable.
-    _write_plugin(plugins, "greeter_plugin", "greeter")
-    newly = load_plugins(reg, plugins, llm)
+    # Drop an agent and rescan -> it becomes resolvable.
+    _write_agent(agents, "greeter_agent", "greeter")
+    newly = load_agents(reg, agents, llm)
     assert newly == ["greeter"]
     assert reg.has("greeter")
     boundary = reg.resolve("greeter")
@@ -99,24 +99,24 @@ def test_load_plugins_registers_dropped_module(tmp_path: Path):
     assert decisions[0].source == "greeter"
 
 
-def test_load_plugins_is_idempotent(tmp_path: Path):
-    plugins = tmp_path / "plugins"
-    plugins.mkdir()
+def test_load_agents_is_idempotent(tmp_path: Path):
+    agents = tmp_path / "agents"
+    agents.mkdir()
     reg = AgentRegistry()
     llm = _llm()
-    _write_plugin(plugins, "greeter_plugin", "greeter")
+    _write_agent(agents, "greeter_agent", "greeter")
 
-    assert load_plugins(reg, plugins, llm) == ["greeter"]
+    assert load_agents(reg, agents, llm) == ["greeter"]
     # Re-scan: already-loaded file is skipped, nothing newly registered.
-    assert load_plugins(reg, plugins, llm) == []
+    assert load_agents(reg, agents, llm) == []
     assert reg.kinds() == ["greeter"]
 
 
-def test_load_plugins_ignores_malformed_module(tmp_path: Path):
-    plugins = tmp_path / "plugins"
-    plugins.mkdir()
-    (plugins / "broken.py").write_text("KIND = 'broken'\n", encoding="utf-8")
+def test_load_agents_ignores_malformed_module(tmp_path: Path):
+    agents = tmp_path / "agents"
+    agents.mkdir()
+    (agents / "broken.py").write_text("KIND = 'broken'\n", encoding="utf-8")
     reg = AgentRegistry()
     # No build() -> not registered, but recorded so it is not retried forever.
-    assert load_plugins(reg, plugins, _llm()) == []
+    assert load_agents(reg, agents, _llm()) == []
     assert not reg.has("broken")

@@ -1,6 +1,6 @@
 # Design — Read-Only Agent Library
 
-A library of independent read-only agent systems, each a drop-in plugin paired
+A library of independent read-only agent systems, each a drop-in agent paired
 with a drop-in read-only tool. They demonstrate "many agents, many purposes,
 simultaneously" while staying strictly within the reasoning/execution boundary:
 the agent proposes inert data, the tool performs only reads.
@@ -10,7 +10,7 @@ the agent proposes inert data, the tool performs only reads.
 ```text
    Reasoning Plane                 Execution Plane
    +-------------------+           +----------------------------+
-   |  plugin agent     |  Decision |  read-only tool            |
+   |  agent     |  Decision |  read-only tool            |
    |  (KIND=...)       | ────────► |  validate() + execute()    |
    |  emits inert data |  (kind)   |  open('r') / scandir/stat  |
    +-------------------+           +----------------------------+
@@ -33,7 +33,7 @@ the agent proposes inert data, the tool performs only reads.
 
 ```text
    examples/readonly/
-     plugins/    drop into <data>/plugins/   (the agents)
+     agents/    drop into <data>/agents/   (the agents)
      tools/      drop into <data>/tools/     (the read-only handlers)
      schedules/  drop into <data>/schedules/ (interval + cron examples, EXT-011)
 ```

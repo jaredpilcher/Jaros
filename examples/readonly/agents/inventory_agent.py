@@ -1,4 +1,4 @@
-"""Read-only plugin agent: ``inventory``.
+"""Read-only agent: ``inventory``.
 
 Proposes a `fs.stat` decision to inventory a directory (default ``.``).
 Read-only — lists entries and sizes via the `fs.stat` tool.

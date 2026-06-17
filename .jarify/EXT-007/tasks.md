@@ -1,16 +1,16 @@
 # Implementation Tasks — Jaros Runtime Daemon
 
-### [TASK-1] Implement the agent registry with plugin loading
+### [TASK-1] Implement the agent registry with agent loading
 
-Map agent kinds to factories; load built-ins and runtime plugins.
+Map agent kinds to factories; load built-ins and runtime agents.
 
 #### Steps
 1. Create `jaros/registry.py` with an `AgentRegistry` class: `register(kind, factory)`, `resolve(kind) -> ReasoningBoundary`, `kinds()`.
 2. Register at least one built-in kind (e.g. `"advance"`) in `register_builtins(registry, llm)` returning a `ReasoningBoundary` that consults the `LlmClient` and emits an `advance` `Decision`.
-3. Implement `load_plugins(registry, plugins_dir)` that imports each `*.py` in the dir via `importlib.util`, reads its module-level `KIND` and `build(llm)` factory, and registers it; track already-loaded files so re-scans are idempotent.
+3. Implement `load_agents(registry, agents_dir)` that imports each `*.py` in the dir via `importlib.util`, reads its module-level `KIND` and `build(llm)` factory, and registers it; track already-loaded files so re-scans are idempotent.
 
 #### Implements
-- [REQ-3] Runtime Agent Registry and Plugin Loading
+- [REQ-3] Runtime Agent Registry and Agent Loading
 
 ### [TASK-2] Implement the daemon boot and continuous run loop
 
@@ -19,7 +19,7 @@ Boot every plane and loop until signaled.
 #### Steps
 1. Create `jaros/daemon.py` with a `Daemon` class whose `__init__` builds the `SharedFileSystem` (+`ensure_layout`), `Queue`, `LlmClient` (via factory), `Harness`, `AgentPool`, and `AgentRegistry`.
 2. Implement `run()` that installs `signal` handlers for `SIGINT`/`SIGTERM` to set a stop flag, then loops on a configurable tick (`JAROS_TICK_MS`) until stopped, and on exit tears down active agents and the pool.
-3. Ensure the loop body calls plugin-scan, inbox-scan, and status-write helpers (TASK-1/3/4) each tick.
+3. Ensure the loop body calls agent-scan, inbox-scan, and status-write helpers (TASK-1/3/4) each tick.
 
 #### Implements
 - [REQ-1] Boot and Continuous Run

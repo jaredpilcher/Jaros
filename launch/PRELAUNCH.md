@@ -4,9 +4,10 @@ One page. Tick top to bottom. Every asset referenced lives in `launch/`. Nothing
 here needs a decision you haven't already made — just execution.
 
 > **Your wedge sentence** (use it *identically* everywhere — site, posts, replies):
-> *"Your agent tests are flaky and you can't reproduce failures. Jaros records every
-> decision and replays the run to byte-identical state — debug it like normal
-> software, and gate it in CI."*
+> *"When a swarm of agents does something wrong, you can't reproduce it or say which
+> agent caused it. Jaros records every decision in one hash-chained log, replays the
+> whole hive to byte-identical state (zero model calls), and attributes any failure to
+> the exact agent. Zero infrastructure."*
 
 > **Your opening hook** (lead with it on *every* post, every platform):
 > *"When an agent 'does something wrong' — sends the wrong email, deletes the wrong

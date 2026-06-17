@@ -68,7 +68,7 @@ before the launch hard-codes a name.)
 
 ### 🟠 P1 — Collapse the bootstrap to one command
 
-The current flow asks the user to `mkdir -p`, then `cp examples/plugins/*.py` and
+The current flow asks the user to `mkdir -p`, then `cp examples/agents/*.py` and
 `cp examples/tools/*.py` by hand. Each manual step is a place to stumble.
 
 **Fix:** add `jaros init --with-examples --data-dir .jaros-data` that creates the

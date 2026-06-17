@@ -69,7 +69,7 @@ def test_layout_dir_names_exposed():
         "inbox",
         "outbox",
         "artifacts",
-        "plugins",
+        "agents",
         "processed",
         "failed",
     )

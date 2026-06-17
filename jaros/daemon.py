@@ -3,11 +3,11 @@
 The daemon is the composition root that *stays running*. It assembles every
 plane exactly once at boot — shared file system, queue, LLM client, harness,
 agent pool, and the agent registry — then loops: ingest work from the shared FS
-``inbox/``, load any new agents from ``plugins/``, run agents as lightweight
+``inbox/``, load any new agents from ``agents/``, run agents as lightweight
 threads under the bounded pool, drive durable state-machine transitions for each
 job, publish ``status.json`` + a stdout heartbeat, and move handled jobs aside.
 
-Nothing enters except through the shared file system (``inbox/`` + ``plugins/``):
+Nothing enters except through the shared file system (``inbox/`` + ``agents/``):
 there is no socket and no port. Every job result is a validated
 :class:`~jaros.core.decision.Decision` applied through the deterministic
 executor and committed to a durable :class:`~jaros.state.TransitionLog`. A single
@@ -41,7 +41,7 @@ from jaros.execution import executor
 from jaros.execution.handlers import register_runtime_handlers
 from jaros.harness import Action, GrantSpec, Harness
 from jaros.llm import LlmConfig, create_llm_client
-from jaros.registry import AgentRegistry, load_plugins, register_builtins
+from jaros.registry import AgentRegistry, load_agents, register_builtins
 from jaros.runtime import AgentPool, AgentThread
 from jaros.scheduling import Scheduler, load_schedules
 from jaros.state import (
@@ -456,18 +456,18 @@ class Daemon:
     def tick(self) -> None:
         """Run exactly one loop pass.
 
-        One pass: scan ``plugins/`` for new agents (REQ-3), process the
+        One pass: scan ``agents/`` for new agents (REQ-3), process the
         ``inbox/`` (REQ-2/REQ-5), then publish ``status.json`` + a heartbeat
         (REQ-4). Wrapped so a fault in any phase is contained and the daemon
         survives to tick again.
         """
         self.tick_count += 1
         try:
-            load_plugins(self.registry, self.fs.base_dir / "plugins", self.llm)
+            load_agents(self.registry, self.fs.base_dir / "agents", self.llm)
             # Idempotently scan and register any new custom tools dropped at runtime
             from jaros.execution.tools import load_custom_tools
             load_custom_tools(self.fs.base_dir / "tools")
-        except Exception:  # a bad plugin/tool must never kill the loop
+        except Exception:  # a bad agent/tool must never kill the loop
             pass
         try:
             self._dispatch_schedules()

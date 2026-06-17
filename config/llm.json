@@ -1,0 +1,5 @@
+{
+  "provider": "default",
+  "options": {},
+  "_comment": "The node's default LLM. Every agent reaches it through the one LlmClient interface, so changing this re-points the whole swarm. provider is one of the registered adapters: 'default' (deterministic echo mock), 'uppercase' (mock), or 'ollama' (a real local small model). To use a real small model: set provider to 'ollama' and run `ollama serve` with e.g. OLLAMA_MODEL=llama3 (the adapter is a stdlib HTTP shim — no SDK). Env JAROS_LLM_PROVIDER overrides this file."
+}

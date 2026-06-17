@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
 
 import { api, type DecisionRecord, type ReplayResult } from "../api";
-import { Card, Empty, Json, Pill } from "../components/ui";
+import { Card, Empty, Json, PageIntro, Pill, Tip } from "../components/ui";
 
 // #EXT-010-REQ-5 Start
 export function Replay() {
@@ -31,8 +31,11 @@ export function Replay() {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
+      <PageIntro icon="↻" sub="Replay runs in an isolated sandbox and never touches the live data dir." to="/help#replay">
+        Jaros's headline guarantee: rebuild any run from the decision log <b>byte-identically</b>, with <b>zero model calls</b>.
+      </PageIntro>
       <Card
-        title="Reproducibility by replay"
+        title={<>Reproducibility by replay <Tip text="The recorded decisions are the run's only non-deterministic input. Re-applying them through the same deterministic handlers reconstructs the run exactly." /></>}
         desc="the recorded decisions are the run's only non-deterministic input — re-execute them to reconstruct it exactly"
         right={
           <button className="primary" disabled={running || decisions.length === 0} onClick={runReplay}>
@@ -41,32 +44,53 @@ export function Replay() {
         }
       >
         {result ? (
-          result.ok ? (
-            <div className="grid cols-4">
-              <div className="stat"><div className="label">Decisions replayed</div><div className="value">{result.decisions}</div></div>
-              <div className="stat"><div className="label">Reconstructed state</div><div className="value green" style={{ fontSize: 22 }}>{result.finalState}</div></div>
-              <div className="stat">
-                <div className="label">Handlers</div>
-                <div style={{ marginTop: 8 }}>
-                  <Pill tone={result.deterministic ? "ok" : "bad"}>{result.deterministic ? "deterministic" : "non-deterministic"}</Pill>
-                </div>
-                <div className="foot">{result.deterministic ? "isolated replays agree — guarantee holds" : "replays diverge — a handler is non-deterministic"}</div>
-              </div>
-              <div className="stat">
-                <div className="label">Byte-identical</div>
-                <div style={{ marginTop: 8 }}>
-                  <Pill tone={result.byteIdentical ? "ok" : "warn"}>{result.byteIdentical ? "identical" : "state-equal"}</Pill>
-                </div>
-                <div className="foot">{result.byteIdentical ? "transition log matches the original" : "final state matches; logs differ"}</div>
-              </div>
-            </div>
-          ) : (
+          result.error ? (
             <div style={{ color: "var(--red)" }}>Replay error: {result.error}</div>
+          ) : (
+            <div className="grid" style={{ gap: 14 }}>
+              <div className="grid cols-4">
+                <div className="stat"><div className="label">Decisions replayed</div><div className="value">{result.decisions}</div></div>
+                <div className="stat"><div className="label">Reconstructed state</div><div className="value green" style={{ fontSize: 22 }}>{result.finalState}</div></div>
+                <div className="stat">
+                  <div className="label">Byte-identical</div>
+                  <div style={{ marginTop: 8 }}><Pill tone={result.byteIdentical ? "ok" : "warn"}>{result.byteIdentical ? "identical" : "diverged"}</Pill></div>
+                  <div className="foot">{result.byteIdentical ? "whole swarm matches the live run" : "a handler diverged"}</div>
+                </div>
+                <div className="stat">
+                  <div className="label">Tamper-evident chain</div>
+                  <div style={{ marginTop: 8 }}><Pill tone={result.chainOk === false ? "bad" : "ok"}>{result.chainOk === false ? "broken" : "intact"}</Pill></div>
+                  <div className="foot">model calls: {result.modelCalls}</div>
+                </div>
+              </div>
+
+              {result.byAgent && Object.keys(result.byAgent).length > 0 && (
+                <div>
+                  <div className="section-title">Per-agent provenance · who did how much</div>
+                  <div className="row" style={{ flexWrap: "wrap", gap: 8 }}>
+                    {Object.entries(result.byAgent).map(([src, n]) => (
+                      <span key={src} className="tag green">◆ {src}: {n}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {result.attribution ? (
+                <div className="card" style={{ padding: 13, borderColor: result.attribution.kind === "divergence" ? "#6a2a2a" : "#6a5b1e" }}>
+                  <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+                    <Pill tone={result.attribution.kind === "divergence" ? "bad" : "warn"}>{result.attribution.kind}</Pill>
+                    <span>attributed to agent <b style={{ color: "var(--yellow)" }}>{result.attribution.source}</b> — decision #{result.attribution.index} <span className="mono hint">({result.attribution.id.slice(0, 20)})</span></span>
+                  </div>
+                  <div className="hint" style={{ marginTop: 7 }}>{result.attribution.reason}</div>
+                </div>
+              ) : (
+                <div className="hint">Reproduced the whole swarm byte-identically, with no model call — every member's decisions in recorded order.</div>
+              )}
+            </div>
           )
         ) : (
           <div className="hint">
-            Replaying feeds the recorded decisions back through the deterministic executor — with no model call — and rebuilds the run's
-            state. Crash recovery is just a special case of this.
+            Replaying feeds every member's recorded decisions back through the deterministic executor — with no model call — rebuilding the
+            whole swarm's state and attributing any failure to the exact agent. Crash recovery is just a special case of this.
           </div>
         )}
       </Card>

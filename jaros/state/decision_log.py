@@ -23,6 +23,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Iterator
@@ -51,46 +52,60 @@ def _decision_from_dict(data: dict[str, Any]) -> Decision:
     )
 
 
+# The previous-checksum of the first (genesis) record: a fixed, all-zero sentinel.
+GENESIS_PREV = "0" * 64
+
+
 @dataclass(frozen=True)
 class DecisionRecord:
     """A single durable record of one accepted decision.
 
-    ``checksum`` covers ``index`` and the canonical ``decision`` payload, so
-    corruption of any field — or a torn final line — is detectable on replay.
+    ``checksum`` covers ``index``, ``prev`` (the previous record's checksum), and
+    the canonical ``decision`` payload. Including ``prev`` chains every record to
+    the one before it (EXT-015 / REQ-4), so corruption of any field — or an
+    insertion, deletion, reorder, or edit *anywhere* in the log — is detectable,
+    not only a torn final line.
     """
 
     index: int
     decision: dict[str, Any]
     checksum: str
+    prev: str = GENESIS_PREV
 
     @staticmethod
-    def compute_checksum(index: int, decision: dict[str, Any]) -> str:
+    def compute_checksum(index: int, prev: str, decision: dict[str, Any]) -> str:
         """Return the SHA-256 hex digest over the record's canonical payload."""
         payload = json.dumps(
-            {"index": index, "decision": decision},
+            {"index": index, "prev": prev, "decision": decision},
             sort_keys=True,
             separators=(",", ":"),
         )
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
     @classmethod
-    def make(cls, index: int, decision: dict[str, Any]) -> "DecisionRecord":
-        """Build a record with a freshly-computed checksum."""
+    def make(
+        cls, index: int, decision: dict[str, Any], prev: str = GENESIS_PREV
+    ) -> "DecisionRecord":
+        """Build a record chained to ``prev`` with a freshly-computed checksum."""
         return cls(
             index=index,
             decision=decision,
-            checksum=cls.compute_checksum(index, decision),
+            prev=prev,
+            checksum=cls.compute_checksum(index, prev, decision),
         )
 
     def checksum_ok(self) -> bool:
-        """Return ``True`` iff the stored checksum matches the payload."""
-        return self.checksum == self.compute_checksum(self.index, self.decision)
+        """Return ``True`` iff the stored checksum matches the payload + chain link."""
+        return self.checksum == self.compute_checksum(
+            self.index, self.prev, self.decision
+        )
 
     def to_json(self) -> str:
         """Serialise to a single canonical JSON line (no trailing newline)."""
         return json.dumps(
             {
                 "index": self.index,
+                "prev": self.prev,
                 "decision": self.decision,
                 "checksum": self.checksum,
             },
@@ -115,6 +130,14 @@ class DecisionLog:
         self.dir: Path = Path(dir)
         self.filename: str = filename
         self.path: Path = self.dir / filename
+        # In-memory tail cache so appends are O(1), not O(n) (which would be O(n^2)
+        # over a run — the exact cost a swarm of thousands of decisions can't pay).
+        # ``read``/``verify_chain`` still do a full read (correct there); only the
+        # append hot path uses the cache. Loaded lazily from disk on first use and
+        # kept current on every append, under a lock so concurrent agents serialize.
+        self._lock = threading.Lock()
+        self._count: int | None = None
+        self._last_checksum: str | None = None
 
     def ensure(self) -> None:
         """Create the parent directory and an empty log file if absent (idempotent)."""
@@ -124,16 +147,56 @@ class DecisionLog:
                 fh.flush()
                 os.fsync(fh.fileno())
 
-    def append(self, record: DecisionRecord) -> None:
-        """Durably append ``record`` as one JSON line, fsync, then return."""
+    def _write_raw(self, record: DecisionRecord) -> None:
+        """Durably write one JSON line + fsync (newline="" -> "\\n" bytes cross-OS)."""
         self.dir.mkdir(parents=True, exist_ok=True)
         line = record.to_json() + "\n"
-        # newline="" disables OS newline translation -> "\n" bytes on every
-        # platform, keeping the recorded log byte-identical cross-OS.
         with open(self.path, "a", encoding="utf-8", newline="") as fh:
             fh.write(line)
             fh.flush()
             os.fsync(fh.fileno())
+
+    def _load_tail_locked(self) -> None:
+        """Populate the count + last-checksum cache from disk once (caller holds lock)."""
+        if self._count is not None:
+            return
+        count = 0
+        last = GENESIS_PREV
+        for rec in self.read():
+            count += 1
+            last = rec.checksum
+        self._count = count
+        self._last_checksum = last
+
+    def append(self, record: DecisionRecord) -> None:
+        """Durably append ``record`` as one JSON line, fsync, then return.
+
+        Thread-safe; keeps the tail cache current when it is already loaded.
+        """
+        with self._lock:
+            self._write_raw(record)
+            if self._count is not None:
+                self._count += 1
+                self._last_checksum = record.checksum
+
+    def append_decision(self, decision: dict[str, Any]) -> "DecisionRecord":
+        """Atomically append the next chained record in O(1) (amortized), thread-safe.
+
+        Uses the cached tail (last checksum + count) instead of re-reading the whole
+        log on every append, so a hive emitting thousands of decisions stays linear.
+        Concurrent agents serialize on the lock, so the one log is a faithful,
+        ordered transcript (EXT-015 / REQ-1).
+        """
+        with self._lock:
+            self._load_tail_locked()
+            assert self._count is not None
+            index = self._count + 1
+            prev = self._last_checksum or GENESIS_PREV
+            record = DecisionRecord.make(index, decision, prev=prev)
+            self._write_raw(record)
+            self._count = index
+            self._last_checksum = record.checksum
+            return record
 
     def read(self) -> Iterator[DecisionRecord]:
         """Yield records in append order, tolerating a torn trailing line."""
@@ -158,6 +221,7 @@ class DecisionLog:
                     index=obj["index"],
                     decision=obj["decision"],
                     checksum=obj["checksum"],
+                    prev=obj.get("prev", GENESIS_PREV),
                 )
             except (json.JSONDecodeError, KeyError, TypeError):
                 if is_torn_trailing:
@@ -171,16 +235,15 @@ class DecisionLog:
 
 
 def record_decision(log: DecisionLog, decision: Decision) -> DecisionRecord:
-    """Durably append ``decision`` to ``log`` as the next ordered record.
+    """Durably append ``decision`` to ``log`` as the next ordered, chained record.
 
     Returns the record written. Intended for use as the executor's ``on_accept``
     hook (EXT-001 / REQ-7), so the decision is recorded before its effects are
-    observable.
+    observable. The new record is chained to the previous one's checksum
+    (EXT-015 / REQ-4), making the per-agent account tamper-evident end-to-end.
+    Appends in O(1) via the log's cached tail (no full re-read per decision).
     """
-    next_index = log.length() + 1
-    record = DecisionRecord.make(next_index, _decision_to_dict(decision))
-    log.append(record)
-    return record
+    return log.append_decision(_decision_to_dict(decision))
 
 
 def read_decisions(log: DecisionLog) -> list[Decision]:
@@ -205,6 +268,57 @@ def read_decisions(log: DecisionLog) -> list[Decision]:
             f"corrupt decision record at position {pos} (index={rec.index!r})"
         )
     return decisions
+
+
+# #EXT-015-REQ-4 Start
+@dataclass(frozen=True)
+class ChainResult:
+    """Outcome of verifying the decision log's hash chain.
+
+    ``ok`` is True iff every record's index is continuous, its checksum matches
+    its payload, and its ``prev`` equals the previous record's checksum. On a
+    break, ``position`` is the 1-based record index where it was detected and
+    ``reason`` says what (insertion, deletion, reorder, or edit).
+    """
+
+    ok: bool
+    length: int
+    position: int | None = None
+    reason: str | None = None
+
+
+def verify_chain(log: DecisionLog) -> ChainResult:
+    """Verify the log is an untampered, append-only hash chain (EXT-015 / REQ-4).
+
+    Walks records in order confirming (1) index continuity from 1, (2) each
+    record's stored checksum recomputes (no edit), and (3) each record's ``prev``
+    equals the previous record's checksum (no insertion/deletion/reorder). Returns
+    the first break, or ``ok=True`` over the whole log. Detection is end-to-end,
+    not only a torn trailing record.
+    """
+    prev = GENESIS_PREV
+    expected = 1
+    count = 0
+    for rec in log.read():
+        count += 1
+        if rec.index != expected:
+            return ChainResult(
+                False, count, expected,
+                f"index discontinuity: expected {expected}, found {rec.index} "
+                "(a record was inserted, deleted, or reordered)",
+            )
+        if not rec.checksum_ok():
+            return ChainResult(False, count, expected, "record checksum mismatch (record was edited)")
+        if rec.prev != prev:
+            return ChainResult(
+                False, count, expected,
+                "broken hash chain: prev does not match the previous record "
+                "(insertion, deletion, reorder, or edit upstream)",
+            )
+        prev = rec.checksum
+        expected += 1
+    return ChainResult(True, count)
+# #EXT-015-REQ-4 End
 
 
 def replay(

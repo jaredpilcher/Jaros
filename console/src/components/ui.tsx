@@ -1,4 +1,41 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
+
+// #EXT-010-REQ-9 Start
+/** A hover tooltip: a small "?" dot that reveals an explanation on hover. */
+export function Tip({ text, align = "center" }: { text: ReactNode; align?: "center" | "right" }) {
+  return (
+    <span className={`tip ${align === "right" ? "right" : ""}`}>
+      <span className="tip-dot" aria-hidden>?</span>
+      <span className="tip-bubble" role="tooltip">{text}</span>
+    </span>
+  );
+}
+
+/** A one-line "what this page is for" banner with a link into the in-app guide. */
+export function PageIntro({
+  icon,
+  children,
+  sub,
+  to = "/help",
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+  sub?: ReactNode;
+  to?: string;
+}) {
+  return (
+    <div className="intro">
+      <div className="intro-ico">{icon}</div>
+      <div className="intro-body">
+        <div className="intro-lead">{children}</div>
+        {sub && <div className="intro-sub">{sub}</div>}
+      </div>
+      <Link className="intro-link" to={to}>Learn more →</Link>
+    </div>
+  );
+}
+// #EXT-010-REQ-9 End
 
 export function Card({
   title,
@@ -35,7 +72,7 @@ export function Stat({
   tone,
   foot,
 }: {
-  label: string;
+  label: ReactNode;
   value: ReactNode;
   tone?: "green" | "red";
   foot?: ReactNode;

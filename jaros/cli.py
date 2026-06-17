@@ -10,7 +10,7 @@ Commands::
 
     jaros serve                            run the daemon (inside the container)
     jaros submit <kind> [--input JSON]     -> inbox/<id>.json
-    jaros add-agent <file.py> [--name K]   -> plugins/<name-or-file>.py
+    jaros add-agent <file.py> [--name K]   -> agents/<name-or-file>.py
     jaros status                           -> print status.json
     jaros watch [--interval S]             -> live status + new outbox results
     jaros logs                             -> print the daemon log (if present)
@@ -20,7 +20,7 @@ Commands::
     global: --data-dir DIR (else $JAROS_DATA_DIR, else ./.jaros-data)
 
 Writes are atomic (temp file + :func:`os.replace`), so the daemon never observes a
-partial job or plugin. This module lives directly under ``jaros/`` (not under an
+partial job or agent. This module lives directly under ``jaros/`` (not under an
 agent package), so the structural comms / no-server checks correctly treat it as a
 host orchestrator rather than an agent.
 """
@@ -111,9 +111,9 @@ def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
 
 # #EXT-008-REQ-3 Start
 def _discover_kind(source: str) -> str | None:
-    """Statically read a plugin module's top-level ``KIND`` string, if any.
+    """Statically read an agent module's top-level ``KIND`` string, if any.
 
-    Parses the source with :mod:`ast` (no import, so no plugin side effects run on
+    Parses the source with :mod:`ast` (no import, so no agent side effects run on
     the host) and returns the literal value of a module-level ``KIND = "..."``
     assignment, or ``None`` when it is absent / not a string literal.
     """
@@ -137,27 +137,27 @@ def _discover_kind(source: str) -> str | None:
 
 
 def cmd_add_agent(path: str, name: str | None, data_dir: Path) -> tuple[Path, str | None]:
-    """Install an agent plugin module into the watched ``plugins/`` folder.
+    """Install an agent module into the watched ``agents/`` folder.
 
     Validates the source ``*.py`` exists and is readable, then copies it to
-    ``plugins/.tmp-<file>`` and ``os.replace``-s it to
-    ``plugins/<name-or-filename>.py`` so the daemon never loads a partial module.
+    ``agents/.tmp-<file>`` and ``os.replace``-s it to
+    ``agents/<name-or-filename>.py`` so the daemon never loads a partial module.
     The destination filename defaults to the source filename; ``name`` overrides
     its stem. Returns ``(installed_path, discovered_kind)``.
     """
     source = Path(path)
     if not source.is_file():
-        raise FileNotFoundError(f"source plugin not found or not a file: {path}")
+        raise FileNotFoundError(f"source agent not found or not a file: {path}")
     try:
         content = source.read_text(encoding="utf-8")
     except OSError as exc:
-        raise OSError(f"source plugin is not readable: {path} ({exc})") from exc
+        raise OSError(f"source agent is not readable: {path} ({exc})") from exc
 
     if name:
         filename = name if name.endswith(".py") else f"{name}.py"
     else:
         filename = source.name
-    target = data_dir / "plugins" / filename
+    target = data_dir / "agents" / filename
     _atomic_write(target, content)
     return target, _discover_kind(content)
 # #EXT-008-REQ-3 End
@@ -253,7 +253,7 @@ def cmd_eval(data_dir: Path, stream=None) -> int:
     """Run the agent eval suite in ``<data>/evals`` and print a pass/fail report.
 
     Assembles a deterministic eval environment from the data dir — built-in +
-    plugin agents and the read-only/custom tool handlers — then runs every case
+    agents and the read-only/custom tool handlers — then runs every case
     in ``evals/*.json``. Returns 0 iff all cases pass. Reads/loads only the shared
     FS; no network.
     """
@@ -261,12 +261,12 @@ def cmd_eval(data_dir: Path, stream=None) -> int:
     from jaros.eval import load_cases, run_suite
     from jaros.execution.tools import load_custom_tools
     from jaros.llm import LlmConfig, create_llm_client
-    from jaros.registry import AgentRegistry, load_plugins, register_builtins
+    from jaros.registry import AgentRegistry, load_agents, register_builtins
 
     llm = create_llm_client(LlmConfig(provider="default"))
     registry = AgentRegistry()
     register_builtins(registry, llm)
-    load_plugins(registry, data_dir / "plugins", llm)
+    load_agents(registry, data_dir / "agents", llm)
     load_custom_tools(data_dir / "tools")  # register tool handlers for result checks
 
     cases = load_cases(data_dir / "evals")
@@ -302,19 +302,12 @@ def cmd_replay(data_dir: Path, *, as_json: bool = False, verbose: bool = False, 
     ``2`` nothing to replay.
     """
     out = stream if stream is not None else sys.stdout
-    import shutil
-    import tempfile
-
-    from jaros.comms.fs import SharedFileSystem
-    from jaros.execution import executor
-    from jaros.execution.handlers import register_runtime_handlers
-    from jaros.harness import GrantSpec, Harness
-    from jaros.state import DecisionLog, TransitionLog, read_decisions, recover, replay
+    from jaros.state import replay_swarm
 
     data_dir = Path(data_dir)
-    decision_log = DecisionLog(data_dir / "state")
-    decisions = read_decisions(decision_log)
-    if not decisions:
+    res = replay_swarm(data_dir)
+
+    if res.decisions == 0:
         if as_json:
             print(json.dumps({"decisions": 0, "ok": False, "reason": "empty"}), file=out)
         else:
@@ -325,57 +318,61 @@ def cmd_replay(data_dir: Path, *, as_json: bool = False, verbose: bool = False, 
             )
         return 2
 
-    sandbox = Path(tempfile.mkdtemp(prefix="jaros-replay-"))
-    try:
-        sandbox_fs = SharedFileSystem(sandbox)
-        sandbox_fs.ensure_layout()
-        sandbox_log = TransitionLog(sandbox / "state")
-        sandbox_harness = Harness()
-        writer = "replay-writer"
-        sandbox_harness.spawn(writer, GrantSpec(role="FsWriteRole", fs=sandbox_fs))
-
-        # Reuse the runtime handlers over the SANDBOX — no model is constructed.
-        executor.reset_handlers()
-        register_runtime_handlers(harness=sandbox_harness, writer_agent=writer, tools_dir=data_dir / "tools")
-
-        results = replay(decision_log, executor.apply, log=sandbox_log)
-        applied = sum(1 for r in results if getattr(r, "applied", False))
-        final_state = recover(sandbox_log)
-
-        live_log = data_dir / "state" / "transitions.log"
-        sandbox_bytes = sandbox_log.path.read_bytes() if sandbox_log.path.exists() else b""
-        live_bytes = live_log.read_bytes() if live_log.exists() else b""
-        byte_identical = sandbox_bytes == live_bytes
-        try:
-            live_state = recover(TransitionLog(data_dir / "state"))
-        except Exception:
-            live_state = None
-        states_match = final_state == live_state if live_state is not None else byte_identical
-        ok = byte_identical and states_match
-    finally:
-        shutil.rmtree(sandbox, ignore_errors=True)
+    # #EXT-015-REQ-5 Start
+    by_agent = {t.source: t.decisions for t in res.by_agent}
+    attribution = None
+    if res.attribution is not None:
+        a = res.attribution
+        attribution = {"kind": a.kind, "index": a.index, "id": a.id, "source": a.source, "reason": a.reason}
 
     report = {
-        "decisions": len(decisions),
+        "decisions": res.decisions,
+        "byAgent": by_agent,
         "modelCalls": 0,
-        "finalState": final_state,
-        "byteIdentical": byte_identical,
-        "ok": ok,
+        "finalState": res.final_state,
+        "byteIdentical": res.byte_identical,
+        "chainOk": res.chain_ok,
+        "attribution": attribution,
+        "ok": res.ok,
     }
     if as_json:
         print(json.dumps(report), file=out)
-        return 0 if ok else 1
+        return 0 if res.ok else 1
 
-    print(f"replayed {len(decisions)} recorded decisions ({applied} applied) - model calls: 0", file=out)
-    print(f"  reconstructed state : {final_state}", file=out)
-    print(f"  byte-identical      : {'yes' if byte_identical else 'NO - divergence detected'}", file=out)
-    if verbose and live_state is not None and not states_match:
-        print(f"  recovered state differs: sandbox={final_state} live={live_state}", file=out)
-    if ok:
-        print("reproducible: the recorded decisions reconstruct the run exactly, with no model call.", file=out)
+    print(
+        f"replayed {res.decisions} recorded decisions across {len(res.by_agent)} "
+        f"agent(s) - model calls: 0",
+        file=out,
+    )
+    for t in res.by_agent:
+        print(f"    {t.source:<18}{t.decisions} decision(s)", file=out)
+    print(f"  reconstructed state : {res.final_state}", file=out)
+    _bi = "yes" if res.byte_identical else ("no" if not res.chain_ok else "NO - divergence detected")
+    print(f"  byte-identical      : {_bi}", file=out)
+    print(
+        f"  tamper-evident chain: {'intact' if res.chain_ok else 'BROKEN - ' + (res.chain_reason or '')}",
+        file=out,
+    )
+    if res.attribution is not None:
+        a = res.attribution
+        label = "DIVERGENCE" if a.kind == "divergence" else "FAILURE"
+        print(f"  attribution [{label}] : agent '{a.source}' produced decision #{a.index} ({a.id})", file=out)
+        print(f"                       reason: {a.reason}", file=out)
+    if res.ok and res.attribution is None:
+        print("reproducible: the whole swarm reconstructs byte-identically, with no model call.", file=out)
+    elif res.ok and res.attribution is not None:
+        print("reproduced byte-identically; a member's handoff failed - attributed to the exact agent above.", file=out)
+    elif not res.chain_ok:
+        print(
+            "TAMPERED: the decision log's hash chain is broken - the recorded account "
+            "was altered, so the run cannot be trusted or replayed. "
+            f"{res.chain_reason or ''}",
+            file=out,
+        )
     else:
         print("DIVERGENCE: replay did not reproduce the run byte-identically (a non-deterministic handler?).", file=out)
-    return 0 if ok else 1
+    return 0 if res.ok else 1
+    # #EXT-015-REQ-5 End
 # #EXT-008-REQ-6 End
 
 
@@ -415,7 +412,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--input", dest="input", default=None, help="job input as a JSON string"
     )
 
-    p_add = add_command("add-agent", "install a plugin module into plugins/")
+    p_add = add_command("add-agent", "install an agent module into agents/")
     p_add.add_argument("path", help="path to the agent module (*.py)")
     p_add.add_argument(
         "--name", dest="name", default=None, help="override the installed kind/filename"
@@ -482,8 +479,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         # Imported lazily so the lightweight host commands don't pull in the whole
         # daemon dependency graph just to submit a job or read status.
         from jaros.daemon import Daemon
+        from jaros.llm.config import resolve_llm_config
 
-        return Daemon(data_dir=data_dir).run()
+        # The default LLM is config-driven (config/llm.json or JAROS_LLM_PROVIDER);
+        # every agent reaches it through the one LlmClient interface.
+        llm_config = resolve_llm_config(data_dir)
+        print(f"[jaros] default LLM provider: {llm_config.provider}", file=sys.stderr)
+        return Daemon(data_dir=data_dir, llm_config=llm_config).run()
 
     if args.command == "submit":
         try:

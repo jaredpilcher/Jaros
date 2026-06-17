@@ -28,7 +28,7 @@ async function waitFor(fn, timeout = 30000) {
 }
 
 const data = fs.mkdtempSync(path.join(os.tmpdir(), "jaros-shots-data-"));
-for (const area of ["plugins", "tools"]) {
+for (const area of ["agents", "tools"]) {
   fs.mkdirSync(path.join(data, area), { recursive: true });
   for (const root of [path.join(REPO, "examples", area), path.join(REPO, "examples", "readonly", area)]) {
     for (const f of fs.readdirSync(root)) {
@@ -55,6 +55,9 @@ const daemon = spawn("python", ["-m", "jaros.cli", "--data-dir", data, "serve"],
 const bridge = spawn(process.execPath, ["--import", "tsx", "server/index.ts"], { cwd: HERE, env, stdio: "ignore" });
 
 let browser;
+let daemon2 = null;
+let bridge2 = null;
+let data2 = null;
 try {
   if (!(await waitFor(() => fs.existsSync(path.join(data, "status.json"))))) throw new Error("daemon did not boot");
   if (!(await waitFor(async () => (await fetch(`${base}/api/health`)).ok))) throw new Error("bridge did not start");
@@ -67,7 +70,28 @@ try {
   browser = await chromium.launch({ channel: "chrome", headless: true }).catch(() => chromium.launch({ channel: "msedge", headless: true }));
   const page = await browser.newPage({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 2, colorScheme: "dark" });
 
-  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/schedules", "schedules"], ["/evals", "evaluations"], ["/state", "state-machine"], ["/harness", "harness"]];
+  // 1. Capture the first-run wizard (auto-opens in a fresh browser with no tour flag).
+  await page.goto(base + "/", { waitUntil: "domcontentloaded" });
+  await sleep(1400);
+  if (await page.waitForSelector(".modal", { timeout: 6000 }).catch(() => null)) {
+    await page.screenshot({ path: path.join(OUT, "tour.png") });
+    console.log("[shots] captured", "tour.png");
+  }
+  // Suppress the tour for the remaining page shots so it doesn't overlay them.
+  await page.addInitScript(() => localStorage.setItem("jaros.tour.v1", "captured"));
+
+  // 2. Capture a tooltip in its open (hover) state on the Jobs page.
+  await page.goto(base + "/jobs", { waitUntil: "domcontentloaded" });
+  await sleep(1200);
+  const tipDot = page.locator(".card .title .tip .tip-dot").first();
+  if (await tipDot.count()) {
+    await tipDot.hover();
+    await sleep(500);
+    await page.screenshot({ path: path.join(OUT, "tooltip.png") });
+    console.log("[shots] captured", "tooltip.png");
+  }
+
+  const routes = [["/", "overview"], ["/jobs", "jobs"], ["/agents", "agents"], ["/replay", "reproducibility"], ["/schedules", "schedules"], ["/evals", "evaluations"], ["/state", "state-machine"], ["/harness", "harness"], ["/help", "help"]];
   for (const [route, name] of routes) {
     await page.goto(base + route, { waitUntil: "domcontentloaded" });
     await sleep(1400); // settle: initial fetches + first live SSE snapshot render
@@ -91,6 +115,25 @@ try {
     await page.screenshot({ path: path.join(OUT, `${name}.png`) });
     console.log("[shots] captured", `${name}.png`);
   }
+
+  // 3. Capture the get-started checklist on a FRESH, empty data dir (new-operator
+  //    state) — on the populated dir above the checklist is already complete and hides.
+  data2 = fs.mkdtempSync(path.join(os.tmpdir(), "jaros-shots-empty-"));
+  const PORT2 = PORT + 1;
+  const base2 = `http://localhost:${PORT2}`;
+  const env2 = { ...process.env, JAROS_DATA_DIR: data2, JAROS_TICK_MS: "150", JAROS_CONSOLE_API_PORT: String(PORT2) };
+  daemon2 = spawn("python", ["-m", "jaros.cli", "--data-dir", data2, "serve"], { cwd: REPO, env: env2, stdio: "ignore" });
+  bridge2 = spawn(process.execPath, ["--import", "tsx", "server/index.ts"], { cwd: HERE, env: env2, stdio: "ignore" });
+  if (await waitFor(() => fs.existsSync(path.join(data2, "status.json"))) && await waitFor(async () => (await fetch(`${base2}/api/health`)).ok)) {
+    const page2 = await browser.newPage({ viewport: { width: 1440, height: 820 }, deviceScaleFactor: 2, colorScheme: "dark" });
+    await page2.addInitScript(() => localStorage.setItem("jaros.tour.v1", "captured"));
+    await page2.goto(base2 + "/", { waitUntil: "domcontentloaded" });
+    await sleep(1600);
+    await page2.screenshot({ path: path.join(OUT, "get-started.png") });
+    console.log("[shots] captured", "get-started.png");
+    await page2.close();
+  }
+
   console.log("SHOTS_OK ->", OUT);
 } catch (e) {
   console.error("[shots] error:", e.message);
@@ -98,6 +141,9 @@ try {
   if (browser) await browser.close();
   daemon.kill();
   bridge.kill();
+  if (daemon2) daemon2.kill();
+  if (bridge2) bridge2.kill();
   await sleep(300);
   fs.rmSync(data, { recursive: true, force: true });
+  if (data2) fs.rmSync(data2, { recursive: true, force: true });
 }

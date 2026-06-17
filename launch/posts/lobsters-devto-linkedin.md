@@ -31,54 +31,52 @@ your own site so you keep the SEO. Good for long-tail discovery (people Googling
 
 ---
 
-## LinkedIn (Day 3)
+## LinkedIn — the apex post (what to publish)
 
-This is your **job channel** — recruiters and eng leaders are here, and v1 (June 9)
-already drove profile views + followers. v2's job is to earn **comments**, not just likes.
+Your *job* channel — recruiters and eng leaders are here. Lead with the swarm
+**accountability** angle: it's the part that resonates with regulated / high-stakes
+teams (fintech, crypto, infra). Make it earn **comments**, not just likes.
 
-### The post (v2 — paste-ready)
-
-Built around the replay video, opening with your strongest line. The **first two lines are
-the hook** — all that shows before "…see more," so they decide who expands.
-
-> When an AI agent "does something wrong" — sends the wrong email, deletes the wrong file —
-> it's almost never a dumb model.
+**Post** (open with the hook; the first two lines are all that show before "…see more"):
+> When a swarm of AI agents "does something wrong," two questions are almost
+> impossible to answer: can you **reproduce** it, and **which agent** caused it?
 >
-> It's that we wired the model's output straight to the trigger. That's a design flaw, not a
-> model flaw — and no amount of better prompting fixes a design flaw.
+> That's not a model problem — it's an architecture problem. And it's fixable.
 >
-> So I open-sourced Jaros, built on one rule: the model only *proposes*. A deterministic
-> system decides what actually runs, and records every decision.
+> Most agent stacks let the model drive: a tool call *is* a side effect. So the one
+> non-deterministic thing in your system is also in the control path, and at swarm
+> scale the failures compound — you can't replay what happened, and the logs show
+> surface chatter, not the deciding agent.
 >
-> The payoff is something most agent stacks can't do 👇 I can replay an entire agent run and
-> reconstruct it to byte-identical state — with zero model calls. "It only happens sometimes"
-> becomes a normal debugging session: pin the decision log, replay, step through, fix.
+> I open-sourced **Jaros** to fix that by construction. The model only *proposes*
+> inert `Decision` data; a deterministic system decides what runs and records every
+> decision — in one ordered, **hash-chained** log, tagged with the agent that made it.
 >
-> [⬆ attach the 30-second replay video here — NATIVE upload, no external link]
+> The payoff:
+> • Replay a whole **hive of agents** to byte-identical state — with **zero model calls**.
+> • Attribute any failure to the **exact agent and decision** that caused it (recorded fact, not a guess).
+> • A **tamper-evident** record of who-did-what — the accountability regulated teams need.
 >
-> It's zero-infrastructure — no server, no database, no broker. MIT, runs offline. And honest
-> about limits: not a security sandbox, not cluster-scale, not "unbreakable." It's the
-> reproducibility-and-safety layer you reach for the day your agent leaves the demo.
+> [attach the 30s replay clip / the swarm-replay screenshot]
 >
-> A question for everyone building agents: when your team says "the agent did something
-> wrong," are you reaching for a better prompt — or rethinking the architecture? Genuinely
-> curious how others are handling this.
+> Zero-infrastructure — no server, no database, no broker. MIT, runs offline. Honest
+> about limits: it's the reproducibility-and-accountability *substrate* a swarm runs
+> on — not a swarm-orchestration framework, not cluster-scale, not "unbreakable."
+>
+> For people building multi-agent systems: when a swarm misbehaves in prod, how does
+> your team reproduce it and figure out which agent was responsible — today?
 
-### First comment (post it immediately — the link lives HERE, not in the body)
+**First comment** (post immediately — link lives HERE, not in the body):
+> Repo + a 5-minute quickstart (no API key, runs offline):
+> https://github.com/jaredpilcher/Jaros — it replays a hive of agents and names the
+> one that broke it. Happy to dig in with anyone wrestling with multi-agent reliability.
 
-> Repo + a 5-minute quickstart (no API key, runs offline): https://github.com/jaredpilcher/Jaros
-> — happy to answer anything, and if you point it at your own agent I'd love to hear where it breaks.
-
-### Why this beats v1 (15 reactions, 0 comments)
-
-- **Hook in the first 2 lines** — the "design flaw" line, above the "…see more" fold.
-- **Native-uploaded video, no link in the body** — LinkedIn throttles outbound links, so the
-  GitHub link goes in the *first comment*. (v1's link-in-body + "go to GitHub" CTA is why it
-  got 0 comments.)
-- **Ends on a question** — pulls conversation *into the comments*, where reach is earned.
-- **Seed it:** right after posting, ping 5–10 relevant people; reply to every comment within
-  the hour. Early comments are what expand reach.
-- **Timing:** Tue–Thu, ~9am ET. Author replies are weighted heavily — be fast and kind.
+**Notes**
+- **Native-upload** the replay clip; no external link in the body (LinkedIn throttles
+  outbound links) — GitHub link goes in the first comment.
+- Reply to every comment fast; author replies are weighted heavily.
+- The "which agent was responsible" question is the comment-bait — and the exact pain
+  a fintech/crypto AI leader feels. Seed it with a few thoughtful connections.
 
 ---
 

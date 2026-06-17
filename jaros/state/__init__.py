@@ -36,13 +36,24 @@ from jaros.state.model import (
 )
 from jaros.state.coordination import FileCoordinator
 from jaros.state.decision_log import (
+    GENESIS_PREV,
+    ChainResult,
     DecisionLog,
     DecisionRecord,
     read_decisions,
     record_decision,
     replay,
+    verify_chain,
 )
 from jaros.state.recover import RecoveryError, recover, recover_via_replay
+from jaros.state.swarm import (
+    AgentTally,
+    Attribution,
+    SwarmReplayResult,
+    attribute,
+    replay_swarm,
+    summary_by_agent,
+)
 
 __all__ = [
     # model
@@ -73,6 +84,17 @@ __all__ = [
     "record_decision",
     "read_decisions",
     "replay",
+    # tamper-evident chain (EXT-015)
+    "verify_chain",
+    "ChainResult",
+    "GENESIS_PREV",
+    # swarm replay + attribution (EXT-015)
+    "replay_swarm",
+    "attribute",
+    "summary_by_agent",
+    "SwarmReplayResult",
+    "Attribution",
+    "AgentTally",
     # coordination
     "FileCoordinator",
 ]

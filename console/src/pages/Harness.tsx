@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api, type HarnessModel, type Job } from "../api";
-import { Card, Empty } from "../components/ui";
+import { Card, Empty, PageIntro } from "../components/ui";
 
 // #EXT-010-REQ-6 Start
 export function Harness() {
@@ -21,6 +21,9 @@ export function Harness() {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
+      <PageIntro icon="▤" sub="Real isolation against hostile code is the host's job (process / container / VPC)." to="/help#harness">
+        Capability-safety made visible: agents hold only the scoped capabilities the harness grants, and every action is <b>default-deny</b>.
+      </PageIntro>
       <Card title="Capability-safety" desc="structural least-privilege — not an adversarial sandbox; host isolation is the security boundary">
         <div className="hint">
           Agents hold only the scoped handles the harness grants. A bug or bad decision cannot reach what it was never given, and every

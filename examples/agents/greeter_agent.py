@@ -1,4 +1,4 @@
-"""Example plugin agent: ``greeter``.
+"""Example agent: ``greeter``.
 
 Demonstrates an agent that proposes a *custom tool* action. It emits an inert
 Decision of kind ``demo.greet`` (see ``examples/tools/greet_tool.py``); the
@@ -6,7 +6,7 @@ daemon's gate runs the tool's ``validate()`` and the executor dispatches to the
 tool's ``execute()``. The agent never performs the side effect itself — its only
 output is data.
 
-Drop this file into the shared-FS ``plugins/`` folder and the matching tool into
+Drop this file into the shared-FS ``agents/`` folder and the matching tool into
 ``tools/``.
 """
 

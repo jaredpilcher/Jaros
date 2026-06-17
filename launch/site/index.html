@@ -17,11 +17,11 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Jaros — reproducible, capability-safe AI agents. Zero infrastructure.</title>
-<meta name="description" content="Jaros records every agent decision and replays the run to byte-identical state — debug agents like normal software and gate them in CI. Zero infrastructure: no server, no database, no broker. MIT, runs offline." />
+<title>Jaros — reproducible, accountable agent swarms. Zero infrastructure.</title>
+<meta name="description" content="Jaros replays a whole hive of agents to byte-identical state with zero model calls, and attributes any failure to the exact agent — over a tamper-evident, hash-chained decision log. Zero infrastructure: no server, no database, no broker. MIT, runs offline." />
 <!-- Open Graph / social preview -->
-<meta property="og:title" content="Jaros — reproducible, capability-safe AI agents" />
-<meta property="og:description" content="Replay an agent run to byte-identical state, with zero model calls. No server, no database, no broker. MIT." />
+<meta property="og:title" content="Jaros — reproducible, accountable agent swarms" />
+<meta property="og:description" content="Replay a hive of agents to byte-identical state with zero model calls, and name the agent that broke it. Tamper-evident. Zero infra. MIT." />
 <meta property="og:type" content="website" />
 <style>
   :root{
@@ -138,8 +138,8 @@
 <header>
   <div class="wrap">
     <span class="pill">Open source · MIT · runs offline</span>
-    <h1>Reproducible, capability-safe<br><span class="grad">AI agents.</span> Zero infrastructure.</h1>
-    <p class="lede">Your agent passes locally and fails in CI on the same input — and you can never reproduce the production failures. Jaros records every decision and <b>replays the run to byte-identical state</b>, so you debug agents like normal software. No server, no database, no broker.</p>
+    <h1>Reproducible, accountable<br><span class="grad">agent swarms.</span> Zero infrastructure.</h1>
+    <p class="lede">When a swarm of agents does something wrong, you can't reproduce it or say which agent caused it. Jaros records every decision in one <b>hash-chained</b> log — so you <b>replay the whole hive to byte-identical state</b> (zero model calls) and <b>attribute any failure to the exact agent</b>. No server, no database, no broker.</p>
     <div class="cta">
       <a class="btn primary" href="https://github.com/jaredpilcher/Jaros">★ Star on GitHub</a>
       <span class="install"><code>pip install jaros</code><button onclick="cp(this)">Copy</button></span>
@@ -151,22 +151,21 @@
 <!-- THE WOW ----------------------------------------------------------------->
 <section id="wow">
   <div class="wrap">
-    <h2>The flaky run, made reproducible</h2>
-    <p class="sub">After any run, replay the whole thing from the recorded decision log — into byte-identical state, with <b>zero model calls</b>. "It only happens sometimes" becomes a normal debugging session.</p>
+    <h2>Replay a hive. Find the culprit.</h2>
+    <p class="sub">After any run, replay the <b>whole swarm</b> from the recorded decision log — into byte-identical state, with <b>zero model calls</b> — and attribute any failure to the <b>exact agent and decision</b>. "It only happens sometimes," for a hive of agents, becomes a normal debugging session.</p>
     <!-- REPLAY CLIP: to use a screen-recording instead of this terminal, replace the
          <div class="term">…</div> below with:
          <video src="replay.mp4" autoplay muted loop playsinline style="width:100%;border-radius:12px;border:1px solid var(--line)"></video> -->
     <div class="term">
       <div class="bar"><i class="r"></i><i class="y"></i><i class="g"></i><span>bash — jaros replay</span></div>
-<pre><span class="c">$</span> jaros submit greeter --input '{"name":"Jaros"}'
-<span class="c">$</span> jaros replay
-replayed 2 recorded decisions (2 applied) - model calls: <span class="hl">0</span>
+<pre><span class="c">$</span> jaros replay
+replayed 7 recorded decisions across 3 agent(s) - model calls: <span class="hl">0</span>
+    planner 2 · reviewer 2 · worker 3
   reconstructed state : <span class="ok">DONE</span>
   byte-identical      : <span class="ok">yes</span>
-<span class="ok">reproducible</span><span class="dim">: the recorded decisions reconstruct the run exactly, with no model call.</span>
-
-<span class="c">$</span> jaros replay --json
-{"decisions": 2, "modelCalls": <span class="hl">0</span>, "finalState": "DONE", "byteIdentical": <span class="ok">true</span>, "ok": <span class="ok">true</span>}</pre>
+  tamper-evident chain: <span class="ok">intact</span>
+  attribution [FAILURE] : agent '<span class="hl">worker</span>' produced the bad-handoff decision
+<span class="ok">reproduced byte-identically</span><span class="dim">; the failure is attributed to the exact agent above.</span></pre>
     </div>
   </div>
 </section>
@@ -294,7 +293,7 @@ replayed 2 recorded decisions (2 applied) - model calls: <span class="hl">0</spa
 
 <footer>
   <div class="wrap">
-    <div>Jaros — MIT licensed · reproducible, capability-safe AI agents.</div>
+    <div>Jaros — MIT licensed · reproducible, accountable agent swarms.</div>
     <div>
       <a href="https://github.com/jaredpilcher/Jaros">GitHub</a> ·
       <a href="https://github.com/jaredpilcher/Jaros/issues">Issues</a> ·

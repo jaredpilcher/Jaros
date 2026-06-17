@@ -3,8 +3,8 @@ data dir and drive it from the host via the shared-FS CLI, with example agents.
 
 Proves the end-to-end story without touching any in-use data dir:
   - the daemon boots and keeps running (EXT-007);
-  - host work + plugins/tools arrive only through the shared volume (EXT-006/008);
-  - a built-in agent and two example plugin agents (one calling a custom tool)
+  - host work + agents/tools arrive only through the shared volume (EXT-006/008);
+  - a built-in agent and two example agents (one calling a custom tool)
     each run, validate, drive durable transitions, and write a result;
   - every accepted decision is recorded to the durable decision log (EXT-002/REQ-6).
 
@@ -52,11 +52,11 @@ def main() -> int:
     data_dir = Path(tempfile.mkdtemp(prefix="jaros-local-"))
     print(f"[local] throwaway data dir: {data_dir}")
 
-    # Stage example plugins + a custom tool into the shared volume before boot.
-    (data_dir / "plugins").mkdir(parents=True, exist_ok=True)
+    # Stage example agents + a custom tool into the shared volume before boot.
+    (data_dir / "agents").mkdir(parents=True, exist_ok=True)
     (data_dir / "tools").mkdir(parents=True, exist_ok=True)
-    for p in (EXAMPLES / "plugins").glob("*.py"):
-        shutil.copy(p, data_dir / "plugins" / p.name)
+    for p in (EXAMPLES / "agents").glob("*.py"):
+        shutil.copy(p, data_dir / "agents" / p.name)
     for p in (EXAMPLES / "tools").glob("*.py"):
         shutil.copy(p, data_dir / "tools" / p.name)
 
@@ -78,7 +78,7 @@ def main() -> int:
             return 1
         print("[local] OS booted; status.json is live.")
 
-        # Submit work from the host: built-in + two example plugin agents.
+        # Submit work from the host: built-in + two example agents.
         jobs = [
             ("advance", "{}"),
             ("echo", '{"msg": "hello from the host"}'),
@@ -131,7 +131,7 @@ def main() -> int:
             print(f"        [{'PASS' if ok else 'FAIL'}] {name}")
 
         if all(checks.values()):
-            print("PASS: local OS stood up, ran built-in + example plugin agents + "
+            print("PASS: local OS stood up, ran built-in + example agents + "
                   "a custom tool, and recorded decisions for replay.")
             return 0
         print(log_path.read_text(encoding="utf-8")[-1500:])

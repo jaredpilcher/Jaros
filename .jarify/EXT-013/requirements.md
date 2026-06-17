@@ -63,7 +63,7 @@ Cases load from the shared FS and run as a suite with an aggregate report.
 Operators run the eval suite from the host with a single command.
 
 #### Acceptance Criteria
-- [x] `jaros eval [--data-dir D]` assembles built-in + plugin agents and the
+- [x] `jaros eval [--data-dir D]` assembles built-in + agents and the
       read-only/custom tool handlers from the data dir and runs `evals/*.json`.
 - [x] It prints a per-case PASS/FAIL report with failing-check details and a
       summary, exiting 0 iff all cases pass (CI-friendly).

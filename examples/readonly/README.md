@@ -16,7 +16,7 @@ themselves (they only `read`/`scandir`/`stat`).
 
 ```
 examples/readonly/
-  plugins/    the agents (drop into <data>/plugins/)
+  agents/    the agents (drop into <data>/agents/)
   tools/      the read-only tools (drop into <data>/tools/)
   schedules/  example schedules (drop into <data>/schedules/)
 ```
@@ -28,8 +28,8 @@ stage the library into the shared volume:
 
 ```bash
 DATA=/tmp/jaros-ro
-mkdir -p $DATA/plugins $DATA/tools $DATA/schedules
-cp examples/readonly/plugins/*.py   $DATA/plugins/
+mkdir -p $DATA/agents $DATA/tools $DATA/schedules
+cp examples/readonly/agents/*.py   $DATA/agents/
 cp examples/readonly/tools/*.py     $DATA/tools/
 
 # boot the OS, then run any agent on demand

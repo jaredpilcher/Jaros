@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { api, type ScheduleRow } from "../api";
-import { Card, Empty, Pill } from "../components/ui";
+import { Card, Empty, PageIntro, Pill } from "../components/ui";
 
 const TRIGGERS = ["every_seconds", "cron", "at"] as const;
 type TriggerKind = (typeof TRIGGERS)[number];
@@ -64,6 +64,10 @@ export function Schedules() {
   }
 
   return (
+    <>
+    <PageIntro icon="⏱" sub="Schedules are crash-safe: a restart neither double-fires nor skips." to="/help#schedules">
+      Run jobs on a native <b>cron</b>, fixed <b>interval</b>, or <b>one-shot</b> — the daemon dispatches them, no external scheduler.
+    </PageIntro>
     <div className="grid cols-2" style={{ alignItems: "start" }}>
       <Card title="Schedules" desc="native cron / interval / one-shot — no external cron" right={<span className="hint mono">{rows.length}</span>}>
         {rows.length === 0 ? (
@@ -125,6 +129,7 @@ export function Schedules() {
         </div>
       </Card>
     </div>
+    </>
   );
 }
 // #EXT-010-REQ-7 End

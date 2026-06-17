@@ -1,14 +1,30 @@
 {
-  "REQ-1": [
-    { "file": "jaros/eval/runner.py", "startLine": 22, "endLine": 79 }
-  ],
-  "REQ-2": [
-    { "file": "jaros/eval/runner.py", "startLine": 82, "endLine": 143 }
+  "REQ-4": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 251,
+      "endLine": 288
+    }
   ],
   "REQ-3": [
-    { "file": "jaros/eval/suite.py", "startLine": 20, "endLine": 81 }
+    {
+      "file": "jaros/eval/suite.py",
+      "startLine": 20,
+      "endLine": 81
+    }
   ],
-  "REQ-4": [
-    { "file": "jaros/cli.py", "startLine": 249, "endLine": 286 }
+  "REQ-1": [
+    {
+      "file": "jaros/eval/runner.py",
+      "startLine": 22,
+      "endLine": 81
+    }
+  ],
+  "REQ-2": [
+    {
+      "file": "jaros/eval/runner.py",
+      "startLine": 84,
+      "endLine": 154
+    }
   ]
 }

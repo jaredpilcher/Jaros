@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 import { api, type Agents as AgentsModel } from "../api";
-import { Card, Empty } from "../components/ui";
+import { Card, Empty, PageIntro, Tip } from "../components/ui";
 
-const PLUGIN_TEMPLATE = `import uuid
+const AGENT_TEMPLATE = `import uuid
 from jaros.core import create_decision
 
 KIND = "my_agent"
@@ -38,10 +38,10 @@ class MyTool:
 
 // #EXT-010-REQ-4 Start
 export function Agents() {
-  const [agents, setAgents] = useState<AgentsModel>({ plugins: [], tools: [] });
-  const [tab, setTab] = useState<"plugins" | "tools">("plugins");
+  const [agents, setAgents] = useState<AgentsModel>({ agents: [], tools: [] });
+  const [tab, setTab] = useState<"agents" | "tools">("agents");
   const [name, setName] = useState("my_agent.py");
-  const [source, setSource] = useState(PLUGIN_TEMPLATE);
+  const [source, setSource] = useState(AGENT_TEMPLATE);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   async function refresh() {
@@ -53,16 +53,16 @@ export function Agents() {
     return () => clearInterval(t);
   }, []);
 
-  function pick(t: "plugins" | "tools") {
+  function pick(t: "agents" | "tools") {
     setTab(t);
-    setName(t === "plugins" ? "my_agent.py" : "my_tool.py");
-    setSource(t === "plugins" ? PLUGIN_TEMPLATE : TOOL_TEMPLATE);
+    setName(t === "agents" ? "my_agent.py" : "my_tool.py");
+    setSource(t === "agents" ? AGENT_TEMPLATE : TOOL_TEMPLATE);
     setMsg(null);
   }
 
   async function install() {
     setMsg(null);
-    const r = tab === "plugins" ? await api.installPlugin(name, source) : await api.installTool(name, source);
+    const r = tab === "agents" ? await api.installAgent(name, source) : await api.installTool(name, source);
     if (r.error) setMsg({ ok: false, text: r.error });
     else {
       setMsg({ ok: true, text: `installed ${r.path} — loaded on the next daemon tick` });
@@ -71,11 +71,15 @@ export function Agents() {
   }
 
   return (
+    <>
+    <PageIntro icon="◆" sub="An agent proposes inert Decision data; a tool executes a namespaced action." to="/help#agents">
+      Extend Jaros at runtime. Drop in an <b>agent</b> or a custom <b>tool</b> and the daemon loads it on the next tick — no restart.
+    </PageIntro>
     <div className="grid cols-2" style={{ alignItems: "start" }}>
       <div className="grid" style={{ gap: 16 }}>
-        <Card title="Plugin agents" desc="loaded from plugins/ at runtime — no restart" right={<span className="hint mono">{agents.plugins.length}</span>}>
-          {agents.plugins.length === 0 ? <Empty>No plugin agents installed.</Empty> : (
-            <table><tbody>{agents.plugins.map((p) => <tr key={p}><td><span className="tag green">◆</span></td><td>{p}</td></tr>)}</tbody></table>
+        <Card title={<>Agents <Tip text="Loaded from the data dir's agents/ folder. Each declares a KIND and a build(llm) factory." /></>} desc="loaded from agents/ at runtime — no restart" right={<span className="hint mono">{agents.agents.length}</span>}>
+          {agents.agents.length === 0 ? <Empty>No agents installed.</Empty> : (
+            <table><tbody>{agents.agents.map((p) => <tr key={p}><td><span className="tag green">◆</span></td><td>{p}</td></tr>)}</tbody></table>
           )}
         </Card>
         <Card title="Custom tools" desc="namespaced actions loaded from tools/" right={<span className="hint mono">{agents.tools.length}</span>}>
@@ -90,7 +94,7 @@ export function Agents() {
         desc="dropped atomically into the shared volume"
         right={
           <div className="row">
-            <button className={tab === "plugins" ? "primary" : ""} onClick={() => pick("plugins")}>Plugin</button>
+            <button className={tab === "agents" ? "primary" : ""} onClick={() => pick("agents")}>Agent</button>
             <button className={tab === "tools" ? "primary" : ""} onClick={() => pick("tools")}>Tool</button>
           </div>
         }
@@ -100,11 +104,12 @@ export function Agents() {
         <label className="field">Source (Python)</label>
         <textarea rows={16} value={source} onChange={(e) => setSource(e.target.value)} style={{ marginBottom: 12 }} />
         <div className="row">
-          <button className="primary" onClick={install}>Install {tab === "plugins" ? "plugin" : "tool"}</button>
+          <button className="primary" onClick={install}>Install {tab === "agents" ? "agent" : "tool"}</button>
           {msg && <span style={{ color: msg.ok ? "var(--green)" : "var(--red)", fontSize: 12 }}>{msg.text}</span>}
         </div>
       </Card>
     </div>
+    </>
   );
 }
 // #EXT-010-REQ-4 End

@@ -6,9 +6,9 @@
     { "file": "examples/readonly/tools/text_count_tool.py", "startLine": 1, "endLine": 41 }
   ],
   "REQ-2": [
-    { "file": "examples/readonly/plugins/system_health_agent.py", "startLine": 1, "endLine": 31 },
-    { "file": "examples/readonly/plugins/disk_monitor_agent.py", "startLine": 1, "endLine": 31 },
-    { "file": "examples/readonly/plugins/inventory_agent.py", "startLine": 1, "endLine": 31 },
-    { "file": "examples/readonly/plugins/text_metrics_agent.py", "startLine": 1, "endLine": 31 }
+    { "file": "examples/readonly/agents/system_health_agent.py", "startLine": 1, "endLine": 31 },
+    { "file": "examples/readonly/agents/disk_monitor_agent.py", "startLine": 1, "endLine": 31 },
+    { "file": "examples/readonly/agents/inventory_agent.py", "startLine": 1, "endLine": 31 },
+    { "file": "examples/readonly/agents/text_metrics_agent.py", "startLine": 1, "endLine": 31 }
   ]
 }

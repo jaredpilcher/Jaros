@@ -1,4 +1,4 @@
-"""Read-only plugin agent: ``text-metrics``.
+"""Read-only agent: ``text-metrics``.
 
 Proposes a `text.count` decision to measure a text file (line/word/char counts).
 Read-only — the `text.count` tool opens the file for reading only.
