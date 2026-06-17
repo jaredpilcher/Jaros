@@ -51,8 +51,8 @@ from jaros.state import (
     record_decision,
 )
 
-#: The built-in agent kind the daemon registers an executor handler for.
-ADVANCE_KIND = "advance"
+#: The built-in decision type the daemon registers an executor handler for.
+ADVANCE_TYPE = "advance"
 
 #: The harness agent id used by the daemon to write per-job results to outbox.
 _WRITER_AGENT = "daemon-writer"
@@ -146,8 +146,8 @@ class Daemon:
             self._claim_lease_s = (int(lease_ms) if lease_ms else 60000) / 1000.0
         except ValueError:
             self._claim_lease_s = 60.0
-        # Reference counts for per-kind harness grants, so concurrent jobs of the
-        # same kind share one grant (torn down only when the last finishes).
+        # Reference counts for per-agent harness grants, so concurrent jobs for
+        # the same agent share one grant (torn down only when the last finishes).
         self._grant_refs: dict[str, int] = {}
         env_tick = os.environ.get("JAROS_TICK_MS")
         if env_tick is not None:
@@ -283,30 +283,30 @@ class Daemon:
         raw = job_path.read_text(encoding="utf-8")
         job = json.loads(raw)
         job_id = job["id"]
-        kind = job["kind"]
+        agent = job["agent"]
         job_input = job.get("input")
 
-        boundary = self.registry.resolve(kind)  # KeyError -> failed/ (REQ-5)
+        boundary = self.registry.resolve(agent)  # KeyError -> failed/ (REQ-5)
 
-        # Spawn each job kind under a fixed least-privilege role. Capability-safety
+        # Spawn each agent under a fixed least-privilege role. Capability-safety
         # is structural least-privilege via the harness-granted handles (EXT-005);
         # Jaros enforces no authorization policy of its own.
         role_name = "GuestRole"
 
         # Spawn in the harness under its assigned role before running reasoning.
-        # Reference-counted so concurrent jobs of the same kind share one grant
+        # Reference-counted so concurrent jobs for the same agent share one grant
         # (one job's teardown must not revoke the grant another is still using).
         with self._lock:
-            if self._grant_refs.get(kind, 0) == 0:
-                self.harness.spawn(kind, GrantSpec(role=role_name, fs=self.fs, queue=self.queue))
-            self._grant_refs[kind] = self._grant_refs.get(kind, 0) + 1
+            if self._grant_refs.get(agent, 0) == 0:
+                self.harness.spawn(agent, GrantSpec(role=role_name, fs=self.fs, queue=self.queue))
+            self._grant_refs[agent] = self._grant_refs.get(agent, 0) + 1
 
         try:
             # Run the boundary directly (we are already in a pool thread)
             decisions = boundary.decide(job_input)
 
             if not decisions:
-                raise RuntimeError(f"agent for kind {kind!r} emitted no decision")
+                raise RuntimeError(f"agent {agent!r} emitted no decision")
 
             decision = decisions[0]
             
@@ -333,7 +333,7 @@ class Daemon:
 
                 # Write the per-job result to outbox via the harness (mediated fs.write).
                 payload = json.dumps(
-                    {"id": job_id, "kind": kind, "result": self.last_result},
+                    {"id": job_id, "agent": agent, "result": self.last_result},
                     indent=2,
                     sort_keys=True,
                 )
@@ -343,10 +343,10 @@ class Daemon:
                     raise RuntimeError(f"harness denied outbox write: {ar.reason}")
         finally:
             with self._lock:
-                self._grant_refs[kind] = self._grant_refs.get(kind, 1) - 1
-                if self._grant_refs[kind] <= 0:
-                    self._grant_refs.pop(kind, None)
-                    self.harness.teardown(kind)
+                self._grant_refs[agent] = self._grant_refs.get(agent, 1) - 1
+                if self._grant_refs[agent] <= 0:
+                    self._grant_refs.pop(agent, None)
+                    self.harness.teardown(agent)
 
     def _move(self, job_path: Path, area: str) -> Path | None:
         """Move ``job_path`` into ``<data>/<area>/`` so it never runs twice.
@@ -362,16 +362,18 @@ class Daemon:
         return dest
     # #EXT-007-REQ-2 End
 
-    # -- observable status + heartbeat --------------------------------------
+    # -- observable status ---------------------------------------------------
 
     # #EXT-007-REQ-4 Start
     def _write_status(self) -> None:
-        """Serialize live state to ``<data>/status.json`` atomically + heartbeat.
+        """Serialize live state to ``<data>/status.json`` atomically.
 
         Writes the current machine state, an agent-pool snapshot, processed /
         failed counts, the last result, the tick number, and uptime. The write
-        is atomic (temp file + ``os.replace``). A one-line ``JAROS_HEARTBEAT``
-        record is also printed to stdout so an operator can watch via logs.
+        is atomic (temp file + ``os.replace``). This runs every tick but stays
+        silent on stdout — only meaningful events (a job completing or failing,
+        a schedule firing) are logged, so the console / ``jaros watch`` follow
+        ``status.json`` rather than a per-tick heartbeat.
         """
         try:
             snapshot = self.pool.snapshot()
@@ -397,23 +399,17 @@ class Daemon:
                 "uptimeSec": round(time.monotonic() - self._started_at, 3),
             }
             # Atomic write: temp file in base_dir + os.replace into status.json.
+            # status.json is refreshed every tick (the console + `jaros watch`
+            # read it); stdout stays quiet — only meaningful events (a job
+            # completing/failing, a schedule firing) print, so the log shows
+            # changes, not a per-tick heartbeat.
             target = self.fs.base_dir / "status.json"
             tmp = target.with_name(f".status.{os.getpid()}.tmp")
             tmp.write_text(json.dumps(status, indent=2, sort_keys=True), encoding="utf-8")
             os.replace(tmp, target)
-
-            print(
-                f"JAROS_HEARTBEAT tick={self.tick_count} state={self.state} "
-                f"active={active} processed={self.processed} failed={self.failed}",
-                flush=True,
-            )
         except Exception as exc:
-            # Contain any temporary filesystem write errors and print it as a heartbeat warning
-            print(
-                f"JAROS_HEARTBEAT tick={self.tick_count} state={self.state} "
-                f"STATUS_WRITE_ERROR={exc}",
-                flush=True,
-            )
+            # Contain temporary filesystem write errors (rare) and surface them once.
+            print(f"[jaros] status write error: {exc}", flush=True)
     # #EXT-007-REQ-4 End
 
     # -- native scheduling --------------------------------------------------
@@ -438,14 +434,14 @@ class Daemon:
                 tmp = inbox / f".tmp-{job_id}"
                 dest = inbox / f"{job_id}.json"
                 tmp.write_text(
-                    json.dumps({"id": job_id, "kind": sch.kind, "input": sch.input}),
+                    json.dumps({"id": job_id, "agent": sch.agent, "input": sch.input}),
                     encoding="utf-8",
                 )
                 os.replace(tmp, dest)
                 self.scheduler.mark_fired(sch, now)
                 with self._lock:
                     self.scheduled += 1
-                print(f"JAROS_SCHED fired schedule={sch.id} kind={sch.kind} job={job_id}", flush=True)
+                print(f"JAROS_SCHED fired schedule={sch.id} agent={sch.agent} job={job_id}", flush=True)
             except Exception as exc:
                 print(f"JAROS_SCHED FAILED schedule={sch.id}: {exc}", flush=True)
     # #EXT-011-REQ-4 End

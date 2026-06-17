@@ -28,7 +28,7 @@ class Schedule:
     """One operator-defined scheduled job and its trigger."""
 
     id: str
-    kind: str
+    agent: str
     input: Any = None
     enabled: bool = True
     every_seconds: int | None = None
@@ -48,8 +48,8 @@ class Schedule:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Schedule":
         """Build + validate a Schedule from a parsed schedule file."""
-        if not isinstance(data, dict) or not data.get("id") or not data.get("kind"):
-            raise ValueError("schedule requires non-empty 'id' and 'kind'")
+        if not isinstance(data, dict) or not data.get("id") or not data.get("agent"):
+            raise ValueError("schedule requires non-empty 'id' and 'agent'")
         triggers = [t for t in ("every_seconds", "cron", "at") if data.get(t) is not None]
         if len(triggers) != 1:
             raise ValueError(
@@ -65,7 +65,7 @@ class Schedule:
             datetime.fromisoformat(str(data["at"]))  # validate timestamp now
         return cls(
             id=str(data["id"]),
-            kind=str(data["kind"]),
+            agent=str(data["agent"]),
             input=data.get("input"),
             enabled=bool(data.get("enabled", True)),
             every_seconds=every,
@@ -185,7 +185,7 @@ class Scheduler:
             last = st.get("lastRun")
             out.append({
                 "id": s.id,
-                "kind": s.kind,
+                "agent": s.agent,
                 "trigger": s.trigger,
                 "enabled": s.enabled,
                 "lastRun": datetime.fromtimestamp(float(last)).isoformat(timespec="seconds") if last else None,

@@ -31,7 +31,7 @@ def _record_run(data: Path, n: int = 2) -> None:
     d = Daemon(data)
     for i in range(n):
         (data / "inbox" / f"j{i}.json").write_text(
-            json.dumps({"id": f"j{i}", "kind": "advance", "input": {"note": f"r{i}"}}),
+            json.dumps({"id": f"j{i}", "agent": "advance", "input": {"note": f"r{i}"}}),
             encoding="utf-8",
         )
     for _ in range(60):

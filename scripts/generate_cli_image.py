@@ -10,6 +10,7 @@ Run:  python scripts/generate_cli_image.py
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -49,50 +50,89 @@ def _font(bold: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.load_default()
 
 
+def _env() -> dict:
+    # Render the public default: the echo/`default` mock provider, ignoring any
+    # local .env (the explicit var wins over python-dotenv's setdefault).
+    return {**os.environ, "JAROS_LLM_PROVIDER": "default"}
+
+
+def _scrub(text: str, data: Path) -> str:
+    # Present a clean, portable data dir (and POSIX separators) instead of the
+    # throwaway temp path, so the picture reads the same on any OS.
+    out = text.replace(str(data), "/tmp/jaros")
+    return "\n".join(ln.replace("\\", "/") if "/tmp/jaros" in ln else ln for ln in out.splitlines())
+
+
 def _run(args: list[str], data: Path) -> str:
     r = subprocess.run(
         [sys.executable, "-m", "jaros.cli", "--data-dir", str(data), *args],
-        cwd=str(REPO), capture_output=True, text=True,
+        cwd=str(REPO), capture_output=True, text=True, env=_env(),
     )
-    out = (r.stdout or r.stderr).rstrip("\n")
-    # Present a clean, portable data dir (and POSIX separators) instead of the
-    # throwaway temp path, so the picture reads the same on any OS.
-    out = out.replace(str(data), "/tmp/jaros")
-    return "\n".join(ln.replace("\\", "/") if "/tmp/jaros" in ln else ln for ln in out.splitlines())
+    return _scrub((r.stdout or r.stderr).rstrip("\n"), data)
+
+
+def _kill_tree(proc: subprocess.Popen) -> None:
+    """Kill the daemon and any child it spawned (e.g. the web console)."""
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                       capture_output=True)
+    else:
+        proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+
+
 
 
 def _capture() -> list[tuple[str, tuple[int, int, int]]]:
     """Run a real session and return styled (text, color) lines."""
-    data = Path(tempfile.mkdtemp(prefix="jaros-cli-img-"))
-    for area, src in (("agents", "examples/readonly/agents"), ("tools", "examples/readonly/tools"),
-                      ("evals", "examples/readonly/evals")):
-        (data / area).mkdir(parents=True, exist_ok=True)
-        for f in (REPO / src).glob("*"):
-            if f.suffix in (".py", ".json"):
-                shutil.copy(f, data / area / f.name)
+    data = Path(tempfile.mkdtemp(prefix="jaros-cli-img-")) / ".jaros-data"
 
+    lines: list[tuple[str, tuple[int, int, int]]] = []
+
+    def cmd(c: str) -> None:
+        lines.append((f"$ jaros {c}", CMD))
+
+    def out(text: str, color=TEXT) -> None:
+        for ln in text.splitlines():
+            lines.append((f"  {ln}", color))
+
+    # 1. Scaffold a ready-to-run node with the bundled example agents — the real
+    #    `jaros init` output, nothing faked.
+    lines.append(("# scaffold a node with bundled example agents/tools/evals/schedules", MUTED))
+    cmd("init --with-examples")
+    init_out = _run(["init", "--with-examples"], data)
+    # Keep the picture compact: the staged-file list, not every line.
+    for ln in init_out.splitlines():
+        low = ln.strip().lower()
+        col = OK if low.startswith(("created", "staged")) else MUTED if ln.strip().startswith("#") else TEXT
+        lines.append((f"  {ln}", col))
+    lines.append(("", TEXT))
+
+    # 2. Boot the node and capture the real startup banner (clean, change-only logs).
     serve = subprocess.Popen(
         [sys.executable, "-m", "jaros.cli", "--data-dir", str(data), "serve"],
-        cwd=str(REPO), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        cwd=str(REPO), stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+        text=True, env=_env(),
     )
-    lines: list[tuple[str, tuple[int, int, int]]] = []
     try:
+        lines.append(("# boot the node + web console; then it stays quiet, logging only events", MUTED))
+        cmd("serve")
+        for _ in range(40):
+            line = serve.stderr.readline()
+            if not line:
+                break
+            out(_scrub(line.rstrip("\n"), data), BLUE)
+            if "Ctrl-C to stop" in line:
+                break
+        lines.append(("", TEXT))
+
         for _ in range(60):
             if (data / "status.json").exists():
                 break
             time.sleep(0.25)
-
-        def cmd(c: str) -> None:
-            lines.append((f"$ jaros {c}", CMD))
-
-        def out(text: str, color=TEXT) -> None:
-            for ln in text.splitlines():
-                lines.append((f"  {ln}", color))
-
-        lines.append(("# zero infrastructure: no server, no database, no broker — just files + threads", MUTED))
-        cmd("serve --data-dir /tmp/jaros &")
-        out("node up · watching inbox/ · agents loaded from agents/", BLUE)
-        lines.append(("", TEXT))
 
         cmd("submit advance --input '{}'")
         out(_run(["submit", "advance", "--input", "{}"], data), OK)
@@ -131,12 +171,8 @@ def _capture() -> list[tuple[str, tuple[int, int, int]]]:
         lines.append(("$ ", PROMPT))
         return lines
     finally:
-        serve.terminate()
-        try:
-            serve.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            serve.kill()
-        shutil.rmtree(data, ignore_errors=True)
+        _kill_tree(serve)
+        shutil.rmtree(data.parent, ignore_errors=True)
 
 
 def _render(lines: list[tuple[str, tuple[int, int, int]]], out_path: Path) -> None:

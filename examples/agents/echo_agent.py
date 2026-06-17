@@ -5,7 +5,7 @@ registers it at runtime with no restart (EXT-007 / REQ-3). The agent reasons
 (here, trivially) and emits a single inert ``advance`` Decision that drives a
 job PENDING -> RUNNING -> DONE, attaching an echoed note from the job input.
 
-An agent module must expose a module-level ``KIND: str`` and a
+An agent module must expose a module-level ``NAME: str`` and a
 ``build(llm) -> ReasoningBoundary``.
 """
 
@@ -16,7 +16,7 @@ import uuid
 from jaros.core import create_decision
 
 
-KIND = "echo"
+NAME = "echo"
 
 
 class EchoBoundary:
@@ -31,7 +31,7 @@ class EchoBoundary:
             create_decision(
                 id=f"echo-{uuid.uuid4().hex}",
                 source="echo",
-                kind="advance",
+                type="advance",
                 payload={"events": ["start", "complete"], "note": f"echo: {msg}"},
             )
         ]

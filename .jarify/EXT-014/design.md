@@ -25,7 +25,7 @@ agent-kit/
 │   ├── public-api.md         exact signatures an author calls
 │   └── workflow.md           the CLI loop: serve / submit / replay / eval
 └── templates/                runnable, matched starter set (`word-count`)
-    ├── agent.py              ReasoningBoundary: KIND + build(llm) + decide
+    ├── agent.py              ReasoningBoundary: NAME + build(llm) + decide
     ├── tool.py               NAME + validate + execute (deterministic)
     ├── eval.json             input -> expected decision/result
     └── schedule.json         interval/cron/one-shot

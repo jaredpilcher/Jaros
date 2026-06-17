@@ -7,12 +7,12 @@ its only output is data. The matching side effect lives in a tool (see
 
 To use this template:
   1. Copy it to `<data-dir>/agents/word_count_agent.py` (rename as you like).
-  2. Change `KIND`, the decision `kind`/`source`, and the `payload` you emit.
+  2. Change `NAME`, the decision `kind`/`source`, and the `payload` you emit.
   3. If the `kind` names a custom action, ship a matching tool (see `tool.py`).
 The daemon imports every `*.py` in `agents/` on its next tick — no restart.
 
 Contract (required by `jaros.registry.load_agents`):
-  - a module-level `KIND: str`
+  - a module-level `NAME: str`
   - a `build(llm) -> ReasoningBoundary` factory
   - the boundary exposes `decide(context) -> list[Decision]`
 """
@@ -23,8 +23,9 @@ import uuid
 
 from jaros.core import create_decision
 
-# The job kind this agent answers. `jaros submit word-count ...` routes here.
-KIND = "word-count"
+# This agent's name — what a job's `agent` field selects.
+# `jaros submit word-count ...` routes here.
+NAME = "word-count"
 
 
 class WordCountBoundary:
@@ -43,7 +44,7 @@ class WordCountBoundary:
         return [
             create_decision(
                 id=f"wc-{uuid.uuid4().hex}",   # unique per decision
-                source=KIND,                    # the emitting agent
+                source=NAME,                    # the emitting agent
                 kind="text.wordcount",          # MUST match the tool's NAME
                 payload={"path": path},         # inert, JSON-serializable data only
             )

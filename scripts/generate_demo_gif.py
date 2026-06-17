@@ -123,8 +123,8 @@ def replay_script() -> list:
         [
             ("operator@host:~$ ", PROMPT),
             ("cat data/state/decisions.log\n", CMD),
-            ("{\"index\":1,\"decision\":{\"kind\":\"advance\",\"payload\":{...}}}\n", TEXT),
-            ("{\"index\":2,\"decision\":{\"kind\":\"demo.greet\",\"payload\":{...}}}\n", TEXT),
+            ("{\"index\":1,\"decision\":{\"type\":\"advance\",\"payload\":{...}}}\n", TEXT),
+            ("{\"index\":2,\"decision\":{\"type\":\"demo.greet\",\"payload\":{...}}}\n", TEXT),
             ("# the model's outputs, captured as inert data\n", MUTED),
             ("_", TEXT),
         ],

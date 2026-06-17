@@ -31,7 +31,7 @@ def test_run_executes_body_once_and_captures_decisions():
 
     def body():
         calls.append(1)
-        return [create_decision(id="d1", source="a1", kind="noop", payload={})]
+        return [create_decision(id="d1", source="a1", type="noop", payload={})]
 
     agent = AgentThread.spawn("a1", body)
     agent.start()

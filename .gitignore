@@ -5,6 +5,7 @@ __pycache__/
 .mypy_cache/
 build/
 dist/
+node_modules/
 .venv/
 venv/
 *.log

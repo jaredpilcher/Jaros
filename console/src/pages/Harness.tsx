@@ -70,12 +70,12 @@ export function Harness() {
           <Empty>No refused or failed jobs.</Empty>
         ) : (
           <table>
-            <thead><tr><th>job</th><th>kind</th><th>reason</th></tr></thead>
+            <thead><tr><th>job</th><th>agent</th><th>reason</th></tr></thead>
             <tbody>
               {failed.map((j) => (
                 <tr key={j.id}>
                   <td style={{ color: "var(--muted)" }}>{j.id.slice(0, 12)}</td>
-                  <td><span className="tag kind">{j.kind ?? "?"}</span></td>
+                  <td><span className="tag kind">{j.agent ?? "?"}</span></td>
                   <td style={{ color: "var(--red)" }}>{j.reason}</td>
                 </tr>
               ))}

@@ -5,8 +5,8 @@ shared file system at runtime — no daemon restart, no code changes to core.
 
 | File | Where it goes | What it shows |
 | --- | --- | --- |
-| `agents/echo_agent.py` | `<data>/agents/` | An agent (`KIND = "echo"`) that emits an inert `advance` Decision driving a job to `DONE`. |
-| `agents/greeter_agent.py` | `<data>/agents/` | An agent (`KIND = "greeter"`) that proposes a *custom tool* action (`demo.greet`). |
+| `agents/echo_agent.py` | `<data>/agents/` | An agent (`NAME = "echo"`) that emits an inert `advance` Decision driving a job to `DONE`. |
+| `agents/greeter_agent.py` | `<data>/agents/` | An agent (`NAME = "greeter"`) that proposes a *custom tool* action (`demo.greet`). |
 | `tools/greet_tool.py` | `<data>/tools/` | A custom Execution-Plane tool (`NAME = "demo.greet"`) with its own deterministic `validate()`/`execute()`. |
 
 ## Try it
@@ -20,11 +20,12 @@ cp examples/agents/*.py /tmp/jaros-demo/agents/
 cp examples/tools/*.py   /tmp/jaros-demo/tools/
 
 # boot the OS, then from another shell submit work
-jaros serve  --data-dir /tmp/jaros-demo &
-jaros submit advance --input '{}'                      --data-dir /tmp/jaros-demo
-jaros submit echo    --input '{"msg": "hi"}'           --data-dir /tmp/jaros-demo
-jaros submit greeter --input '{"name": "Jaros"}'       --data-dir /tmp/jaros-demo
-jaros watch  --data-dir /tmp/jaros-demo
+export JAROS_DATA_DIR=/tmp/jaros-demo
+jaros serve &
+jaros submit advance --input '{}'
+jaros submit echo    --input '{"msg": "hi"}'
+jaros submit greeter --input '{"name": "Jaros"}'
+jaros watch
 ```
 
 Each accepted decision is recorded to `<data>/state/decisions.log`, so the run is

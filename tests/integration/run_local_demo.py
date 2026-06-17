@@ -84,9 +84,9 @@ def main() -> int:
             ("echo", '{"msg": "hello from the host"}'),
             ("greeter", '{"name": "Jaros"}'),
         ]
-        for kind, payload in jobs:
-            r = _cli(data_dir, "submit", kind, "--input", payload)
-            print(f"[local] submit {kind}: {r.stdout.strip() or r.stderr.strip()}")
+        for agent, payload in jobs:
+            r = _cli(data_dir, "submit", agent, "--input", payload)
+            print(f"[local] submit {agent}: {r.stdout.strip() or r.stderr.strip()}")
             if r.returncode != 0:
                 print("FAIL: submit failed.")
                 return 1
@@ -100,10 +100,10 @@ def main() -> int:
         results = {}
         for f in outbox.glob("*.json"):
             r = json.loads(f.read_text(encoding="utf-8"))
-            results[r.get("kind")] = r.get("result")
+            results[r.get("agent")] = r.get("result")
         print("[local] outbox results:")
-        for kind, res in results.items():
-            print(f"        {kind}: {json.dumps(res)[:160]}")
+        for agent, res in results.items():
+            print(f"        {agent}: {json.dumps(res)[:160]}")
 
         status = json.loads(status_path.read_text(encoding="utf-8"))
         print(f"[local] status: processed={status.get('processed')} "

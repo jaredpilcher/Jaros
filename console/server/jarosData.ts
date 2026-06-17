@@ -88,7 +88,7 @@ export function getStatus(): JarosStatus | null {
 
 export interface DecisionRecord {
   index: number;
-  decision: { id: string; source: string; kind: string; payload: unknown };
+  decision: { id: string; source: string; type: string; payload: unknown };
   checksum: string;
 }
 
@@ -109,7 +109,7 @@ export function getTransitions(): TransitionEntry[] {
 
 export interface JobSummary {
   id: string;
-  kind?: string;
+  agent?: string;
   area: "inbox" | "processed" | "failed";
   reason?: string;
 }
@@ -119,10 +119,10 @@ export function getJobs(): JobSummary[] {
   for (const area of ["inbox", "processed", "failed"] as const) {
     for (const file of listFiles(area, ".json")) {
       const id = file.replace(/\.json$/, "");
-      const body = readJsonSafe<{ kind?: string }>(`${area}/${file}`);
+      const body = readJsonSafe<{ agent?: string }>(`${area}/${file}`);
       const reason =
         area === "failed" ? readTextSafe(`failed/${file}.reason`)?.trim() : undefined;
-      jobs.push({ id, kind: body?.kind, area, reason: reason ?? undefined });
+      jobs.push({ id, agent: body?.agent, area, reason: reason ?? undefined });
     }
   }
   return jobs;
@@ -130,15 +130,15 @@ export function getJobs(): JobSummary[] {
 
 export interface OutboxResult {
   id: string;
-  kind?: string;
+  agent?: string;
   result?: unknown;
 }
 
 export function getOutbox(): OutboxResult[] {
   return listFiles("outbox", ".json").map((file) => {
     const id = file.replace(/\.json$/, "");
-    const body = readJsonSafe<{ kind?: string; result?: unknown }>(`outbox/${file}`);
-    return { id, kind: body?.kind, result: body?.result };
+    const body = readJsonSafe<{ agent?: string; result?: unknown }>(`outbox/${file}`);
+    return { id, agent: body?.agent, result: body?.result };
   });
 }
 
@@ -153,13 +153,13 @@ export function getTools(): string[] {
 
 // #EXT-010-REQ-3 Start
 /** Atomically write a job descriptor into inbox/ (temp file + rename). */
-export function submitJob(kind: string, input: unknown): { id: string } {
+export function submitJob(agent: string, input: unknown): { id: string } {
   const id = randomUUID().replace(/-/g, "");
   const inbox = abs("inbox");
   fs.mkdirSync(inbox, { recursive: true });
   const tmp = path.join(inbox, `.tmp-${id}`);
   const dest = path.join(inbox, `${id}.json`);
-  fs.writeFileSync(tmp, JSON.stringify({ id, kind, input }, null, 2), "utf-8");
+  fs.writeFileSync(tmp, JSON.stringify({ id, agent, input }, null, 2), "utf-8");
   fs.renameSync(tmp, dest);
   return { id };
 }
@@ -186,7 +186,7 @@ export function installModule(area: "agents" | "tools", name: string, source: st
 export interface ScheduleFile {
   name?: string;
   id?: string;
-  kind?: string;
+  agent?: string;
   input?: unknown;
   enabled?: boolean;
   every_seconds?: number;

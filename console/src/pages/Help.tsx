@@ -57,7 +57,7 @@ export function Help() {
 
       <h2 id="jobs" className="anchor">Jobs</h2>
       <p>
-        Submit a job (an agent <code>kind</code> + JSON input) and it is written atomically to the shared
+        Submit a job (an agent <code>name</code> + JSON input) and it is written atomically to the shared
         <code> inbox/</code> — the only way work enters the system. Watch it flow inbox → processed → outbox.
         Use the preset buttons (<code>advance</code>, <code>echo</code>, <code>greeter</code>) for a one-click start.
       </p>

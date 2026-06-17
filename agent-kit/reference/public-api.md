@@ -9,23 +9,23 @@ they are mirrored by the runnable [templates](../templates/) and the working
 ```python
 from jaros.core import create_decision, Decision
 
-create_decision(*, id: str, source: str, kind: str, payload: JsonValue) -> Decision
+create_decision(*, id: str, source: str, type: str, payload: JsonValue) -> Decision
 ```
 
 - `id` — unique per decision (use `uuid.uuid4().hex`).
 - `source` — the emitting agent's name.
-- `kind` — the discriminator; **must equal the tool `NAME`** that executes it.
+- `type` — the discriminator; **must equal the tool `NAME`** that executes it.
 - `payload` — inert, JSON-serializable data ONLY. `create_decision` proves it
   round-trips (`json.loads(json.dumps(payload)) == payload`) and raises otherwise.
 
-`Decision` is a frozen dataclass: `id`, `source`, `kind`, `payload`.
+`Decision` is a frozen dataclass: `id`, `source`, `type`, `payload`.
 
 ## The agent contract (`ReasoningBoundary`)
 
 A module dropped in `agents/` must expose:
 
 ```python
-KIND: str                       # the job kind this agent answers
+NAME: str                       # the agent's name (what a job's `agent` field selects)
 
 def build(llm) -> ReasoningBoundary
     # returns an object exposing:
@@ -45,7 +45,7 @@ A class dropped in `tools/`:
 from jaros.core.decision_gate import ValidationResult
 
 class MyTool:
-    NAME = "my.action"                       # equals the decision kind
+    NAME = "my.action"                       # equals the decision type
 
     def validate(self, decision) -> ValidationResult:
         # cheap, pure structural checks
@@ -61,17 +61,17 @@ only two outcomes.
 
 ## Eval case JSON (`evals/*.json`)
 
-A file is one case object or a list of them. `name` and `kind` are required; every
+A file is one case object or a list of them. `name` and `agent` are required; every
 `expect` key is optional (only the ones present are checked):
 
 ```json
 {
   "name": "human-readable case name",
-  "kind": "word-count",
+  "agent": "word-count",
   "input": { "path": "README.md" },
   "expect": {
     "decision_count": 1,
-    "decision_kind": "text.wordcount",
+    "decision_type": "text.wordcount",
     "source": "word-count",
     "payload_contains": { "path": "README.md" },
     "gate": "accept",
@@ -91,7 +91,7 @@ One object per file. Exactly one trigger: `every_seconds` (int), `cron`
 (5-field string), or `at` (ISO timestamp, one-shot):
 
 ```json
-{ "id": "word-count-hourly", "kind": "word-count",
+{ "id": "word-count-hourly", "agent": "word-count",
   "input": { "path": "README.md" }, "every_seconds": 3600, "enabled": true }
 ```
 

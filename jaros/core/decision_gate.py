@@ -72,8 +72,8 @@ def _structural_check(d: Decision) -> ValidationResult:
         return ValidationResult.reject("decision id must be a non-empty string")
     if not isinstance(d.source, str) or not d.source:
         return ValidationResult.reject("decision source must be a non-empty string")
-    if not isinstance(d.kind, str) or not d.kind:
-        return ValidationResult.reject("decision kind must be a non-empty string")
+    if not isinstance(d.type, str) or not d.type:
+        return ValidationResult.reject("decision type must be a non-empty string")
     try:
         assert_serializable(d.payload)
     except NotSerializableError as exc:

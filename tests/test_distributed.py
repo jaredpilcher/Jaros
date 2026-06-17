@@ -26,10 +26,10 @@ def _isolate():
     reset_validators()
 
 
-def _submit(data: Path, job_id: str, kind: str = "advance", inp=None) -> None:
+def _submit(data: Path, job_id: str, agent: str = "advance", inp=None) -> None:
     (data / "inbox").mkdir(parents=True, exist_ok=True)
     (data / "inbox" / f"{job_id}.json").write_text(
-        json.dumps({"id": job_id, "kind": kind, "input": inp or {}}), encoding="utf-8"
+        json.dumps({"id": job_id, "agent": agent, "input": inp or {}}), encoding="utf-8"
     )
 
 
@@ -64,7 +64,7 @@ def test_stale_claim_is_reclaimed_by_a_live_node(tmp_path: Path):
     # expired lease (old mtime, no heartbeat).
     (tmp_path / "claimed").mkdir(parents=True, exist_ok=True)
     stuck = tmp_path / "claimed" / "stuck.json"
-    stuck.write_text(json.dumps({"id": "stuck", "kind": "advance", "input": {}}), encoding="utf-8")
+    stuck.write_text(json.dumps({"id": "stuck", "agent": "advance", "input": {}}), encoding="utf-8")
     old = time.time() - 100
     os.utime(stuck, (old, old))
 
@@ -83,7 +83,7 @@ def test_fresh_sibling_claim_is_not_stolen(tmp_path: Path):
     # A claim freshly held by a live sibling (recent mtime) must NOT be reclaimed.
     (tmp_path / "claimed").mkdir(parents=True, exist_ok=True)
     (tmp_path / "claimed" / "sib.json").write_text(
-        json.dumps({"id": "sib", "kind": "advance", "input": {}}), encoding="utf-8"
+        json.dumps({"id": "sib", "agent": "advance", "input": {}}), encoding="utf-8"
     )
 
     d = Daemon(tmp_path)

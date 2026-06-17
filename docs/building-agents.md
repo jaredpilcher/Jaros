@@ -75,7 +75,7 @@ class GreeterAgent(ReasoningBoundary):
             create_decision(
                 id="greeter-1",
                 source="greeter",
-                kind="advance",
+                type="advance",
                 payload={
                     "advice": reply.text,
                     "model": reply.model,
@@ -159,7 +159,7 @@ else:
 
 ## Step 4 — Deterministic System Execution
 
-This is the kernel's job, not the agent's. The validation gate checks the decision payload, the executor validates its kind and dispatches to registered deterministic handlers, the state machine transitions and logs durably, and results are written **through the harness-mediated handles**.
+This is the kernel's job, not the agent's. The validation gate checks the decision payload, the executor validates its type and dispatches to registered deterministic handlers, the state machine transitions and logs durably, and results are written **through the harness-mediated handles**.
 
 ```python
 import json
@@ -170,8 +170,8 @@ from jaros.state.machine import commit
 from jaros.state.log import TransitionLog
 from jaros.state.model import INITIAL_STATE
 
-# Register the deterministic handler for this decision kind (the running
-# daemon registers its built-in kinds the same way at boot)
+# Register the deterministic handler for this decision type (the running
+# daemon registers its built-in types the same way at boot)
 register_handler("advance", lambda decision, **collaborators: decision.payload)
 
 # Emitted decision from the agent thread
@@ -182,7 +182,7 @@ gated = validate_decision(decision)
 if not gated.ok:
     raise ValueError(f"Rejected: {gated.reason}")
 
-# 2. Pluggable Executor (EXT-001: dispatches deterministically to registered kind handler)
+# 2. Pluggable Executor (EXT-001: dispatches deterministically to registered type handler)
 applied = apply(gated.value)
 if not applied.applied:
     raise RuntimeError(f"Execution failed: {applied.reason}")
@@ -234,7 +234,7 @@ Every `Decision` proposed by the Reasoning Plane is sent through a deterministic
 #### A. Built-in Structural Gate (Non-Bypassable)
 The gate executes a series of hardcoded structural checks first. These **cannot be removed** by developer configuration, guaranteeing that the system remains safe at the baseline:
 *   Enforces that the decision is a valid frozen `Decision` instance.
-*   Enforces that `id`, `source`, and `kind` are non-empty strings.
+*   Enforces that `id`, `source`, and `type` are non-empty strings.
 *   Enforces that the `payload` is completely recursively JSON-serializable (rejects functions, system handles, bytes, and sets).
 
 #### B. Adding Custom Validation Gates (Policies)
@@ -314,13 +314,13 @@ class ResearchAgent(ReasoningBoundary):
             create_decision(
                 id="trigger-summarizer",
                 source="researcher",
-                kind="advance",
+                type="advance",
                 payload={
                     "events": ["START"],
                     "artifact_path": "inbox/job_summarizer.json",
                     "data": {
                         "id": "job_summarizer",
-                        "kind": "summarizer", # Triggers the summarizer agent kind!
+                        "agent": "summarizer", # Triggers the summarizer agent!
                         "input": {"text": llm_response}
                     }
                 }
@@ -338,7 +338,7 @@ class ResearchAgent(ReasoningBoundary):
             create_decision(
                 id="enqueue-summary",
                 source="researcher",
-                kind="advance",
+                type="advance",
                 payload={
                     "events": ["START"],
                     "action": "queue.send",
@@ -351,14 +351,14 @@ class ResearchAgent(ReasoningBoundary):
 
 ### Pattern C: Safe Host Command Execution (Decoupled Seam)
 If an agent needs to execute a terminal command on the host (e.g. `git status`) and retrieve the stdout, it must never run a process locally inside the container. Instead, it leverages a decoupled event loop via the shared filesystem:
-1. **Agent Proposes**: Emits a `Decision` of kind `"host_command"`, detailing the binary and arguments as pure JSON data.
+1. **Agent Proposes**: Emits a `Decision` of type `"host_command"`, detailing the binary and arguments as pure JSON data.
 2. **Validation Gate**: Validates the command against an allowlist (e.g. `{"git", "dir", "pytest"}`) at the gate.
 3. **Host Runner**: A lightweight runner on the host — the standalone [`jaros-host-runner`](https://github.com/jaredpilcher/jaros-host-runner) companion project — polls `host_inbox/`, safely runs the command against its configured allowlist, and writes the captured results (`returncode`, `stdout`, `stderr`) atomically to `host_outbox/`.
 4. **Agent Ingests**: The agent checks the shared folder `host_outbox/` for the result using `fs_read` capability.
 
 ### Pattern D: Safe Database (PostgreSQL) Queries
 If an agent needs to query a database like PostgreSQL, it must never open direct connection sockets or handle credentials in the Reasoning Plane. Instead, it leverages the pluggable executor dispatch:
-1. **Agent Proposes**: Emits a `Decision` of kind `"db_query"`, declaring the query string and parameterized variables as pure JSON data.
+1. **Agent Proposes**: Emits a `Decision` of type `"db_query"`, declaring the query string and parameterized variables as pure JSON data.
 2. **Validation Gate**: Checks the query structurally at the gate, blocking mutating queries (`DROP`, `DELETE`) and enforcing strict parameterized safety.
 3. **Pluggable Executor**: The Execution Plane dispatches the query to a registered handler which connects securely to PostgreSQL using environment-hidden credentials and returns the serialized JSON results.
 

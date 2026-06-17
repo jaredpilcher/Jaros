@@ -1,9 +1,9 @@
 """The inert Decision contract (EXT-001 / REQ-1).
 
 A Decision is the *only* thing the Reasoning Plane may emit. It is immutable,
-JSON-serializable data: it carries intent (``kind``) and inert ``payload`` data,
+JSON-serializable data: it carries intent (``type``) and inert ``payload`` data,
 never callbacks, closures, or handles. It records its ``source`` (the emitting
-agent) and a discriminated ``kind`` so the executor can dispatch deterministically.
+agent) and a discriminated ``type`` so the executor can dispatch deterministically.
 """
 
 from __future__ import annotations
@@ -22,13 +22,13 @@ class Decision:
     Attributes:
         id: Unique identifier for this decision.
         source: Identifier of the emitting agent/source.
-        kind: Discriminator used for deterministic executor dispatch.
+        type: Discriminator used for deterministic executor dispatch.
         payload: Inert, JSON-serializable data only.
     """
 
     id: str
     source: str
-    kind: str
+    type: str
     payload: JsonValue
 
 
@@ -36,7 +36,7 @@ def create_decision(
     *,
     id: str,
     source: str,
-    kind: str,
+    type: str,
     payload: JsonValue,
 ) -> Decision:
     """Construct a validated, frozen :class:`Decision`.
@@ -52,5 +52,5 @@ def create_decision(
     # Prove serialize -> deserialize -> identical (the Decision is pure data).
     if json.loads(json.dumps(payload)) != payload:
         raise ValueError("payload is not JSON round-trippable")
-    return Decision(id=id, source=source, kind=kind, payload=payload)
+    return Decision(id=id, source=source, type=type, payload=payload)
 # #EXT-001-REQ-1 End

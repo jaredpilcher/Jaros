@@ -27,11 +27,11 @@ export interface Snapshot {
   };
 }
 
-export interface Job { id: string; kind?: string; area: "inbox" | "processed" | "failed"; reason?: string }
-export interface OutboxResult { id: string; kind?: string; result?: unknown }
+export interface Job { id: string; agent?: string; area: "inbox" | "processed" | "failed"; reason?: string }
+export interface OutboxResult { id: string; agent?: string; result?: unknown }
 export interface DecisionRecord {
   index: number;
-  decision: { id: string; source: string; kind: string; payload: unknown };
+  decision: { id: string; source: string; type: string; payload: unknown };
   checksum: string;
 }
 export interface TransitionEntry { index: number; event: string; state: string; checksum: string }
@@ -39,7 +39,7 @@ export interface Agents { agents: string[]; tools: string[] }
 export interface ScheduleRow {
   name: string;
   id?: string;
-  kind?: string;
+  agent?: string;
   input?: unknown;
   enabled?: boolean;
   every_seconds?: number;
@@ -104,7 +104,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 export const api = {
   snapshot: () => get<Snapshot>("/snapshot"),
   jobs: () => get<Job[]>("/jobs"),
-  submitJob: (kind: string, input: string) => post<{ id?: string; error?: string }>("/jobs", { kind, input }),
+  submitJob: (agent: string, input: string) => post<{ id?: string; error?: string }>("/jobs", { agent, input }),
   outbox: () => get<OutboxResult[]>("/outbox"),
   decisions: () => get<DecisionRecord[]>("/decisions"),
   transitions: () => get<TransitionEntry[]>("/transitions"),

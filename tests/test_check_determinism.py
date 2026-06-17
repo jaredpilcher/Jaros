@@ -58,7 +58,7 @@ def test_guardrail_would_catch_nondeterminism():
 
     executor.register_handler("advance", flaky)
     dlog = DecisionLog(Path(tempfile.mkdtemp()) / "state")
-    record_decision(dlog, create_decision(id="d", source="x", kind="advance", payload={}))
+    record_decision(dlog, create_decision(id="d", source="x", type="advance", payload={}))
 
     def replay_once() -> bytes:
         log = TransitionLog(Path(tempfile.mkdtemp()))

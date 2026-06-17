@@ -74,7 +74,7 @@ def test_custom_tool_validate_rejects_bad_payload(tmp_path):
     bad = create_decision(
         id="dec-bad-1",
         source="auditor",
-        kind="db.accounts.read",
+        type="db.accounts.read",
         payload={},
     )
     gated_bad = validate_decision(bad)
@@ -91,7 +91,7 @@ def test_custom_tool_validate_and_execute(tmp_path):
     ok = create_decision(
         id="dec-ok-1",
         source="auditor",
-        kind="db.accounts.read",
+        type="db.accounts.read",
         payload={"account_id": "acc_123"},
     )
     gated_ok = validate_decision(ok)

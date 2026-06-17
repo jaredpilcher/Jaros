@@ -56,23 +56,23 @@ $ jaros submit planner --input '{"ticket":"can't log in after a password reset"}
 ## Run it
 
 ```bash
-DATA=/tmp/jaros-swarm
-mkdir -p $DATA/agents $DATA/tools
-cp examples/swarm/agents/*.py $DATA/agents/
-cp examples/swarm/tools/*.py   $DATA/tools/
+export JAROS_DATA_DIR=/tmp/jaros-swarm
+mkdir -p $JAROS_DATA_DIR/agents $JAROS_DATA_DIR/tools
+cp examples/swarm/agents/*.py $JAROS_DATA_DIR/agents/
+cp examples/swarm/tools/*.py   $JAROS_DATA_DIR/tools/
 
-JAROS_LLM_PROVIDER=default jaros serve --data-dir $DATA &
+JAROS_LLM_PROVIDER=default jaros serve &
 
 # a hive triaging two tickets + one seeded bad handoff
 for t in "login fails" "double charge"; do
-  jaros submit planner  --input "{\"ticket\":\"$t\"}" --data-dir $DATA
-  jaros submit worker   --input "{\"ticket\":\"$t\"}" --data-dir $DATA
-  jaros submit reviewer --input "{\"ticket\":\"$t\"}" --data-dir $DATA
+  jaros submit planner  --input "{\"ticket\":\"$t\"}"
+  jaros submit worker   --input "{\"ticket\":\"$t\"}"
+  jaros submit reviewer --input "{\"ticket\":\"$t\"}"
 done
-jaros submit worker --input '{"ticket":"refund","bad":true}' --data-dir $DATA   # the culprit
+jaros submit worker --input '{"ticket":"refund","bad":true}'   # the culprit
 
 # replay the WHOLE swarm and find who broke it
-jaros replay --data-dir $DATA
+jaros replay
 #   replayed 7 recorded decisions across 3 agent(s) - model calls: 0
 #       planner   2 ·  reviewer 2 ·  worker 3
 #   reconstructed state : DONE

@@ -10,7 +10,7 @@ type TriggerKind = (typeof TRIGGERS)[number];
 export function Schedules() {
   const [rows, setRows] = useState<ScheduleRow[]>([]);
   const [name, setName] = useState("my-schedule");
-  const [kind, setKind] = useState("system-health");
+  const [agent, setAgent] = useState("system-health");
   const [input, setInput] = useState("{}");
   const [triggerKind, setTriggerKind] = useState<TriggerKind>("every_seconds");
   const [triggerVal, setTriggerVal] = useState("60");
@@ -34,7 +34,7 @@ export function Schedules() {
       setMsg({ ok: false, text: "input must be valid JSON" });
       return;
     }
-    const schedule: Record<string, unknown> = { id: name, kind, input: parsedInput, enabled };
+    const schedule: Record<string, unknown> = { id: name, agent, input: parsedInput, enabled };
     schedule[triggerKind] = triggerKind === "every_seconds" ? Number(triggerVal) : triggerVal;
     const r = await api.createSchedule(name, schedule);
     if (r.error) setMsg({ ok: false, text: r.error });
@@ -47,7 +47,7 @@ export function Schedules() {
   async function toggle(row: ScheduleRow) {
     const schedule: Record<string, unknown> = {
       id: row.id ?? row.name,
-      kind: row.kind,
+      agent: row.agent,
       input: row.input ?? {},
       enabled: !row.enabled,
     };
@@ -75,13 +75,13 @@ export function Schedules() {
         ) : (
           <table>
             <thead>
-              <tr><th>id</th><th>kind</th><th>trigger</th><th>next / last</th><th></th></tr>
+              <tr><th>id</th><th>agent</th><th>trigger</th><th>next / last</th><th></th></tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.name}>
                   <td>{r.id ?? r.name}</td>
-                  <td><span className="tag kind">{r.kind ?? "?"}</span></td>
+                  <td><span className="tag kind">{r.agent ?? "?"}</span></td>
                   <td>{r.trigger ?? (r.every_seconds != null ? `every ${r.every_seconds}s` : r.cron ? `cron ${r.cron}` : r.at ? `at ${r.at}` : "?")}</td>
                   <td style={{ color: "var(--muted)" }}>
                     {r.nextRun ? `→ ${r.nextRun}` : "—"}<br />
@@ -106,8 +106,8 @@ export function Schedules() {
       <Card title="New schedule" desc="written to schedules/ — the daemon dispatches it natively">
         <label className="field">Name</label>
         <input value={name} onChange={(e) => setName(e.target.value)} style={{ marginBottom: 12 }} />
-        <label className="field">Agent kind</label>
-        <input value={kind} onChange={(e) => setKind(e.target.value)} style={{ marginBottom: 12 }} />
+        <label className="field">Agent</label>
+        <input value={agent} onChange={(e) => setAgent(e.target.value)} style={{ marginBottom: 12 }} />
         <label className="field">Input (JSON)</label>
         <textarea rows={3} value={input} onChange={(e) => setInput(e.target.value)} style={{ marginBottom: 12 }} />
         <label className="field">Trigger</label>

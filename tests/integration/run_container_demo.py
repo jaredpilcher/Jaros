@@ -101,13 +101,13 @@ def main() -> int:
             ("echo", '{"msg": "hello from the host"}'),
             ("greeter", '{"name": "Jaros"}'),
         ]
-        for kind, payload in jobs:
+        for agent, payload in jobs:
             submit = _run(
                 [sys.executable, "-m", "jaros.cli", "--data-dir", str(data_dir),
-                 "submit", kind, "--input", payload],
+                 "submit", agent, "--input", payload],
                 cwd=str(REPO_ROOT),
             )
-            print(f"[demo] submit {kind}: {submit.stdout.strip() or submit.stderr.strip()}")
+            print(f"[demo] submit {agent}: {submit.stdout.strip() or submit.stderr.strip()}")
             if submit.returncode != 0:
                 print(submit.stderr)
                 print("FAIL: `jaros submit` failed.")
@@ -123,11 +123,11 @@ def main() -> int:
         results = {}
         for f in outbox.glob("*.json"):
             r = json.loads(f.read_text(encoding="utf-8"))
-            results[r.get("kind")] = r.get("result")
+            results[r.get("agent")] = r.get("result")
         status = json.loads(status_path.read_text(encoding="utf-8"))
         print("[demo] outbox results:")
-        for kind, res in results.items():
-            print(f"        {kind}: {json.dumps(res)[:160]}")
+        for agent, res in results.items():
+            print(f"        {agent}: {json.dumps(res)[:160]}")
         print(f"[demo] status: processed={status.get('processed')} "
               f"failed={status.get('failed')} state={status.get('state')}")
 

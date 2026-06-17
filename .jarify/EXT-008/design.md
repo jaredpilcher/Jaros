@@ -20,7 +20,7 @@ The CLI is a thin, pure-files client. The shared data directory (a Docker-mounte
 
 ```text
   jaros serve                 run the daemon (used inside the container)
-  jaros submit <kind> [--input JSON]   -> inbox/<id>.json
+  jaros submit <agent> [--input JSON]   -> inbox/<id>.json
   jaros add-agent <file.py> [--name K] -> agents/<file>.py
   jaros status                -> print status.json
   jaros watch [--interval S]  -> live status + new outbox results

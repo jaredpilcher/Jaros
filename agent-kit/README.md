@@ -41,20 +41,20 @@ The four templates form one coherent `word-count` example. Stage them and run th
 suite — they pass unmodified, so they are a correct starting point, not pseudocode:
 
 ```bash
-DATA=/tmp/jaros
-mkdir -p $DATA/agents $DATA/tools $DATA/evals
-cp agent-kit/templates/agent.py  $DATA/agents/word_count_agent.py
-cp agent-kit/templates/tool.py   $DATA/tools/word_count_tool.py
-cp agent-kit/templates/eval.json $DATA/evals/word_count.json
-jaros eval --data-dir $DATA        # -> 1/1 eval cases passed  (exit 0)
+export JAROS_DATA_DIR=/tmp/jaros
+mkdir -p $JAROS_DATA_DIR/agents $JAROS_DATA_DIR/tools $JAROS_DATA_DIR/evals
+cp agent-kit/templates/agent.py  $JAROS_DATA_DIR/agents/word_count_agent.py
+cp agent-kit/templates/tool.py   $JAROS_DATA_DIR/tools/word_count_tool.py
+cp agent-kit/templates/eval.json $JAROS_DATA_DIR/evals/word_count.json
+jaros eval        # -> 1/1 eval cases passed  (exit 0)
 ```
 
 ## How to finish (definition of done)
 
 Whatever you author, verify it before you call it done:
 
-1. `jaros eval --data-dir <dir>` exits 0.
-2. `jaros replay --data-dir <dir> --json` shows `"modelCalls": 0` and
+1. `jaros eval` exits 0.
+2. `jaros replay --json` shows `"modelCalls": 0` and
    `"byteIdentical": true` (your `execute()` is deterministic).
 3. The repo suite still passes: `pytest`.
 

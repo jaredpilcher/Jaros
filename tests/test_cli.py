@@ -76,7 +76,7 @@ def test_submit_writes_valid_job_with_parsed_input(tmp_path, capsys):
     jobs = list(inbox.glob("*.json"))
     assert len(jobs) == 1
     job = json.loads(jobs[0].read_text(encoding="utf-8"))
-    assert job["kind"] == "advance"
+    assert job["agent"] == "advance"
     assert job["input"] == {"x": 1}
     assert job["id"] == jobs[0].stem  # id matches filename
     # printed id + path
@@ -114,7 +114,7 @@ def test_submit_no_partial_temp_file_left(tmp_path):
 
 # --- add-agent -------------------------------------------------------------
 
-def _write_agent(tmp_path, body='KIND = "greet"\n\ndef build(llm):\n    return None\n'):
+def _write_agent(tmp_path, body='NAME = "greet"\n\ndef build(llm):\n    return None\n'):
     src = tmp_path / "greet_src.py"
     src.write_text(body, encoding="utf-8")
     return src
@@ -128,7 +128,7 @@ def test_add_agent_installs_module_into_agents(tmp_path, capsys):
     installed = tmp_path / "agents" / "greet_src.py"
     assert installed.is_file()
     assert installed.read_text(encoding="utf-8") == src.read_text(encoding="utf-8")
-    # discovered KIND is surfaced
+    # discovered NAME is surfaced
     assert "greet" in capsys.readouterr().out
 
 
@@ -147,10 +147,10 @@ def test_add_agent_missing_source_errors(tmp_path, capsys):
     assert not agents.exists() or list(agents.iterdir()) == []
 
 
-def test_discover_kind_handles_missing(tmp_path):
-    assert cli._discover_kind("def build(llm):\n    return None\n") is None
-    assert cli._discover_kind('KIND = "x"\n') == "x"
-    assert cli._discover_kind("KIND: str = 'y'\n") == "y"
+def test_discover_name_handles_missing(tmp_path):
+    assert cli._discover_name("def build(llm):\n    return None\n") is None
+    assert cli._discover_name('NAME = "x"\n') == "x"
+    assert cli._discover_name("NAME: str = 'y'\n") == "y"
 
 
 # --- status ----------------------------------------------------------------
@@ -228,3 +228,41 @@ def test_cli_module_imports_no_network(tmp_path):
     source = inspect.getsource(cli)
     for mod in ("import socket", "http.client", "urllib.request", "requests", "grpc"):
         assert mod not in source
+
+
+# --- jaros init (EXT-008 / REQ-7) --------------------------------------------
+
+def test_init_creates_full_layout(tmp_path):
+    d = tmp_path / "data"
+    assert cli.main(["init", "--data-dir", str(d)]) == 0
+    for name in cli.INIT_DIRS:
+        assert (d / name).is_dir(), f"missing layout dir: {name}"
+
+
+def test_init_with_examples_stages_bundled_starter(tmp_path):
+    d = tmp_path / "data"
+    assert cli.main(["init", "--with-examples", "--data-dir", str(d)]) == 0
+    agents = {p.name for p in (d / "agents").glob("*.py")}
+    tools = {p.name for p in (d / "tools").glob("*.py")}
+    # Staged from the packaged jaros._starter (works from a wheel, not just the repo).
+    assert "system_health_agent.py" in agents and "planner_agent.py" in agents
+    assert "sys_info_tool.py" in tools and "handoff_tool.py" in tools
+    assert (d / "evals" / "readonly.json").is_file()
+    assert any((d / "schedules").glob("*.json"))
+
+
+def test_init_is_idempotent_and_no_duplicates(tmp_path):
+    d = tmp_path / "data"
+    assert cli.cmd_init(d, with_examples=True, stream=io.StringIO()) == 0
+    n = len(list((d / "agents").glob("*.py")))
+    assert cli.cmd_init(d, with_examples=True, stream=io.StringIO()) == 0  # re-run is safe
+    assert len(list((d / "agents").glob("*.py"))) == n  # not duplicated
+
+
+def test_starter_is_bundled_as_package_data():
+    # The starter must be importable as package data so `init --with-examples`
+    # works from a `pip install jaros` (not only a source checkout).
+    from importlib import resources
+    root = resources.files("jaros._starter")
+    assert (root / "agents" / "system_health_agent.py").is_file()
+    assert (root / "tools" / "sys_info_tool.py").is_file()

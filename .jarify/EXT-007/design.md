@@ -12,7 +12,7 @@ The daemon is the composition root that *stays running*. It assembles every plan
   loop (every tick, until SIGINT/SIGTERM):
         scan agents/      -> import + register any new agent modules   (REQ-3)
         scan inbox/*.json  -> for each job:                              (REQ-2)
-              kind,input -> registry.resolve(kind) -> ReasoningBoundary
+              agent,input -> registry.resolve(agent) -> ReasoningBoundary
               run under AgentPool as a thread        (REQ-3 of EXT-003)
               Decision -> gate -> executor -> commit(state machine)      (durable)
               write result -> outbox/<id>.json via harness-granted fs    (REQ-6)
