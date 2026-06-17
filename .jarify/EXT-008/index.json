@@ -48,5 +48,12 @@
       "startLine": 166,
       "endLine": 248
     }
+  ],
+  "REQ-7": [
+    {
+      "file": "jaros/cli.py",
+      "startLine": 380,
+      "endLine": 470
+    }
   ]
 }

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jaros"
-version = "0.1.0"
+version = "0.2.0"
 description = "A zero-infrastructure runtime that makes agent systems reproducible, testable, and capability-safe — a durable, replayable state machine orchestrating AI agents as lightweight threads."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,6 +34,11 @@ dev = ["pytest>=7", "pillow>=10"]
 
 [tool.setuptools.packages.find]
 include = ["jaros*"]
+
+# Ship the bundled starter agents/tools/evals/schedules inside the wheel so
+# `jaros init --with-examples` works from a plain `pip install jaros`.
+[tool.setuptools.package-data]
+"jaros._starter" = ["agents/*.py", "tools/*.py", "evals/*.json", "schedules/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

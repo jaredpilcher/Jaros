@@ -228,3 +228,41 @@ def test_cli_module_imports_no_network(tmp_path):
     source = inspect.getsource(cli)
     for mod in ("import socket", "http.client", "urllib.request", "requests", "grpc"):
         assert mod not in source
+
+
+# --- jaros init (EXT-008 / REQ-7) --------------------------------------------
+
+def test_init_creates_full_layout(tmp_path):
+    d = tmp_path / "data"
+    assert cli.main(["init", "--data-dir", str(d)]) == 0
+    for name in cli.INIT_DIRS:
+        assert (d / name).is_dir(), f"missing layout dir: {name}"
+
+
+def test_init_with_examples_stages_bundled_starter(tmp_path):
+    d = tmp_path / "data"
+    assert cli.main(["init", "--with-examples", "--data-dir", str(d)]) == 0
+    agents = {p.name for p in (d / "agents").glob("*.py")}
+    tools = {p.name for p in (d / "tools").glob("*.py")}
+    # Staged from the packaged jaros._starter (works from a wheel, not just the repo).
+    assert "system_health_agent.py" in agents and "planner_agent.py" in agents
+    assert "sys_info_tool.py" in tools and "handoff_tool.py" in tools
+    assert (d / "evals" / "readonly.json").is_file()
+    assert any((d / "schedules").glob("*.json"))
+
+
+def test_init_is_idempotent_and_no_duplicates(tmp_path):
+    d = tmp_path / "data"
+    assert cli.cmd_init(d, with_examples=True, stream=io.StringIO()) == 0
+    n = len(list((d / "agents").glob("*.py")))
+    assert cli.cmd_init(d, with_examples=True, stream=io.StringIO()) == 0  # re-run is safe
+    assert len(list((d / "agents").glob("*.py"))) == n  # not duplicated
+
+
+def test_starter_is_bundled_as_package_data():
+    # The starter must be importable as package data so `init --with-examples`
+    # works from a `pip install jaros` (not only a source checkout).
+    from importlib import resources
+    root = resources.files("jaros._starter")
+    assert (root / "agents" / "system_health_agent.py").is_file()
+    assert (root / "tools" / "sys_info_tool.py").is_file()

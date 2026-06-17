@@ -377,6 +377,99 @@ def cmd_replay(data_dir: Path, *, as_json: bool = False, verbose: bool = False, 
 
 
 # #EXT-008-REQ-1 Start
+# #EXT-008-REQ-7 Start
+#: The full layout ``jaros init`` creates — the daemon's runtime LAYOUT_DIRS plus
+#: the host-side folders (tools/evals/schedules/config) the runtime layout omits.
+INIT_DIRS: tuple[str, ...] = (
+    "state", "inbox", "outbox", "processed", "failed", "artifacts",
+    "agents", "tools", "evals", "schedules", "config",
+)
+
+#: Bundled starter areas -> (resource/data-dir subdir, file suffix).
+_STARTER_AREAS: tuple[tuple[str, str], ...] = (
+    ("agents", ".py"), ("tools", ".py"), ("evals", ".json"), ("schedules", ".json"),
+)
+
+
+def _stage_starter(data_dir: Path, *, force: bool) -> dict[str, int] | None:
+    """Copy the bundled starter agents/tools/evals/schedules into ``data_dir``.
+
+    Reads from the packaged :mod:`jaros._starter` via :mod:`importlib.resources`,
+    so it works from a plain ``pip install jaros`` (not only a source checkout).
+    Returns a per-area count, or ``None`` if the bundled resources are absent.
+    Existing files are left intact unless ``force`` is given.
+    """
+    from importlib import resources
+
+    try:
+        root = resources.files("jaros._starter")
+    except (ModuleNotFoundError, FileNotFoundError, TypeError):
+        return None
+    staged = {area: 0 for area, _ in _STARTER_AREAS}
+    for area, suffix in _STARTER_AREAS:
+        src_dir = root / area
+        try:
+            if not src_dir.is_dir():
+                continue
+            entries = list(src_dir.iterdir())
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+        for entry in entries:
+            if not entry.name.endswith(suffix):
+                continue
+            dest = data_dir / area / entry.name
+            if dest.exists() and not force:
+                continue
+            dest.write_bytes(entry.read_bytes())
+            staged[area] += 1
+    return staged
+
+
+def cmd_init(data_dir: Path, *, with_examples: bool = False, force: bool = False, stream=None) -> int:
+    """Scaffold a ready-to-use data dir; optionally stage the bundled examples.
+
+    Creates the full directory layout (idempotent) and, with ``with_examples``,
+    copies the packaged starter agents/tools/evals/schedules so the console shows
+    installed agents and ``jaros submit``/``eval`` work right away. Writes only
+    under ``data_dir`` — no socket, no network (consistent with REQ-5).
+    """
+    out = stream if stream is not None else sys.stdout
+    data_dir = Path(data_dir)
+
+    created: list[str] = []
+    for name in INIT_DIRS:
+        d = data_dir / name
+        if not d.exists():
+            created.append(name)
+        d.mkdir(parents=True, exist_ok=True)
+
+    print(f"initialized Jaros data dir: {data_dir}", file=out)
+    print(
+        f"  layout: {', '.join(INIT_DIRS)}"
+        + (f"  ({len(created)} created)" if created else "  (already present)"),
+        file=out,
+    )
+
+    if with_examples:
+        staged = _stage_starter(data_dir, force=force)
+        if staged is None:
+            print("  examples: bundled starter not found in this install — layout created without them", file=out)
+        else:
+            print(
+                f"  examples staged: agents={staged['agents']} tools={staged['tools']} "
+                f"evals={staged['evals']} schedules={staged['schedules']}",
+                file=out,
+            )
+
+    print("", file=out)
+    print(f"next:  jaros serve  --data-dir {data_dir}", file=out)
+    if with_examples:
+        print(f"       jaros submit system-health --data-dir {data_dir}", file=out)
+        print(f"       jaros eval   --data-dir {data_dir}", file=out)
+    return 0
+# #EXT-008-REQ-7 End
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Construct the argparse parser with ``--data-dir`` + subcommands.
 
@@ -403,6 +496,16 @@ def _build_parser() -> argparse.ArgumentParser:
             "--data-dir", dest="data_dir", default=argparse.SUPPRESS, help=data_dir_help
         )
         return p
+
+    p_init = add_command("init", "scaffold a data dir layout (optionally with example agents)")
+    p_init.add_argument(
+        "--with-examples", dest="with_examples", action="store_true",
+        help="stage the bundled example agents/tools/evals/schedules",
+    )
+    p_init.add_argument(
+        "--force", dest="force", action="store_true",
+        help="overwrite existing example files when staging",
+    )
 
     add_command("serve", "run the daemon (used inside the container)")
 
@@ -474,6 +577,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
     data_dir = resolve_data_dir(args)
+
+    if args.command == "init":
+        return cmd_init(
+            data_dir,
+            with_examples=getattr(args, "with_examples", False),
+            force=getattr(args, "force", False),
+        )
 
     if args.command == "serve":
         # Imported lazily so the lightweight host commands don't pull in the whole

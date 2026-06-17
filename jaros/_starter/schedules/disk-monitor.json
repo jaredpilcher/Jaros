@@ -1,0 +1,7 @@
+{
+  "id": "disk-monitor",
+  "kind": "disk-monitor",
+  "input": { "path": "." },
+  "cron": "*/5 * * * *",
+  "enabled": true
+}

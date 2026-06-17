@@ -83,3 +83,15 @@ Prove the guarantee and the safety properties, and surface replay in the docs.
 
 #### Implements
 - [REQ-6] Deterministic Replay Command
+
+### [TASK-8] Initialize a data directory (`jaros init`)
+
+Scaffold a ready-to-use data dir, with bundled examples that ship in the wheel.
+
+#### Steps
+1. Bundle a starter set under `jaros/_starter/{agents,tools,evals,schedules}` (a `__init__.py` package + the read-only library and swarm hive) and declare it as `package-data` in `pyproject.toml` so it ships in `pip install jaros`.
+2. In `jaros/cli.py`, add `cmd_init(data_dir, *, with_examples, force, stream=None)` that creates the full layout (`INIT_DIRS`: the runtime dirs plus `tools/`, `evals/`, `schedules/`, `config/`), idempotently; with `--with-examples`, copy the bundled starter into the data dir via `importlib.resources.files("jaros._starter")` (so it works from a wheel), skipping existing files unless `--force`. Register the `init` subparser (`--with-examples`, `--force`) and dispatch it in `main()`.
+3. Add tests in `tests/test_cli.py`: the full layout is created and idempotent; `--with-examples` stages the bundled agents/tools/evals/schedules; verify the wheel includes `jaros/_starter/**`.
+
+#### Implements
+- [REQ-7] Initialize a Data Directory

@@ -92,29 +92,32 @@ The whole loop from the CLI — submit work, check status, replay it byte-identi
 
 ![A real Jaros CLI session: submit jobs, status, replay --json (0 model calls, byte-identical), and a green eval suite](docs/cli.png)
 
+Install from PyPI and scaffold a ready-to-run node in two commands:
+
 ```bash
-pip install -e ".[dev]"
+pip install jaros
+jaros init --with-examples   # scaffolds ./.jaros-data with bundled example agents, tools, evals, schedules
 ```
 
-Stand up the OS on a data directory, then drive it from another shell — work enters **only** through the shared file system:
+`jaros init --with-examples` drops a library of example agents and tools straight into the data dir, so the daemon — and the [console](console/) — have something to run immediately. Boot the node, then drive it from another shell; work enters **only** through the shared file system:
 
 ```bash
-# stage the example agents into the shared volume (see examples/)
-mkdir -p .jaros-data/agents .jaros-data/tools
-cp examples/agents/*.py .jaros-data/agents/
-cp examples/tools/*.py   .jaros-data/tools/
-
-# boot the long-running daemon (the OS)
-jaros serve --data-dir .jaros-data
+# boot the long-running daemon (the OS) — it discovers ./.jaros-data by default
+jaros serve
 ```
 
 ```bash
 # from another terminal: submit work + watch results, all over the shared FS
-jaros submit advance --input '{}'                  --data-dir .jaros-data
-jaros submit echo    --input '{"msg": "hello"}'    --data-dir .jaros-data
-jaros submit greeter --input '{"name": "Jaros"}'   --data-dir .jaros-data
-jaros watch  --data-dir .jaros-data
+jaros submit system-health             # a bundled example agent
+jaros submit advance --input '{}'      # the built-in agent
+jaros watch
 ```
+
+Every command discovers the data dir automatically (`./.jaros-data`, or `$JAROS_DATA_DIR`, or `--data-dir DIR` to override).
+
+> Hacking on Jaros itself? Clone the repo and `pip install -e ".[dev]"` instead — every command works the same against a checkout.
+
+**Want to build your own agents?** Point your coding agent (e.g. **Claude Code**) at **[`agent-kit/`](agent-kit/)**, tell it to read what's there, and it learns the whole system and writes + verifies new Jaros agents for you. See [Building with a coding agent](#building-with-a-coding-agent).
 
 Then the payoff — reconstruct the entire run from the recorded decisions, with **no model call**:
 
@@ -241,9 +244,11 @@ ctx = harness.spawn("greeter", GrantSpec(role="FsWriteRole", fs=shared_fs))
 
 A *custom tool* extends what the system can *do*: drop a class exposing `NAME`, `validate()`, and `execute()` into `tools/`, and an agent proposes a decision of that `kind`. See **[`examples/tools/greet_tool.py`](examples/tools/greet_tool.py)** and the full guide in **[docs/building-agents.md](docs/building-agents.md)**.
 
-### Building with an AI agent
+### Building with a coding agent
 
-Jaros is made to be extended by coding agents. Point any AI coding agent at **[`AGENTS.md`](AGENTS.md)** → **[`agent-kit/`](agent-kit/)** and it has the whole project in one folder: the mental model, a skill for each artifact (agent, tool, eval, schedule), accurate API reference, and runnable templates that pass `jaros eval` unmodified. It can author new Jaros agents and tools and verify them on its own.
+Jaros is made to be extended *by* coding agents. Point your coding agent — **Claude Code**, Cursor, or similar — at **[`AGENTS.md`](AGENTS.md)** → **[`agent-kit/`](agent-kit/)** and have it read what's there. The kit puts the whole project in one folder: the mental model, a skill for each artifact (agent, tool, eval, schedule), accurate API reference, and runnable templates that pass `jaros eval` unmodified.
+
+Your agent gets started **right away** — it learns how Jaros is meant to be used and authors + verifies new Jaros agents and tools on its own. It's the same kit used to build the examples in this repo: tell your agent *"read `agent-kit/` and build me an agent that does X,"* and it will.
 
 ---
 

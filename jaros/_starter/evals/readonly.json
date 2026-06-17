@@ -1,0 +1,45 @@
+[
+  {
+    "name": "system-health emits an accepted sys.info decision",
+    "kind": "system-health",
+    "input": {},
+    "expect": {
+      "decision_count": 1,
+      "decision_kind": "sys.info",
+      "source": "system-health",
+      "gate": "accept",
+      "result_contains": { "tool": "sys.info" },
+      "deterministic": true
+    }
+  },
+  {
+    "name": "disk-monitor reads usage for the given path",
+    "kind": "disk-monitor",
+    "input": { "path": "." },
+    "expect": {
+      "decision_kind": "fs.disk_usage",
+      "payload_contains": { "path": "." },
+      "gate": "accept",
+      "result_contains": { "tool": "fs.disk_usage", "path": "." }
+    }
+  },
+  {
+    "name": "inventory proposes a fs.stat decision",
+    "kind": "inventory",
+    "input": { "path": "." },
+    "expect": {
+      "decision_kind": "fs.stat",
+      "payload_contains": { "path": "." },
+      "gate": "accept"
+    }
+  },
+  {
+    "name": "text-metrics targets the requested file",
+    "kind": "text-metrics",
+    "input": { "path": "README.md" },
+    "expect": {
+      "decision_kind": "text.count",
+      "payload_contains": { "path": "README.md" }
+    }
+  }
+]
