@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jaros"
-version = "0.2.0"
+version = "0.3.0"
 description = "A zero-infrastructure runtime that makes agent systems reproducible, testable, and capability-safe — a durable, replayable state machine orchestrating AI agents as lightweight threads."
 readme = "README.md"
 requires-python = ">=3.10"
