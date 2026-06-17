@@ -1,28 +1,19 @@
 {
-  "REQ-4": [
+  "REQ-7": [
     {
-      "file": "jaros/state/recover.py",
-      "startLine": 30,
-      "endLine": 77
-    }
-  ],
-  "REQ-6": [
-    {
-      "file": "jaros/state/recover.py",
-      "startLine": 80,
-      "endLine": 103
+      "file": "jaros/daemon.py",
+      "startLine": 172,
+      "endLine": 209
     },
     {
-      "file": "jaros/state/decision_log.py",
-      "startLine": 33,
-      "endLine": 232
-    }
-  ],
-  "REQ-1": [
+      "file": "jaros/daemon.py",
+      "startLine": 225,
+      "endLine": 237
+    },
     {
-      "file": "jaros/state/model.py",
-      "startLine": 18,
-      "endLine": 88
+      "file": "jaros/state/coordination.py",
+      "startLine": 22,
+      "endLine": 123
     }
   ],
   "REQ-2": [
@@ -44,21 +35,30 @@
       "endLine": 175
     }
   ],
-  "REQ-7": [
+  "REQ-6": [
     {
-      "file": "jaros/state/coordination.py",
-      "startLine": 22,
-      "endLine": 123
+      "file": "jaros/state/decision_log.py",
+      "startLine": 34,
+      "endLine": 346
     },
     {
-      "file": "jaros/daemon.py",
-      "startLine": 172,
-      "endLine": 209
-    },
+      "file": "jaros/state/recover.py",
+      "startLine": 80,
+      "endLine": 103
+    }
+  ],
+  "REQ-4": [
     {
-      "file": "jaros/daemon.py",
-      "startLine": 225,
-      "endLine": 237
+      "file": "jaros/state/recover.py",
+      "startLine": 30,
+      "endLine": 77
+    }
+  ],
+  "REQ-1": [
+    {
+      "file": "jaros/state/model.py",
+      "startLine": 18,
+      "endLine": 88
     }
   ]
 }

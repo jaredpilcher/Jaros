@@ -397,23 +397,17 @@ class Daemon:
                 "uptimeSec": round(time.monotonic() - self._started_at, 3),
             }
             # Atomic write: temp file in base_dir + os.replace into status.json.
+            # status.json is refreshed every tick (the console + `jaros watch`
+            # read it); stdout stays quiet — only meaningful events (a job
+            # completing/failing, a schedule firing) print, so the log shows
+            # changes, not a per-tick heartbeat.
             target = self.fs.base_dir / "status.json"
             tmp = target.with_name(f".status.{os.getpid()}.tmp")
             tmp.write_text(json.dumps(status, indent=2, sort_keys=True), encoding="utf-8")
             os.replace(tmp, target)
-
-            print(
-                f"JAROS_HEARTBEAT tick={self.tick_count} state={self.state} "
-                f"active={active} processed={self.processed} failed={self.failed}",
-                flush=True,
-            )
         except Exception as exc:
-            # Contain any temporary filesystem write errors and print it as a heartbeat warning
-            print(
-                f"JAROS_HEARTBEAT tick={self.tick_count} state={self.state} "
-                f"STATUS_WRITE_ERROR={exc}",
-                flush=True,
-            )
+            # Contain temporary filesystem write errors (rare) and surface them once.
+            print(f"[jaros] status write error: {exc}", flush=True)
     # #EXT-007-REQ-4 End
 
     # -- native scheduling --------------------------------------------------

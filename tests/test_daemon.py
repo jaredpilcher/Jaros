@@ -153,11 +153,15 @@ def test_agent_dropped_into_agents_becomes_usable(tmp_path: Path):
     assert result["result"]["finalState"] == "DONE"
 
 
-def test_heartbeat_line_printed(tmp_path: Path, capsys):
+def test_tick_writes_status_without_heartbeat(tmp_path: Path, capsys):
+    # A tick refreshes status.json for the console / `jaros watch`, but stays
+    # quiet on stdout — no per-tick heartbeat. The log only shows meaningful
+    # events (a job completing/failing, a schedule firing).
     d = Daemon(tmp_path)
     d.tick()
     out = capsys.readouterr().out
-    assert "JAROS_HEARTBEAT" in out
+    assert (tmp_path / "status.json").is_file()
+    assert "JAROS_HEARTBEAT" not in out
 
 
 def test_stop_and_teardown_release_grants(tmp_path: Path):

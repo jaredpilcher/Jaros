@@ -10,14 +10,14 @@
     {
       "file": "console/server/jaros_introspect.py",
       "startLine": 53,
-      "endLine": 122
+      "endLine": 78
     }
   ],
   "REQ-8": [
     {
       "file": "console/server/jaros_introspect.py",
-      "startLine": 125,
-      "endLine": 147
+      "startLine": 81,
+      "endLine": 103
     }
   ],
   "REQ-1": [
@@ -25,6 +25,11 @@
       "file": "console/server/jarosData.ts",
       "startLine": 14,
       "endLine": 152
+    },
+    {
+      "file": "jaros/cli.py",
+      "startLine": 500,
+      "endLine": 534
     }
   ],
   "REQ-3": [
@@ -53,28 +58,6 @@
       "file": "console/server/index.ts",
       "startLine": 80,
       "endLine": 106
-    }
-  ],
-  "REQ-9": [
-    {
-      "file": "console/src/components/ui.tsx",
-      "startLine": 4,
-      "endLine": 38
-    },
-    {
-      "file": "console/src/components/Wizard.tsx",
-      "startLine": 9,
-      "endLine": 91
-    },
-    {
-      "file": "console/src/components/GetStarted.tsx",
-      "startLine": 6,
-      "endLine": 67
-    },
-    {
-      "file": "console/src/pages/Help.tsx",
-      "startLine": 24,
-      "endLine": 165
     }
   ]
 }

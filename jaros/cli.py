@@ -207,20 +207,39 @@ def cmd_watch(data_dir: Path, interval: float, stream=None) -> int:
     """
     out = stream if stream is not None else sys.stdout
     outbox = data_dir / "outbox"
+    # Each result is surfaced once: existing results on the first pass, new ones
+    # as they appear. (The status line, by contrast, prints only when it changes.)
     seen: set[str] = set()
+    last_sig: object = object()  # sentinel -> the first read always prints
+    print(f"watching {data_dir} — Ctrl-C to stop", file=out)
     try:
         while True:
-            cmd_status(data_dir, stream=out)
+            status = _read_status(data_dir)
+            if status is None:
+                sig: object = None
+                line = "waiting for the daemon…"
+            else:
+                pool = status.get("pool", {}) or {}
+                sig = (status.get("state"), status.get("processed"), status.get("failed"),
+                       status.get("scheduled"), pool.get("active"))
+                line = (f"state={status.get('state')}  processed={status.get('processed')}  "
+                        f"failed={status.get('failed')}  active={pool.get('active', 0)}")
+            # Print the status line only when something changed.
+            if sig != last_sig:
+                last_sig = sig
+                print(f"  [{time.strftime('%H:%M:%S')}] {line}", file=out)
+            # And a line for each new outbox result.
             if outbox.is_dir():
                 for result in sorted(outbox.glob("*.json")):
                     if result.name in seen:
                         continue
                     seen.add(result.name)
-                    print(f"--- new result: outbox/{result.name} ---", file=out)
+                    kind = "?"
                     try:
-                        print(result.read_text(encoding="utf-8"), file=out)
-                    except OSError:
+                        kind = json.loads(result.read_text(encoding="utf-8")).get("kind", "?")
+                    except (OSError, ValueError):
                         pass
+                    print(f"  -> outbox/{result.name}  ({kind})", file=out)
             time.sleep(max(interval, 0.0))
     except KeyboardInterrupt:
         print("watch stopped.", file=out)
@@ -478,6 +497,43 @@ def cmd_init(data_dir: Path, *, with_examples: bool = False, force: bool = False
 # #EXT-008-REQ-7 End
 
 
+# #EXT-010-REQ-1 Start
+def _find_console_dir() -> "Path | None":
+    """Locate the web console (a host-side companion) shipped beside the repo."""
+    here = Path(__file__).resolve()
+    for base in (here.parent.parent, here.parent.parent.parent):
+        cand = base / "console"
+        if (cand / "package.json").is_file():
+            return cand
+    return None
+
+
+def _launch_console(data_dir: Path) -> "tuple[str, object] | None":
+    """Start the web console (Vite + bridge) as a separate host-side process.
+
+    The Jaros node itself stays serverless — this only spawns the *console*
+    (a host-side companion) when Node + the console + its deps are present,
+    pointing it at the same data dir. Returns ``(url, process)`` or ``None``.
+    """
+    import shutil
+    import subprocess
+
+    console_dir = _find_console_dir()
+    npm = shutil.which("npm")
+    if console_dir is None or npm is None or not (console_dir / "node_modules").is_dir():
+        return None
+    env = {**os.environ, "JAROS_DATA_DIR": str(Path(data_dir).resolve())}
+    try:
+        proc = subprocess.Popen(
+            [npm, "run", "dev"], cwd=str(console_dir), env=env,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+    except OSError:
+        return None
+    return ("http://localhost:5500", proc)
+# #EXT-010-REQ-1 End
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Construct the argparse parser with ``--data-dir`` + subcommands.
 
@@ -515,7 +571,11 @@ def _build_parser() -> argparse.ArgumentParser:
         help="overwrite existing example files when staging",
     )
 
-    add_command("serve", "run the daemon (used inside the container)")
+    p_serve = add_command("serve", "run the daemon (and the web console by default)")
+    p_serve.add_argument(
+        "--no-console", dest="no_console", action="store_true",
+        help="do not auto-launch the web console",
+    )
 
     p_submit = add_command("submit", "write a job descriptor into inbox/")
     p_submit.add_argument("kind", help="agent kind that should handle the job")
@@ -602,8 +662,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         # The default LLM is config-driven (config/llm.json or JAROS_LLM_PROVIDER);
         # every agent reaches it through the one LlmClient interface.
         llm_config = resolve_llm_config(data_dir)
-        print(f"[jaros] default LLM provider: {llm_config.provider}", file=sys.stderr)
-        return Daemon(data_dir=data_dir, llm_config=llm_config).run()
+
+        # The web console comes up by default (a host-side companion process; the
+        # node itself stays serverless). --no-console, or no Node/console, skips it.
+        console = None if getattr(args, "no_console", False) else _launch_console(data_dir)
+
+        print("Jaros node up.", file=sys.stderr)
+        print(f"  data dir : {data_dir}", file=sys.stderr)
+        print(f"  model    : {llm_config.provider}", file=sys.stderr)
+        if console is not None:
+            print(f"  console  : {console[0]}  (starting…)", file=sys.stderr)
+        elif not getattr(args, "no_console", False):
+            print("  console  : not started — run it with  cd console && npm install && npm run dev", file=sys.stderr)
+        print("  Ctrl-C to stop. The log below shows events as they happen.", file=sys.stderr)
+        try:
+            return Daemon(data_dir=data_dir, llm_config=llm_config).run()
+        finally:
+            if console is not None:
+                try:
+                    console[1].terminate()
+                except Exception:
+                    pass
 
     if args.command == "submit":
         try:
