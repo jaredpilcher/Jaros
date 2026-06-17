@@ -63,8 +63,8 @@ inbox → processed → outbox. Preset buttons give a one-click start.
 ![Jobs — submit, then watch the queue and outbox update live](../console/docs/screenshots/jobs.png)
 
 ```bash
-jaros submit advance --input '{}' --data-dir $DATA
-jaros status --data-dir $DATA
+jaros submit advance --input '{}'
+jaros status
 ```
 
 ## Agents & Tools
@@ -77,8 +77,8 @@ executes a namespaced action.
 ![Agents & Tools — loaded extensions and the runtime installer](../console/docs/screenshots/agents.png)
 
 ```bash
-jaros add-agent ./my_agent.py --data-dir $DATA
-cp examples/readonly/agents/*.py $DATA/agents/
+jaros add-agent ./my_agent.py
+cp examples/readonly/agents/*.py $JAROS_DATA_DIR/agents/
 ```
 
 ## Reproducibility
@@ -91,7 +91,7 @@ confirms the rebuilt run is **byte-identical** with **zero model calls**.
 ![Reproducibility — replay reconstructs a run byte-identically, no model call](../console/docs/screenshots/reproducibility.png)
 
 ```bash
-jaros replay --data-dir $DATA --json    # { decisions, modelCalls:0, byteIdentical, ok }
+jaros replay --json    # { decisions, modelCalls:0, byteIdentical, ok }
 ```
 
 ## Schedules
@@ -111,7 +111,7 @@ iff all pass, so the same suite gates CI.
 ![Evaluations — declarative, reproducible agent tests](../console/docs/screenshots/evaluations.png)
 
 ```bash
-jaros eval --data-dir $DATA        # exit 0 iff all pass
+jaros eval        # exit 0 iff all pass
 ```
 
 ## State Machine

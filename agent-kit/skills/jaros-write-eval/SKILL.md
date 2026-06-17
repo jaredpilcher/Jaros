@@ -52,7 +52,7 @@ required; every `expect` key is optional and only checked when present.
 ## Verify
 
 ```bash
-jaros eval --data-dir <dir>      # prints [PASS]/[FAIL] per case; exit 0 iff all pass
+jaros eval      # prints [PASS]/[FAIL] per case; exit 0 iff all pass
 ```
 
 `result_contains` runs the real handler, so stage the matching tool first. See

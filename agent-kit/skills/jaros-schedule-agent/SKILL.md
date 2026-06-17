@@ -45,7 +45,7 @@ One object per file in `schedules/`. Provide exactly one trigger:
 ## Verify
 
 ```bash
-jaros status --data-dir <dir>    # lists schedules with their next/last run
+jaros status    # lists schedules with their next/last run
 ```
 
 Or manage them from the console's **Schedules** page (create / pause / delete).

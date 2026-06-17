@@ -59,7 +59,8 @@ against the **same** directory (use a throwaway dir, never one in use):
 
 ```bash
 # terminal 1 — a Jaros OS on a throwaway data dir
-jaros serve --data-dir /tmp/jaros-demo
+export JAROS_DATA_DIR=/tmp/jaros-demo
+jaros serve
 
 # terminal 2 — the console
 cd console

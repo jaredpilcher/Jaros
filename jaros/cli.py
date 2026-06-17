@@ -8,6 +8,7 @@ made — the CLI reaches the daemon exclusively through files.
 
 Commands::
 
+    jaros init [--with-examples]           scaffold a data dir (+ bundled examples)
     jaros serve                            run the daemon (inside the container)
     jaros submit <kind> [--input JSON]     -> inbox/<id>.json
     jaros add-agent <file.py> [--name K]   -> agents/<name-or-file>.py
@@ -17,7 +18,8 @@ Commands::
     jaros eval                             -> run the agent eval suite (evals/)
     jaros replay [--json]                  -> reconstruct + verify a run (byte-identical, no model call)
 
-    global: --data-dir DIR (else $JAROS_DATA_DIR, else ./.jaros-data)
+    The data dir is discovered automatically: ./.jaros-data by default, else
+    $JAROS_DATA_DIR, else pass --data-dir DIR to override.
 
 Writes are atomic (temp file + :func:`os.replace`), so the daemon never observes a
 partial job or agent. This module lives directly under ``jaros/`` (not under an
@@ -461,11 +463,17 @@ def cmd_init(data_dir: Path, *, with_examples: bool = False, force: bool = False
                 file=out,
             )
 
+    # The CLI discovers the data dir automatically (default ./.jaros-data, else
+    # $JAROS_DATA_DIR), so the next steps need no --data-dir. Only when a
+    # non-default dir was initialized do we point the env var at it.
     print("", file=out)
-    print(f"next:  jaros serve  --data-dir {data_dir}", file=out)
+    print("next:", file=out)
+    if str(data_dir) != DEFAULT_DATA_DIR:
+        print(f"  set JAROS_DATA_DIR={data_dir}   # so jaros discovers this node", file=out)
+    print("  jaros serve                   # boot the node", file=out)
     if with_examples:
-        print(f"       jaros submit system-health --data-dir {data_dir}", file=out)
-        print(f"       jaros eval   --data-dir {data_dir}", file=out)
+        print("  jaros submit system-health    # run a bundled example agent", file=out)
+        print("  jaros eval                    # run the bundled eval suite", file=out)
     return 0
 # #EXT-008-REQ-7 End
 

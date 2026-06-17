@@ -1,28 +1,27 @@
 # Reference — workflow
 
-The CLI loop for authoring and verifying. Use a throwaway `--data-dir` for
+The CLI loop for authoring and verifying. Use a throwaway data dir (set `JAROS_DATA_DIR`) for
 experiments — never one a daemon you don't own is using.
 
 ```bash
-DATA=/tmp/jaros
-
+export JAROS_DATA_DIR=/tmp/jaros
 # 1. stage your artifacts (or copy a template to start)
-mkdir -p $DATA/agents $DATA/tools $DATA/evals $DATA/schedules
-cp agent-kit/templates/agent.py    $DATA/agents/word_count_agent.py
-cp agent-kit/templates/tool.py     $DATA/tools/word_count_tool.py
-cp agent-kit/templates/eval.json   $DATA/evals/word_count.json
+mkdir -p $JAROS_DATA_DIR/agents $JAROS_DATA_DIR/tools $JAROS_DATA_DIR/evals $JAROS_DATA_DIR/schedules
+cp agent-kit/templates/agent.py    $JAROS_DATA_DIR/agents/word_count_agent.py
+cp agent-kit/templates/tool.py     $JAROS_DATA_DIR/tools/word_count_tool.py
+cp agent-kit/templates/eval.json   $JAROS_DATA_DIR/evals/word_count.json
 
 # 2. run the node (long-running); it loads agents/ + tools/ on each tick
-jaros serve  --data-dir $DATA &
+jaros serve &
 
 # 3. submit a job and inspect
-jaros submit word-count --input '{"path":"README.md"}' --data-dir $DATA
-jaros status --data-dir $DATA          # state, processed, schedules
-jaros watch  --data-dir $DATA          # live status + new results
+jaros submit word-count --input '{"path":"README.md"}'
+jaros status          # state, processed, schedules
+jaros watch          # live status + new results
 
 # 4. VERIFY your work
-jaros eval   --data-dir $DATA          # exit 0 iff all eval cases pass
-jaros replay --data-dir $DATA --json   # { decisions, modelCalls:0, byteIdentical, ok }
+jaros eval          # exit 0 iff all eval cases pass
+jaros replay --json   # { decisions, modelCalls:0, byteIdentical, ok }
 ```
 
 ## Commands

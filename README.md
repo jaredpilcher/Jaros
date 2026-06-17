@@ -122,7 +122,7 @@ Every command discovers the data dir automatically (`./.jaros-data`, or `$JAROS_
 Then the payoff — reconstruct the entire run from the recorded decisions, with **no model call**:
 
 ```bash
-jaros replay --data-dir .jaros-data
+jaros replay
 #   replayed 3 recorded decisions (3 applied) - model calls: 0
 #     reconstructed state : DONE
 #     byte-identical      : yes
@@ -263,7 +263,7 @@ docker build -t jaros .
 docker run -d --name jaros_os -v ${PWD}/.jaros-data:/data jaros
 
 # submit from the host, purely over the shared FS
-jaros submit advance --input '{}' --data-dir .jaros-data
+jaros submit advance --input '{}'
 ```
 
 ### Scheduling across containers (single-node-first)

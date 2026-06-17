@@ -20,11 +20,12 @@ cp examples/agents/*.py /tmp/jaros-demo/agents/
 cp examples/tools/*.py   /tmp/jaros-demo/tools/
 
 # boot the OS, then from another shell submit work
-jaros serve  --data-dir /tmp/jaros-demo &
-jaros submit advance --input '{}'                      --data-dir /tmp/jaros-demo
-jaros submit echo    --input '{"msg": "hi"}'           --data-dir /tmp/jaros-demo
-jaros submit greeter --input '{"name": "Jaros"}'       --data-dir /tmp/jaros-demo
-jaros watch  --data-dir /tmp/jaros-demo
+export JAROS_DATA_DIR=/tmp/jaros-demo
+jaros serve &
+jaros submit advance --input '{}'
+jaros submit echo    --input '{"msg": "hi"}'
+jaros submit greeter --input '{"name": "Jaros"}'
+jaros watch
 ```
 
 Each accepted decision is recorded to `<data>/state/decisions.log`, so the run is

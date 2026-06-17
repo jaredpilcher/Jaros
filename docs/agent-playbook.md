@@ -98,7 +98,7 @@ def build(llm):
 Execute the `add-agent` subcommand from the host. This copies the script into the watched `agents/` directory atomically:
 
 ```bash
-python -m jaros.cli --data-dir .jaros-data add-agent path/to/custom_agent.py --name custom_agent
+python -m jaros.cli add-agent path/to/custom_agent.py --name custom_agent
 ```
 The running Docker container daemon will instantly detect the file, load it, and make `custom_agent` available for execution.
 
@@ -112,7 +112,7 @@ To execute an installed agent, you submit a job descriptor atomically into the s
 Pass prompt contexts or goal arguments directly inside the `--input` JSON option:
 
 ```bash
-python -m jaros.cli --data-dir .jaros-data submit custom_agent --input '{"task": "Evaluate user security parameters"}'
+python -m jaros.cli submit custom_agent --input '{"task": "Evaluate user security parameters"}'
 ```
 
 ### Step B: Submitting via Direct File Write (Decoupled/Cron)
@@ -205,7 +205,7 @@ To monitor execution progress and read final outbox results cleanly:
 ### Step A: Read status metadata
 Query the overall running state, processed counts, and active pool threads:
 ```bash
-python -m jaros.cli --data-dir .jaros-data status
+python -m jaros.cli status
 ```
 Or read `status.json` directly from the shared volume:
 ```python
@@ -217,7 +217,7 @@ print(f"Processed: {status['processed']}, State: {status['state']}")
 ### Step B: Watch job outputs
 Loop-read the `outbox/` layout directory for results:
 ```bash
-python -m jaros.cli --data-dir .jaros-data watch
+python -m jaros.cli watch
 ```
 Or check the specific job result file:
 ```python

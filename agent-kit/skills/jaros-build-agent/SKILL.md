@@ -92,8 +92,8 @@ runnable hive in [`examples/swarm/agents/`](../../../examples/swarm/agents/).
 
 ## Verify
 
-Stage the agent (and its tool + an eval) and run `jaros eval --data-dir <dir>` —
-it must exit 0. Then `jaros replay --data-dir <dir> --json` must report
+Stage the agent (and its tool + an eval) and run `jaros eval` —
+it must exit 0. Then `jaros replay --json` must report
 `modelCalls: 0` and `byteIdentical: true`. See
 [reference/workflow.md](../../reference/workflow.md).
 
