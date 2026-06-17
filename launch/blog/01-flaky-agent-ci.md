@@ -102,9 +102,17 @@ I'll be precise, because over-claiming in this space is epidemic:
   claims only what it can keep: durable, crash-recoverable, replayable,
   capability-bounded.
 
+And it doesn't stop at one agent. Every agent writes to **one ordered, hash-chained
+decision log**, tagged with the agent that made each decision — so you can replay a
+whole **swarm** to byte-identical state *and* attribute any failure to the exact agent
+and decision that caused it. "Which agent broke it?" stops being a guess off surface
+logs and becomes a lookup against a tamper-evident record (the kind of who-did-what
+audit trail regulated teams increasingly need — e.g. EU AI Act Article 12). At swarm
+scale, that accountability is the whole game.
+
 Think of it as the **graduation layer** between a prototype (LangGraph, CrewAI) and
 heavyweight durable-execution infrastructure (Temporal, Dapr): the reproducibility
-and safety you need *the day you ship*, without standing up a cluster.
+and accountability you need *the day you ship a swarm*, without standing up a cluster.
 
 There's one honest caveat, and stating it is the point: replay is byte-identical
 **because the executor handlers are deterministic.** Jaros makes that checkable and
@@ -115,7 +123,11 @@ rather than silently breaking the guarantee.
 
 ```bash
 pip install jaros            # runs offline; no key, no database, no server
-# boot the OS, submit an agent, then replay the run to byte-identical state
+jaros init --with-examples   # scaffold a data dir + bundled example agents
+jaros serve                  # boot the OS (opens the web console; --no-console for headless)
+# in a second terminal:
+jaros submit greeter --input '{"name":"Jaros"}'
+jaros replay                 # replay the run to byte-identical state, 0 model calls
 ```
 
 Full quickstart, the benchmark, and the architecture are in the repo:

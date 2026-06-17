@@ -39,34 +39,45 @@ then reply to people who engage. Pin the thread.
 >
 > "It only happens sometimes" → "replay the log and step through it."
 
-**6/**
+**6/ (this is the part that matters at scale)**
+> Now make it a SWARM. Every agent's decisions land in one ordered, hash-chained log,
+> tagged with the agent that made it. So you can:
+> • replay the WHOLE hive to byte-identical state (0 model calls), and
+> • attribute any failure to the **exact agent + decision** — a recorded fact, not a guess.
+
+**7/**
+> That's the unsolved part of multi-agent systems: when a hive misbehaves, *which agent
+> caused it?* Today you read surface chatter and guess. Jaros names it off the log. The
+> chain is tamper-evident too — an auditable who-did-what (hello, EU AI Act Art. 12).
+
+**8/**
 > It's zero-infra: no server, no DB, no broker. Files + threads. Runs OFFLINE, no API
 > key. There's literally a build check that fails if any module imports a database
 > driver or broker.
 
-**7/**
+**9/**
 > Honest about limits (over-claiming is epidemic here):
 > ❌ not a hardened sandbox
 > ❌ not cluster-scale
-> ❌ not a governance gateway
+> ❌ not a swarm-orchestration framework
 > ❌ not "unbreakable"
-> ✅ durable, replayable, capability-bounded — claims it can keep.
+> ✅ durable, replayable, attributable, capability-bounded — claims it can keep.
 
-**8/**
+**10/**
 > The caveat that matters: replay is byte-identical *because handlers are
 > deterministic*. I don't assume it — there's a CI check that fails the build if the
 > core path stops reproducing. Checked, not trusted.
 
-**9/**
+**11/**
 > Think of it as the graduation layer: between a LangGraph/CrewAI prototype and
-> Temporal/Dapr-scale infra. The reproducibility + safety you need the day you ship,
-> without standing up a cluster.
+> Temporal/Dapr-scale infra. The reproducibility + accountability you need the day you
+> ship a swarm, without standing up a cluster.
 
-**10/**
+**12/**
 > MIT, Python, 5-min quickstart, runnable benchmark, web console with one-click replay:
 > https://github.com/jaredpilcher/Jaros
 >
-> If your agents are flaky in CI — point this at one and tell me where it breaks. 🙏
+> If you run multi-agent systems — point this at one and tell me where it breaks. 🙏
 
 ## Notes
 

@@ -32,11 +32,13 @@ replay` ships, the README quickstart ends on it, and it's the single command tha
 makes the value land:
 
 ```bash
-jaros replay --data-dir .jaros-data
-# replayed 2 recorded decisions (2 applied) - model calls: 0
+jaros replay
+# replayed 6 recorded decisions across 5 agent(s) - model calls: 0
 #   reconstructed state : DONE
 #   byte-identical      : yes
-# reproducible: the recorded decisions reconstruct the run exactly, with no model call.
+#   tamper-evident chain: intact
+#   attribution [FAILURE] : agent 'X' produced decision #N — reason: …
+# reproduced byte-identically; any member's failing handoff is attributed to the exact agent.
 ```
 
 Verified end-to-end (submit → process → replay): byte-identical, exit `0`,
@@ -66,23 +68,30 @@ Keep the editable install in a separate "Contributing" section. (Verify the name
 `jaros` is available on PyPI; if taken, decide on a fallback like `jaros-os` now,
 before the launch hard-codes a name.)
 
-### 🟠 P1 — Collapse the bootstrap to one command
+### ✅ P1 — Collapse the bootstrap to one command — **DONE (shipped: EXT-008)**
 
-The current flow asks the user to `mkdir -p`, then `cp examples/agents/*.py` and
-`cp examples/tools/*.py` by hand. Each manual step is a place to stumble.
+The flow used to ask the user to `mkdir -p`, then `cp examples/agents/*.py` and
+`cp examples/tools/*.py` by hand — each manual step a place to stumble. **Fixed:**
+`jaros init --with-examples` now scaffolds the full 11-dir layout and stages the
+bundled example agents/tools/evals/schedules in one command:
 
-**Fix:** add `jaros init --with-examples --data-dir .jaros-data` that creates the
-layout and stages the example agents/tools. Until then, provide a copy-paste block
-that's a *single* fenced command (chain with `&&`) so it's one paste, not four.
+```bash
+jaros init --with-examples
+# initialized Jaros data dir: .jaros-data
+#   layout: state, inbox, outbox, … (11 created)
+#   examples staged: agents=7 tools=5 evals=1 schedules=2
+```
 
-### 🟡 P2 — Make the two-terminal flow obvious + drop the repeated flag
+### ✅ P2 — Two-terminal flow + drop the repeated flag — **DONE**
 
-`jaros serve` blocks, so newcomers don't realize they need a second terminal, and
-every command repeats `--data-dir .jaros-data`.
-
-**Fix:** (a) add a callout: *"`serve` runs in the foreground — open a second
-terminal for the commands below."* (b) Lead with `export JAROS_DATA_DIR=.jaros-data`
-once, then drop the flag from every example (the CLI already honors the env var).
+`jaros serve` blocks, so newcomers didn't realize they needed a second terminal,
+and every command used to repeat `--data-dir .jaros-data`. **Fixed two ways:**
+(a) **data-dir auto-discovery** — the CLI resolves the data dir from
+`$JAROS_DATA_DIR`, else `./.jaros-data`, so the flag is gone from every example;
+(b) **`serve` now launches the bundled web console by default** (`--no-console` to
+opt out), so the "wow" is visible in a browser without a second terminal at all —
+the console has one-click replay built in. The README still notes that the
+CLI-only flow uses a second terminal for `submit`/`watch`.
 
 ### 🟡 P2 — Add the trust badges
 
@@ -106,23 +115,25 @@ versions. They're social proof for the visitor deciding whether to spend 5 minut
 # 1. Install — no API key, no database, no server. Runs offline.
 pip install jaros            # (after PyPI publish; until then: pip install -e .)
 
-# 2. Boot the OS on a data dir (foreground — use a second terminal for step 3)
-export JAROS_DATA_DIR=.jaros-data
-jaros init --with-examples   # (after adding init; until then: mkdir+cp block)
-jaros serve
+# 2. Scaffold a data dir + bundled example agents (one command)
+jaros init --with-examples   # creates ./.jaros-data; the CLI auto-discovers it
 
-# 3. In a second terminal: submit work, watch it run
-export JAROS_DATA_DIR=.jaros-data
+# 3. Boot the OS — also opens the web console (one-click replay) in your browser
+jaros serve                  # add --no-console for headless; serve blocks the terminal
+
+# 4. In a second terminal: submit work across agents, watch it run
 jaros submit greeter --input '{"name":"Jaros"}'
 jaros watch
 
-# 4. THE WOW: replay the whole run to byte-identical state, with zero model calls
-jaros replay                 # ✅ ships today (EXT-008)
+# 5. THE WOW: replay the whole hive to byte-identical state, attribute any failure
+jaros replay                 # ✅ ships today (EXT-008 / EXT-015) — 0 model calls
 ```
 
-`jaros submit/watch/replay` (steps 3–4) all work today. The only remaining
-"(after …)" gaps are the two P1 conveniences — `pip install jaros` (PyPI) and
-`jaros init --with-examples` — each an afternoon, and neither blocks the wow.
+Every step works today. The data dir is auto-discovered (no `--data-dir`), `serve`
+shows the console without a second terminal, and `replay` reconstructs the whole
+swarm byte-identically and names the agent behind any failure. The only remaining
+"(after …)" gap is `pip install jaros` (PyPI publish) — an afternoon, and it
+doesn't block the wow.
 
 ---
 
@@ -131,12 +142,15 @@ jaros replay                 # ✅ ships today (EXT-008)
 - [x] **The wow is a single command in the path: `jaros replay` (EXT-008, verified).**
 - [x] No API key required anywhere in the path (default echo adapter, offline).
 - [x] The wow (`jaros replay`) is the *last thing the visitor sees* in the quickstart.
-- [ ] Fresh container: install → boot → submit → **replay** in < 5 min (re-run on a clean image).
+- [ ] Fresh container: install → `init` → boot → submit → **replay** in < 5 min (re-run on a clean image).
 - [ ] `pip install jaros` works (PyPI) **or** the editable fallback is crystal clear.  ← P1
-- [ ] One-paste bootstrap (`jaros init --with-examples`) + second-terminal callout.  ← P1/P2
+- [x] One-paste bootstrap (`jaros init --with-examples`) — shipped.
+- [x] data-dir auto-discovery (no repeated `--data-dir`) — shipped.
+- [x] `serve` shows the console by default (`--no-console` to opt out) — shipped.
 - [ ] Badges (CI, PyPI, MIT, Python versions) on the README.  ← P2
 - [ ] Someone who isn't you ran it start-to-finish and hit zero surprises.
 
-**Status:** the P0 (wow-in-the-path) is done. What's left before posting is all
-non-code polish — PyPI publish, one-command bootstrap, badges, and one clean-image
-dry run.
+**Status:** P0 (wow-in-the-path) and both P1 conveniences (`jaros init`, data-dir
+discovery, console-by-default) are **done and verified on a fresh data dir**. What's
+left before/around posting is non-code polish — PyPI publish, badges, and one
+independent clean-image dry run.

@@ -7,11 +7,13 @@ HN). Lead with the *capability*, not the category.
 ## Title options (pick one, ≤ 80 chars)
 
 1. **Show HN: Jaros – replay an AI agent run to byte-identical state (no model call)**
-2. **Show HN: Jaros – make agent runs reproducible by recording every decision**
-3. **Show HN: Jaros – a zero-infra runtime that makes AI agents reproducible in CI**
+2. **Show HN: Jaros – replay an agent swarm and attribute any failure to the exact agent**
+3. **Show HN: Jaros – make agent runs reproducible by recording every decision**
+4. **Show HN: Jaros – a zero-infra runtime that makes AI agents reproducible in CI**
 
-> Recommended: **#1.** It names the one thing nothing else does and invites "wait,
-> how?" — which is exactly the click you want.
+> Recommended: **#1** for the broadest "wait, how?" click; **#2** if you want to lead
+> with the differentiator (swarm attribution is the thing nothing else does). Pick by
+> which crowd is live that morning — #1 is safer, #2 is sharper.
 
 ## URL
 
@@ -32,6 +34,12 @@ prefers the source. Put the blog link in your first comment.
 > byte-identical state with **zero model calls** — crash recovery is just a special
 > case of replay. A flaky incident becomes: pin the decision log, replay, step
 > through, fix, re-run identically.
+>
+> The part I'm most interested in feedback on is what happens at **swarm** scale: every
+> agent writes to one ordered, hash-chained log tagged with its source, so you can
+> replay a whole hive byte-identically *and* attribute any failure to the exact agent +
+> decision that caused it — a recorded fact, not a tracer-model guess. "Which of my 30
+> agents broke this run?" becomes a lookup against a tamper-evident record.
 >
 > It's a zero-infra Python runtime — no server/DB/broker, runs offline with no API
 > key (there's even a build check that fails if any module imports a database driver

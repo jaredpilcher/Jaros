@@ -53,10 +53,11 @@ Tick every box. This is pure building — your home turf.
 - [ ] The 5-min wow works copy-paste with **no API key** (default adapter is offline).
 - [ ] `CONTRIBUTING.md` + 3–5 `good first issue`s exist.
 - [ ] A one-page landing site (the repo + docs is enough to start).
-- [ ] Decide the **one wedge sentence** and use it identically everywhere:
-      *"Your agent tests are flaky and you can't reproduce failures. Jaros records
-      every decision and replays the run to byte-identical state — so you can
-      debug it like normal software and gate it in CI."*
+- [ ] Use the **one wedge sentence** identically everywhere (site, posts, replies):
+      *"When a swarm of agents does something wrong, you can't reproduce it or say which
+      agent caused it. Jaros records every decision in one hash-chained log, replays the
+      whole hive to byte-identical state (zero model calls), and attributes any failure to
+      the exact agent. Zero infrastructure."*
 - [ ] Pick a launch week. Best days: **Tuesday–Thursday.** Avoid Mon/Fri, holidays,
       and big news days (major model releases, Apple/Google keynotes).
 
@@ -92,7 +93,9 @@ US is waking up). Adjust ±1hr; consistency matters more than precision.
 
 - **09:00 ET** — **r/MachineLearning** (variant C, framed as a project/engineering
   post — that sub is stricter; lead with the technical contribution, not the launch).
-- **LinkedIn** post (`posts/lobsters-devto-linkedin.md`) — a calmer, builder-story version.
+- **LinkedIn v2** (`posts/lobsters-devto-linkedin.md`) — the **swarm-apex** post: replay
+  the whole hive, attribute any failure to the exact agent. It adds the differentiator the
+  June 9 launch post left out, and it's the regulated-market (fintech/crypto) angle.
 - Write a short "launch day, by the numbers" note for yourself; decide what to fix.
 
 ### Day 4–5 (Fri / weekend)
@@ -178,7 +181,7 @@ of talking to users; launch before the quickstart is flawless.
 
 ---
 
-*Built for the `prime-directive-reconciliation` branch. Every claim in these
-artifacts is backed by something that runs today (`launch/benchmark/`,
-`scripts/check_determinism.py`, the console replay). Keep it that way — the honesty
-is the moat.*
+*This kit lives on the private `launch-site` branch only — it is **not** part of the
+public repo. Every claim in these artifacts is backed by something that runs today
+(`launch/benchmark/`, `scripts/check_determinism.py`, `jaros replay`'s swarm
+attribution, the console replay). Keep it that way — the honesty is the moat.*

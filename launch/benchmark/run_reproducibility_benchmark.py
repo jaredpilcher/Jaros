@@ -62,7 +62,7 @@ def record_a_run(workdir: Path) -> DecisionLog:
             create_decision(
                 id=f"d{i}",
                 source="benchmark-agent",
-                kind="advance",
+                type="advance",
                 payload={"events": ["start", "block", "unblock", "complete"]},
             ),
         )

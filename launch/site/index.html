@@ -221,21 +221,22 @@ replayed 7 recorded decisions across 3 agent(s) - model calls: <span class="hl">
 <section id="start">
   <div class="wrap">
     <h2>Quickstart — under 5 minutes, no API key</h2>
-    <p class="sub">It runs offline on a deterministic default adapter. Two terminals: one for the OS, one to drive it over the shared file system.</p>
+    <p class="sub">It runs offline on a deterministic default adapter. <code>serve</code> opens the web console by default; the CLI-only flow uses a second terminal to drive it over the shared file system.</p>
 <pre class="code"><span class="cm"># 1. install — no API key, no database, no server</span>
 <span class="cd">pip install jaros</span>
 
-<span class="cm"># 2. boot the OS on a data dir (foreground — use a second terminal for step 3)</span>
-<span class="cd">export JAROS_DATA_DIR=.jaros-data</span>
-<span class="cd">jaros serve</span>
+<span class="cm"># 2. scaffold a data dir + bundled example agents (auto-discovered)</span>
+<span class="cd">jaros init --with-examples</span>
 
-<span class="cm"># 3. second terminal: submit work, watch it run</span>
-<span class="cd">export JAROS_DATA_DIR=.jaros-data</span>
+<span class="cm"># 3. boot the OS — also opens the web console (one-click replay)</span>
+<span class="cd">jaros serve</span>          <span class="cm"># --no-console for headless; serve blocks the terminal</span>
+
+<span class="cm"># 4. second terminal: submit work across agents, watch it run</span>
 <span class="cd">jaros submit greeter --input '{"name":"Jaros"}'</span>
 <span class="cd">jaros watch</span>
 
-<span class="cm"># 4. THE WOW: replay the whole run to byte-identical state, zero model calls</span>
-<span class="cd">jaros replay</span></pre>
+<span class="cm"># 5. THE WOW: replay the whole hive byte-identically, attribute any failure</span>
+<span class="cd">jaros replay</span>        <span class="cm"># 0 model calls; names the exact agent behind a failure</span></pre>
     <p class="muted" style="margin-top:14px">Full guide, architecture, and the web console with one-click replay → <a href="https://github.com/jaredpilcher/Jaros">github.com/jaredpilcher/Jaros</a></p>
   </div>
 </section>

@@ -54,9 +54,15 @@ offline" angle lands hardest here.*
 > `deterministic: true`, plus a CI check that fails the build if the core path stops
 > being reproducible.
 >
+> Where it gets interesting for multi-agent: every agent writes to **one ordered,
+> hash-chained decision log**, so you can replay a *whole swarm* byte-identically **and
+> attribute any failure to the exact agent + decision** that caused it (recorded fact,
+> not a tracer-model guess). The "which agent broke it?" question becomes a lookup.
+>
 > It's zero-infra (files + threads, no server/DB/broker), MIT, runs offline.
 > Repo: https://github.com/jaredpilcher/Jaros. Curious whether this maps to how you're
-> handling agent testing today — what's your current approach to flaky runs?
+> handling agent testing today — and how you currently figure out which agent in a
+> swarm caused a bad outcome.
 
 ---
 
