@@ -41,7 +41,7 @@ runtime, and the architecture guardrails over `jaros/**` continue to pass.
 #### Acceptance Criteria
 - [x] All console code lives under `console/`, never inside the `jaros/` package.
 - [x] Every read and write the console performs is within the shared data
-      directory (`status.json`, `inbox/`, `outbox/`, `state/`, `plugins/`,
+      directory (`status.json`, `inbox/`, `outbox/`, `state/`, `agents/`,
       `tools/`); it opens no socket to the daemon (there is none).
 - [x] `scripts/check_no_server.py`, `check_comms.py`, and `check_zero_infra.py`
       (which scan `jaros/**`) still pass — the node remains serverless.
@@ -72,12 +72,12 @@ over the shared FS.
 
 ### [REQ-4] Runtime Agent & Tool Management
 
-The operator can view and install plugin agents and custom tools at runtime.
+The operator can view and install agents and custom tools at runtime.
 
 #### Acceptance Criteria
-- [x] The console lists the loaded plugin agents (`plugins/`) and custom tools
+- [x] The console lists the loaded agents (`agents/`) and custom tools
       (`tools/`).
-- [x] A new plugin agent or custom tool can be installed by name + source; it is
+- [x] A new agent or custom tool can be installed by name + source; it is
       written atomically into the watched folder and loaded on the next daemon tick.
 - [x] Module names are validated to prevent path traversal outside the layout.
 
@@ -128,9 +128,27 @@ operator can test agents from the browser.
 
 #### Acceptance Criteria
 - [x] A one-click action runs `evals/*.json` against the data dir's built-in +
-      plugin agents and loaded tools, reporting total/passed/failed and per-case
+      agents and loaded tools, reporting total/passed/failed and per-case
       checks.
 - [x] Each case is expandable to its individual checks (name, ok, detail) and any
       error; the suite status is shown green/failing.
 - [x] The run assembles a deterministic environment and surfaces it read-only —
       no model-grading, reproducible results.
+
+### [REQ-9] Guided Onboarding & In-App Documentation
+
+A first-time operator must be able to tell where to start and what to do next
+without leaving the console. The console provides a brief first-run tour, a live
+get-started checklist, contextual tooltips and per-page intros, and an in-app
+help page with pictures and step-by-step CLI instructions.
+
+#### Acceptance Criteria
+- [x] On first open, a brief dismissible wizard introduces the core loop (submit
+      a job → extend at runtime → replay); it is re-openable from the top bar and
+      remembers completion via local storage.
+- [x] The Overview shows a live, status-driven "get started" checklist that marks
+      each step done as it is completed and links to the relevant page.
+- [x] Each page carries a one-line intro explaining its purpose and a "Learn
+      more" link into the in-app guide; key controls have hover tooltips.
+- [x] An in-app Help page documents every page with screenshots and provides a
+      copy-pasteable CLI quickstart, plus links to the full Markdown docs.

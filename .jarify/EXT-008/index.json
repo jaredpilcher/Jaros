@@ -1,4 +1,16 @@
 {
+  "REQ-6": [
+    {
+      "file": "jaros/execution/handlers.py",
+      "startLine": 29,
+      "endLine": 88
+    },
+    {
+      "file": "jaros/cli.py",
+      "startLine": 291,
+      "endLine": 379
+    }
+  ],
   "REQ-1": [
     {
       "file": "jaros/cli.py",
@@ -35,18 +47,6 @@
       "file": "jaros/cli.py",
       "startLine": 166,
       "endLine": 248
-    }
-  ],
-  "REQ-6": [
-    {
-      "file": "jaros/cli.py",
-      "startLine": 291,
-      "endLine": 379
-    },
-    {
-      "file": "jaros/execution/handlers.py",
-      "startLine": 29,
-      "endLine": 88
     }
   ]
 }

@@ -12,7 +12,7 @@ from jaros.eval import EvalCase, load_cases, run_case, run_suite
 from jaros.execution import executor
 from jaros.execution.tools import load_custom_tools, reset_tools_registry
 from jaros.llm import LlmConfig, create_llm_client
-from jaros.registry import AgentRegistry, load_plugins
+from jaros.registry import AgentRegistry, load_agents
 
 RO = Path(__file__).resolve().parents[1] / "examples" / "readonly"
 
@@ -118,7 +118,7 @@ def test_readonly_eval_suite_all_pass():
     """The shipped read-only eval cases pass against the read-only agents."""
     llm = create_llm_client(LlmConfig(provider="default"))
     reg = AgentRegistry()
-    load_plugins(reg, RO / "plugins", llm)
+    load_agents(reg, RO / "agents", llm)
     load_custom_tools(RO / "tools")
     cases = load_cases(RO / "evals")
     assert len(cases) >= 4

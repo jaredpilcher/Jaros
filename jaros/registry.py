@@ -1,13 +1,13 @@
-"""Runtime agent registry + plugin loading (EXT-007 / REQ-3).
+"""Runtime agent registry + agent loading (EXT-007 / REQ-3).
 
 The registry maps an agent ``kind`` to a factory that produces a
 :class:`~jaros.core.reasoning_boundary.ReasoningBoundary`. Built-in kinds are
 registered at boot via :func:`register_builtins`; new agent modules dropped into
-the shared-FS ``plugins/`` directory are imported and registered at runtime via
-:func:`load_plugins` — no daemon restart required.
+the shared-FS ``agents/`` directory are imported and registered at runtime via
+:func:`load_agents` — no daemon restart required.
 
-A plugin module declares a module-level ``KIND: str`` and a ``build(llm)``
-factory returning a ``ReasoningBoundary``. :func:`load_plugins` is idempotent
+An agent module declares a module-level ``KIND: str`` and a ``build(llm)``
+factory returning a ``ReasoningBoundary``. :func:`load_agents` is idempotent
 across re-scans: a module file is imported and registered exactly once.
 
 This module is part of the daemon's *composition root*; it wires the reasoning
@@ -26,7 +26,7 @@ from jaros.core import Decision, ReasoningBoundary, create_decision
 from jaros.llm import LlmClient, LlmRequest
 
 # A factory builds a fresh ReasoningBoundary for a resolved agent kind. Built-in
-# factories may close over the shared LlmClient; plugin factories receive it.
+# factories may close over the shared LlmClient; agent factories receive it.
 AgentBoundaryFactory = Callable[[], ReasoningBoundary]
 
 
@@ -40,15 +40,15 @@ class AgentRegistry:
 
     def __init__(self) -> None:
         self._factories: dict[str, AgentBoundaryFactory] = {}
-        # Absolute paths of plugin files already imported, so re-scans are
-        # idempotent (a plugin is loaded + registered exactly once).
-        self._loaded_plugins: set[str] = set()
+        # Absolute paths of agent files already imported, so re-scans are
+        # idempotent (an agent is loaded + registered exactly once).
+        self._loaded_agents: set[str] = set()
 
     def register(self, kind: str, factory: AgentBoundaryFactory) -> None:
         """Register ``factory`` as the producer for agent ``kind``.
 
         Re-registering a kind replaces the prior factory (last-writer-wins),
-        which keeps plugin reloads well-defined.
+        which keeps agent reloads well-defined.
         """
         if not isinstance(kind, str) or not kind:
             raise ValueError("agent kind must be a non-empty string")
@@ -110,14 +110,14 @@ def register_builtins(registry: AgentRegistry, llm: LlmClient) -> None:
     registry.register("advance", lambda: _AdvanceBoundary(llm))
 
 
-def load_plugins(
+def load_agents(
     registry: AgentRegistry,
-    plugins_dir: str | Path,
+    agents_dir: str | Path,
     llm: LlmClient,
 ) -> list[str]:
-    """Import each ``*.py`` in ``plugins_dir`` and register its declared kind.
+    """Import each ``*.py`` in ``agents_dir`` and register its declared kind.
 
-    Each plugin module must expose a module-level ``KIND: str`` and a
+    Each agent module must expose a module-level ``KIND: str`` and a
     ``build(llm) -> ReasoningBoundary`` factory. For every not-yet-loaded ``*.py``
     file the module is imported via :mod:`importlib.util`, its ``KIND`` is read,
     and a factory closing over ``llm`` (calling ``module.build(llm)``) is
@@ -128,7 +128,7 @@ def load_plugins(
 
     Returns the list of kinds newly registered by this scan (for observability).
     """
-    directory = Path(plugins_dir)
+    directory = Path(agents_dir)
     newly_registered: list[str] = []
     if not directory.is_dir():
         return newly_registered
@@ -137,10 +137,10 @@ def load_plugins(
         if path.name.startswith("_"):
             continue  # skip dunder/private helper modules
         key = str(path.resolve())
-        if key in registry._loaded_plugins:
+        if key in registry._loaded_agents:
             continue  # already loaded in a prior scan -> idempotent
 
-        module_name = f"jaros_plugin_{path.stem}"
+        module_name = f"jaros_agent_{path.stem}"
         spec = importlib.util.spec_from_file_location(module_name, path)
         if spec is None or spec.loader is None:
             continue
@@ -150,13 +150,13 @@ def load_plugins(
         kind = getattr(module, "KIND", None)
         build = getattr(module, "build", None)
         if not isinstance(kind, str) or not kind or not callable(build):
-            # A malformed plugin is recorded as seen (so it is not retried every
+            # A malformed agent is recorded as seen (so it is not retried every
             # scan) but is not registered.
-            registry._loaded_plugins.add(key)
+            registry._loaded_agents.add(key)
             continue
 
         registry.register(kind, lambda build=build: build(llm))
-        registry._loaded_plugins.add(key)
+        registry._loaded_agents.add(key)
         newly_registered.append(kind)
 
     return newly_registered

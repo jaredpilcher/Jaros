@@ -15,7 +15,7 @@ The dynamic tooling system allows operators to plug new code into the Execution 
 ```text
 Host System (Execution Plane)                   Daemon Sandbox (Execution Plane)
 ┌───────────────────────────┐                   ┌──────────────────────────────┐
-│  plugins/tools/           │                   │  Dynamic Tool Registry       │
+│  agents/tools/           │                   │  Dynamic Tool Registry       │
 │  └─ account_reader.py    ─┼──(Boot Scan)─────►│  - Maps "db.accounts.read"   │
 └───────────────────────────┘                   │  - Instantiates reader tool  │
                                                 └──────────────┬───────────────┘
@@ -55,4 +55,4 @@ Reasoning Plane (Non-Deterministic)             Validation & Execution Gates
    capability handles an agent actually holds.
 
 3. **Dynamic Import**:
-   We scan `plugins/tools/` (or a configured folder) at boot time using standard-library `importlib.util` to safely exec and load tool modules. Any parsing error is contained, logged, and isolated so the daemon boots normally even if a tool has syntax errors.
+   We scan `agents/tools/` (or a configured folder) at boot time using standard-library `importlib.util` to safely exec and load tool modules. Any parsing error is contained, logged, and isolated so the daemon boots normally even if a tool has syntax errors.

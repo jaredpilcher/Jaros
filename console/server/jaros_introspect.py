@@ -52,72 +52,28 @@ def do_harness() -> dict:
 
 # #EXT-010-REQ-5 Start
 def do_replay(data_dir: str) -> dict:
-    from jaros.execution import executor
-    from jaros.execution.tools import load_custom_tools, reset_tools_registry
-    from jaros.state import (
-        DecisionLog,
-        TransitionLog,
-        commit,
-        recover,
-        replay,
-    )
-    from jaros.state.model import INITIAL_STATE
+    # Reuse the runtime's swarm replay (EXT-015): replays the whole hive through
+    # the real handlers into an isolated sandbox, verifies the tamper-evident
+    # chain + byte-identity, and attributes any failure to the exact agent — the
+    # same code path the CLI uses, so the console can't drift from it.
+    from jaros.state import replay_swarm
 
-    data = Path(data_dir)
-    decision_log = DecisionLog(data / "state")
-    recorded = decision_log.length()
-
-    # Re-register the deterministic handlers a daemon would have, into a FRESH
-    # transition log, then replay the recorded decisions through the executor.
-    def advance_handler(decision, *, log):
-        payload = decision.payload if isinstance(decision.payload, dict) else {}
-        events = payload.get("events") or ["start", "complete"]
-        state = INITIAL_STATE
-        for event in events:
-            state = commit(log, state, event).state
-        return {"finalState": state}
-
-    executor.reset_handlers()
-    reset_tools_registry()
-    executor.register_handler("advance", advance_handler)
-    executor.register_handler("fs.write", lambda d, **k: {"path": (d.payload or {}).get("path")})
-    try:
-        load_custom_tools(data / "tools")  # so custom-tool decisions replay too
-    except Exception:
-        pass
-
-    def replay_once_bytes() -> bytes:
-        log = TransitionLog(Path(tempfile.mkdtemp(prefix="jaros-replay-")))
-        replay(decision_log, executor.apply, log=log)
-        return log.path.read_bytes()
-
-    fresh = TransitionLog(Path(tempfile.mkdtemp(prefix="jaros-replay-")))
-    results = replay(decision_log, executor.apply, log=fresh)
-    final_state = recover(fresh)
-
-    # Byte-identical check against the original durable transition log, if present.
-    original = data / "state" / "transitions.log"
-    byte_identical = False
-    try:
-        if original.exists():
-            byte_identical = fresh.path.read_bytes() == original.read_bytes()
-    except Exception:
-        byte_identical = False
-
-    # Determinism check: the byte-identical guarantee holds only if handlers are
-    # deterministic. Replay again into isolated state and confirm they agree —
-    # divergence flags a non-deterministic handler (EXT-001 / REQ-7).
-    from jaros.execution import replays_agree
-    deterministic = replays_agree(replay_once_bytes, runs=2)
-
+    res = replay_swarm(data_dir)
+    attribution = None
+    if res.attribution is not None:
+        a = res.attribution
+        attribution = {"kind": a.kind, "index": a.index, "id": a.id, "source": a.source, "reason": a.reason}
     return {
-        "decisions": recorded,
-        "applied": sum(1 for r in results if getattr(r, "applied", False)),
-        "finalState": final_state,
-        "byteIdentical": byte_identical,
-        "deterministic": deterministic,
+        "decisions": res.decisions,
+        "byAgent": {t.source: t.decisions for t in res.by_agent},
+        "finalState": res.final_state,
+        "byteIdentical": res.byte_identical,
+        # A byte-identical reconstruction over the live log is the determinism signal.
+        "deterministic": res.byte_identical,
+        "chainOk": res.chain_ok,
+        "attribution": attribution,
         "modelCalls": 0,
-        "ok": True,
+        "ok": res.ok,
     }
 # #EXT-010-REQ-5 End
 
@@ -128,7 +84,7 @@ def do_evals(data_dir: str) -> dict:
     from jaros.execution import executor
     from jaros.execution.tools import load_custom_tools, reset_tools_registry
     from jaros.llm import LlmConfig, create_llm_client
-    from jaros.registry import AgentRegistry, load_plugins, register_builtins
+    from jaros.registry import AgentRegistry, load_agents, register_builtins
 
     data = Path(data_dir)
     executor.reset_handlers()
@@ -136,7 +92,7 @@ def do_evals(data_dir: str) -> dict:
     llm = create_llm_client(LlmConfig(provider="default"))
     registry = AgentRegistry()
     register_builtins(registry, llm)
-    load_plugins(registry, data / "plugins", llm)
+    load_agents(registry, data / "agents", llm)
     load_custom_tools(data / "tools")
 
     cases = load_cases(data / "evals")

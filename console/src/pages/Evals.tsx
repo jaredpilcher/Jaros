@@ -1,7 +1,7 @@
 import { Fragment, useState } from "react";
 
 import { api, type EvalReport } from "../api";
-import { Card, Empty, Pill } from "../components/ui";
+import { Card, Empty, PageIntro, Pill } from "../components/ui";
 
 // #EXT-010-REQ-8 Start
 export function Evals() {
@@ -21,6 +21,9 @@ export function Evals() {
 
   return (
     <div className="grid" style={{ gap: 16 }}>
+      <PageIntro icon="✓" sub="Same suite gates CI: exit 0 iff every case passes." to="/help#evals">
+        Test agents with <b>declarative, reproducible</b> checks — input → expected decision/result, no model-grading flakiness.
+      </PageIntro>
       <Card
         title="Agent evaluations"
         desc="reproducible, declarative checks — input → expected decision/result, no model-grading flakiness"
@@ -39,7 +42,7 @@ export function Evals() {
           )
         ) : (
           <div className="hint">
-            Runs <code>evals/*.json</code> against the built-in + plugin agents and the loaded tools. Because reasoning emits inert data
+            Runs <code>evals/*.json</code> against the built-in + agents and the loaded tools. Because reasoning emits inert data
             and execution is deterministic, results reproduce exactly — debuggable like any test.
           </div>
         )}

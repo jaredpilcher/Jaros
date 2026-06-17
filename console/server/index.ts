@@ -22,7 +22,7 @@ import {
   getDecisions,
   getJobs,
   getOutbox,
-  getPlugins,
+  getAgents,
   getSchedules,
   getStatus,
   getTools,
@@ -92,7 +92,7 @@ function snapshot() {
       failed: jobs.filter((j) => j.area === "failed").length,
       outbox: getOutbox().length,
       decisions: getDecisions().length,
-      plugins: getPlugins().length,
+      agents: getAgents().length,
       tools: getTools().length,
     },
   };
@@ -167,10 +167,10 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/decisions") return sendJson(res, 200, getDecisions());
     if (pathname === "/api/transitions") return sendJson(res, 200, getTransitions());
     if (pathname === "/api/agents" && method === "GET") {
-      return sendJson(res, 200, { plugins: getPlugins(), tools: getTools() });
+      return sendJson(res, 200, { agents: getAgents(), tools: getTools() });
     }
     if ((pathname === "/api/agents" || pathname === "/api/tools") && method === "POST") {
-      const area = pathname.endsWith("/tools") ? "tools" : "plugins";
+      const area = pathname.endsWith("/tools") ? "tools" : "agents";
       const body = JSON.parse((await readBody(req)) || "{}");
       if (!body.name || typeof body.source !== "string") {
         return sendJson(res, 400, { error: "name and source are required" });

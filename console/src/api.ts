@@ -22,7 +22,7 @@ export interface Snapshot {
     failed: number;
     outbox: number;
     decisions: number;
-    plugins: number;
+    agents: number;
     tools: number;
   };
 }
@@ -35,7 +35,7 @@ export interface DecisionRecord {
   checksum: string;
 }
 export interface TransitionEntry { index: number; event: string; state: string; checksum: string }
-export interface Agents { plugins: string[]; tools: string[] }
+export interface Agents { agents: string[]; tools: string[] }
 export interface ScheduleRow {
   name: string;
   id?: string;
@@ -67,6 +67,13 @@ export interface EvalReport {
   results: EvalCaseResult[];
   error?: string;
 }
+export interface Attribution {
+  kind: "failure" | "divergence";
+  index: number;
+  id: string;
+  source: string;
+  reason: string;
+}
 export interface ReplayResult {
   decisions: number;
   applied: number;
@@ -75,6 +82,9 @@ export interface ReplayResult {
   deterministic: boolean;
   modelCalls: number;
   ok: boolean;
+  byAgent?: Record<string, number>;
+  chainOk?: boolean;
+  attribution?: Attribution | null;
   error?: string;
 }
 
@@ -99,7 +109,7 @@ export const api = {
   decisions: () => get<DecisionRecord[]>("/decisions"),
   transitions: () => get<TransitionEntry[]>("/transitions"),
   agents: () => get<Agents>("/agents"),
-  installPlugin: (name: string, source: string) => post<{ path?: string; error?: string }>("/agents", { name, source }),
+  installAgent: (name: string, source: string) => post<{ path?: string; error?: string }>("/agents", { name, source }),
   installTool: (name: string, source: string) => post<{ path?: string; error?: string }>("/tools", { name, source }),
   model: () => get<StateModel>("/model"),
   harness: () => get<HarnessModel>("/harness"),

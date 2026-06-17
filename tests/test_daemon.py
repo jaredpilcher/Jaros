@@ -39,7 +39,7 @@ def _status(data: Path) -> dict:
 
 def test_boot_creates_layout_and_status(tmp_path: Path):
     d = Daemon(tmp_path)
-    for name in ("inbox", "outbox", "plugins", "processed", "failed", "state"):
+    for name in ("inbox", "outbox", "agents", "processed", "failed", "state"):
         assert (tmp_path / name).is_dir()
     d.tick()
     status = _status(tmp_path)
@@ -120,8 +120,8 @@ def test_status_reflects_counts_after_multiple_ticks(tmp_path: Path):
     assert (tmp_path / "outbox" / "b.json").is_file()
 
 
-def _write_plugin(data: Path, name: str, kind: str) -> None:
-    (data / "plugins" / f"{name}.py").write_text(
+def _write_agent(data: Path, name: str, kind: str) -> None:
+    (data / "agents" / f"{name}.py").write_text(
         "from jaros.core import create_decision\n"
         "import uuid\n"
         f"KIND = {kind!r}\n"
@@ -130,18 +130,18 @@ def _write_plugin(data: Path, name: str, kind: str) -> None:
         "        def decide(self, context):\n"
         "            return [create_decision(id='p-'+uuid.uuid4().hex,\n"
         f"                source={kind!r}, kind='advance',\n"
-        "                payload={'events': ['start', 'complete'], 'note': 'via-plugin'})]\n"
+        "                payload={'events': ['start', 'complete'], 'note': 'via-agent'})]\n"
         "    return _B()\n",
         encoding="utf-8",
     )
 
 
-def test_plugin_dropped_into_plugins_becomes_usable(tmp_path: Path):
+def test_agent_dropped_into_agents_becomes_usable(tmp_path: Path):
     d = Daemon(tmp_path)
     assert not d.registry.has("custom")
 
-    _write_plugin(tmp_path, "custom_plugin", "custom")
-    # A job for the plugin kind, processed in the same tick that scans plugins.
+    _write_agent(tmp_path, "custom_agent", "custom")
+    # A job for the agent kind, processed in the same tick that scans agents.
     _submit_job(tmp_path, "p1", "custom", {"x": 1})
     d.tick()
 
@@ -149,7 +149,7 @@ def test_plugin_dropped_into_plugins_becomes_usable(tmp_path: Path):
     outbox = tmp_path / "outbox" / "p1.json"
     assert outbox.is_file()
     result = json.loads(outbox.read_text(encoding="utf-8"))
-    assert result["result"]["note"] == "via-plugin"
+    assert result["result"]["note"] == "via-agent"
     assert result["result"]["finalState"] == "DONE"
 
 

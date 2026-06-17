@@ -18,7 +18,7 @@ component of the node, and the `jaros/**` architecture guardrails are unaffected
    +------------------+                          |  fs read/write only
                                                  v
                             +-------------------- SHARED FILE SYSTEM --------------------+
-                            |  status.json   /inbox   /outbox   /state   /plugins /tools |
+                            |  status.json   /inbox   /outbox   /state   /agents /tools |
                             +-----------------------------------------------------------+
                                                  ^
                                                  |  fs read/write only (no socket between them)
@@ -35,7 +35,7 @@ volume, exactly as the CLI and daemon do. The Jaros node opens no socket.
 
 - **`jarosData.ts`** — the file-system access layer. Resolves the data dir,
   reads `status.json`, the newline-delimited decision/transition logs, the
-  inbox/outbox/failed areas, and the plugins/tools folders; performs atomic
+  inbox/outbox/failed areas, and the agents/tools folders; performs atomic
   job submission and module installation (temp file + rename).
 - **`index.ts`** — a minimal Node HTTP server (built-ins only) exposing a small
   REST API, a server-sent-events stream for live snapshots, and (in production)
@@ -66,7 +66,7 @@ durable log — the EXT-002 / REQ-6 property, made visible to an operator.
     ├── Layout            sidebar + topbar, live connection pill (SSE snapshot)
     ├── Overview          status, throughput sparkline, pool, zero-infra profile
     ├── Jobs              submit (atomic inbox) · inbox/processed/failed · outbox
-    ├── Agents & Tools    list + install plugin agents and custom tools
+    ├── Agents & Tools    list + install agents and custom tools
     ├── Reproducibility   decision log table + one-click replay result
     ├── State Machine     introspected model + live transition log
     └── Harness           mediation rules + roles + refusal audit
