@@ -149,20 +149,21 @@ hash-chained, per-agent decision log. End-to-end in Docker:
 
 ## 8. Watch + drive everything from the browser
 
-`jaros serve` already started the console — open **http://localhost:5500**. Submit
-jobs, install agents/tools, manage schedules, run evals, browse + replay the
-decision log, and inspect the state machine and harness — all over the shared file
-system; the node stays serverless.
-
-First run, or want the console on its own (e.g. pointed at a remote node's shared
-dir)? Install its deps once and run it standalone:
+`jaros serve` already started the console — open **http://localhost:5500**. It
+ships in the wheel (a prebuilt SPA + a pure-stdlib server), so **`pip install
+jaros` gives you the console with no Node toolchain**. Submit jobs, install
+agents/tools, manage schedules, run evals, browse + replay the decision log, and
+inspect the state machine and harness — all over the shared file system; the node
+stays serverless.
 
 ```bash
-cd console && npm install
-JAROS_DATA_DIR=../.jaros-data npm run dev   # point the console at any node's dir; http://localhost:5500
+jaros console --console-port 8080   # run just the console (no daemon), on a port you pick
+jaros serve --no-console            # or skip it entirely
 ```
 
-See the [console README](../console/README.md).
+For console **development** (React hot-reload against a checkout), run the
+TypeScript bridge instead — `cd console && npm install && npm run dev`. See the
+[console README](../console/README.md).
 
 ## 9. Deploy in Docker (one node, then many)
 

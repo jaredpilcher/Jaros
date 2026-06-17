@@ -83,16 +83,18 @@ Every command discovers the data dir automatically (`./.jaros-data`, or `$JAROS_
 
 A TypeScript + React administrative and monitoring interface lives in **[`console/`](console/)** — submit jobs, install agents and custom tools, watch live status, browse the durable decision log, and **replay it to byte-identical state** from the browser. It's a host-side companion (a thin file-system bridge + SPA); the Jaros node itself stays serverless.
 
-**`jaros serve` starts it for you** and prints the URL — open **http://localhost:5500**. The Overview is a glanceable NOC view with a live get-started checklist; every other page (State Machine, Reproducibility, Harness, Jobs, Agents, Schedules, Evaluations) introspects the *real* runtime over the file system.
+**It ships in the wheel — no Node required.** `pip install jaros` bundles a prebuilt SPA and a pure-stdlib server, so **`jaros serve` brings the console up for you** and prints the URL — open **http://localhost:5500**. Run it standalone with `jaros console`, set the port with `--console-port`, or skip it with `jaros serve --no-console`:
+
+```bash
+jaros serve                       # node + console (default)
+jaros console --console-port 8080 # just the console, on a port you pick
+```
+
+The Overview is a glanceable NOC view with a live get-started checklist; every other page (State Machine, Reproducibility, Harness, Jobs, Agents, Schedules, Evaluations) introspects the *real* runtime over the file system.
 
 ![Jaros Console — Overview](console/docs/screenshots/overview.png)
 
-Want it on its own (first run, or pointed at a remote node's shared dir)? Install its deps once and run it standalone:
-
-```bash
-cd console && npm install
-JAROS_DATA_DIR=/tmp/jaros-demo npm run dev        # then open http://localhost:5500
-```
+> The bundled server is the Python twin of the TypeScript bridge under [`console/`](console/). For console **development** (React hot-reload), run `cd console && npm install && npm run dev`; everyday use needs neither.
 
 The full page gallery and a walkthrough of every page (with pictures) live in **[docs/console.md](docs/console.md)** and the [console README](console/README.md#screenshots).
 

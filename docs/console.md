@@ -6,19 +6,31 @@ install agents and tools, manage schedules, run evals, browse and replay the
 decision log, and introspect the state machine and harness — all over the shared
 file system. The node itself stays serverless.
 
-**`jaros serve` brings the console up by default** — boot a node and open
-**http://localhost:5500**. Pass `jaros serve --no-console` to skip it.
+**The console ships in the wheel — no Node required.** `pip install jaros`
+bundles a prebuilt SPA and a pure-stdlib server, so **`jaros serve` brings the
+console up by default** — boot a node and open **http://localhost:5500**. Run it
+standalone with `jaros console`, choose the port with `--console-port`, or skip
+it with `jaros serve --no-console`:
 
-To run the console on its own — first run (its npm deps aren't installed yet), or
-pointed at a node whose shared dir lives elsewhere — start it standalone:
+```bash
+jaros serve                          # node + console
+jaros console                        # just the console, against the discovered data dir
+jaros console --console-port 8080    # …on a port you pick
+```
+
+> Point `$JAROS_DATA_DIR` (or `--data-dir`) at the same data dir a `jaros serve`
+> daemon is using. Use a throwaway dir for experiments — never one another daemon owns.
+
+### Developing the console
+
+The bundled server is the Python twin of the TypeScript bridge under `console/`.
+For React hot-reload while hacking on the UI, run the TS dev server against a
+checkout (and re-bundle with `python scripts/sync_console_dist.py` when done):
 
 ```bash
 cd console && npm install
 JAROS_DATA_DIR=/tmp/jaros npm run dev        # open http://localhost:5500
 ```
-
-> Point `JAROS_DATA_DIR` at the same data dir a `jaros serve` daemon is using.
-> Use a throwaway dir for experiments — never one another daemon owns.
 
 ## Finding your way around
 

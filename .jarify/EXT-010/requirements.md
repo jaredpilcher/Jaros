@@ -7,6 +7,8 @@ implementation:
   - console/server/index.ts
   - console/server/jarosData.ts
   - console/server/jaros_introspect.py
+  - jaros_console/server.py
+  - jaros_console/data.py
   - console/src/api.ts
   - console/src/App.tsx
   - console/src/components/Layout.tsx
@@ -39,7 +41,9 @@ its own UI (an operator tool), but it adds no server, database, or broker to the
 runtime, and the architecture guardrails over `jaros/**` continue to pass.
 
 #### Acceptance Criteria
-- [x] All console code lives under `console/`, never inside the `jaros/` package.
+- [x] All console code lives outside the `jaros/` package — the TypeScript app
+      under `console/` and the bundled Python twin under `jaros_console/` (a
+      sibling package) — never inside `jaros/`.
 - [x] Every read and write the console performs is within the shared data
       directory (`status.json`, `inbox/`, `outbox/`, `state/`, `agents/`,
       `tools/`); it opens no socket to the daemon (there is none).
@@ -152,3 +156,28 @@ help page with pictures and step-by-step CLI instructions.
       more" link into the in-app guide; key controls have hover tooltips.
 - [x] An in-app Help page documents every page with screenshots and provides a
       copy-pasteable CLI quickstart, plus links to the full Markdown docs.
+
+### [REQ-10] Bundled, Zero-Node Console for pip Installs
+
+A plain `pip install jaros` — with no Node toolchain and no repo checkout — must
+ship a working console. A pure-stdlib Python server, shipped as the sibling
+`jaros_console` package (outside `jaros/`), serves the **prebuilt** SPA and the
+same REST + SSE API over the shared data directory. It launches from
+`jaros serve` by default and from a dedicated `jaros console` command, on an
+operator-settable port. Because the server lives outside `jaros/`, the
+zero-infrastructure guarantee over `jaros/**` is preserved.
+
+#### Acceptance Criteria
+- [x] A `pip install jaros` ships the prebuilt SPA assets and a stdlib server in
+      the `jaros_console` package; running the console needs no npm and no
+      `console/` checkout.
+- [x] The Python server exposes the same routes and response shapes as the
+      TypeScript bridge (health, snapshot, status, jobs GET/POST, outbox,
+      decisions, transitions, agents/tools GET/POST, schedules GET/POST/DELETE,
+      model, harness, replay, evals, and the events SSE stream) and serves the
+      SPA with single-port SPA fallback.
+- [x] `jaros serve` launches the console by default and `jaros console` runs it
+      standalone; both accept `--console-port` (default 5500), and `--no-console`
+      (or a missing bundle) degrades gracefully without failing the node.
+- [x] The `jaros` package imports no server framework; `check_zero_infra.py` and
+      `check_no_server.py` still pass because the server lives in `jaros_console/`.

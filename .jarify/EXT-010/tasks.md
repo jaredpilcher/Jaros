@@ -98,3 +98,32 @@ Prove the whole console stack drives a live Jaros over the shared FS.
 #### Implements
 - [REQ-1] Host-Side Console; Serverless Node Preserved
 - [REQ-5] Reproducibility: Decision Log & Replay
+
+### [TASK-9] Ship a bundled, zero-Node Python console
+
+Make `pip install jaros` self-sufficient: a pure-stdlib server, shipped beside
+the `jaros` package, that serves the prebuilt SPA and the same API with no Node.
+
+#### Steps
+1. Create the sibling `jaros_console` package: `data.py` (port of
+   `jarosData.ts` — `resolve_data_dir`, safe JSON/NDJSON readers, `get_status`/
+   `get_jobs`/`get_outbox`/`get_decisions`/`get_transitions`/`get_agents`/
+   `get_tools`/`get_schedules`/`snapshot`, atomic `submit_job`/`install_module`/
+   `write_schedule`/`delete_schedule` with a path-traversal name guard, plus the
+   in-process `do_model`/`do_harness`/`do_replay`/`do_evals` from
+   `jaros_introspect.py`) and `server.py` (a `ThreadingHTTPServer` whose handler
+   mirrors every `console/server/index.ts` route and serves `_dist/` with SPA
+   fallback and an `/api/events` SSE loop).
+2. Bundle the prebuilt SPA into `jaros_console/_dist/` and declare it as
+   package-data in `pyproject.toml` so it ships in the wheel; add
+   `scripts/sync_console_dist.py` to rebuild + refresh it from `console/dist/`.
+3. Wire `jaros/cli.py`: lazily import `jaros_console` to launch the server on a
+   daemon thread from `jaros serve` (default-on, `--console-port`, `--no-console`),
+   and add a `jaros console` subcommand that runs it standalone against the
+   resolved data dir; degrade gracefully when the bundle/port is unavailable.
+4. Add `tests/test_console_server.py` exercising the stdlib server end to end
+   (health, snapshot, submit→inbox, static SPA fallback) on an ephemeral port.
+
+#### Implements
+- [REQ-10] Bundled, Zero-Node Console for pip Installs
+- [REQ-1] Host-Side Console; Serverless Node Preserved

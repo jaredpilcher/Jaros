@@ -72,10 +72,50 @@ durable log — the EXT-002 / REQ-6 property, made visible to an operator.
     └── Harness           mediation rules + roles + refusal audit
 ```
 
+## Bundled Python console (zero-Node, for pip installs)
+
+The TypeScript bridge needs Node + a `console/` checkout. For a plain
+`pip install jaros`, a **pure-stdlib Python twin** ships in the wheel as the
+sibling `jaros_console` package — the same routes and response shapes, the same
+prebuilt React bundle, served on a single localhost port. It stays *outside*
+`jaros/` for the same reason the TS bridge does: `jaros/**` must import no server
+framework (`check_zero_infra` forbids `http.server`), so the server cannot live
+inside the node's package.
+
+```text
+   Browser (same prebuilt React SPA)
+   +------------------+   HTTP/SSE on one port (default 5500)
+   |  /  +  /api/*    |  <───────────────────────────────┐
+   +------------------+                                   │
+                                                          v
+                         +───────────────────────────────────────────+
+                         |  jaros_console  (sibling pkg, in the wheel) |
+                         |   server.py   http.server: SPA + /api       |
+                         |   data.py     shared-FS reads/writes +      |
+                         |               in-process jaros introspection|
+                         |   _dist/      prebuilt SPA (package-data)   |
+                         +───────────────────┬───────────────────────-+
+                                             |  fs read/write only
+                                             v
+                         +──────── SHARED FILE SYSTEM ────────+
+                         |  status.json /inbox /outbox /state |
+                         +────────────────────────────────────+
+
+   jaros serve  ──launches──>  jaros_console.serve_console(background=True)
+   jaros console ──runs standalone──>  serve_console(...)   (--console-port)
+```
+
+`jaros/cli.py` imports `jaros_console` only lazily, at launch time, so the
+`jaros` package itself still imports no server framework and the guardrails over
+`jaros/**` keep passing. If Node *is* present and a `console/` checkout exists,
+the TS dev bridge remains available for console development; the bundled Python
+server is what makes `pip install` self-sufficient.
+
 ## Prime Directive consistency
 
 - The console adds **no** server/database/broker to the *node*; it is a host-side
-  tool (EXT-008-class). [PRIME-001 / P3]
+  tool (EXT-008-class), whether served by the Node bridge or the bundled Python
+  twin. [PRIME-001 / P3]
 - It uses only the shared FS as transport to the OS — no agent-to-agent or
   node-to-console socket. [PRIME-001 / REQ-6]
 - It surfaces, rather than re-implements, reproducibility-by-replay and

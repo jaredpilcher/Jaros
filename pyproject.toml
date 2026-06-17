@@ -40,9 +40,11 @@ version = { attr = "jaros.__version__" }
 include = ["jaros*"]
 
 # Ship the bundled starter agents/tools/evals/schedules inside the wheel so
-# `jaros init --with-examples` works from a plain `pip install jaros`.
+# `jaros init --with-examples` works from a plain `pip install jaros`; and ship
+# the prebuilt console SPA so `jaros serve` / `jaros console` need no Node.
 [tool.setuptools.package-data]
 "jaros._starter" = ["agents/*.py", "tools/*.py", "evals/*.json", "schedules/*.json"]
+"jaros_console" = ["_dist/*", "_dist/assets/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

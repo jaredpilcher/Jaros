@@ -1,4 +1,21 @@
 {
+  "REQ-10": [
+    {
+      "file": "jaros_console/server.py",
+      "startLine": 20,
+      "endLine": 218
+    },
+    {
+      "file": "jaros_console/data.py",
+      "startLine": 18,
+      "endLine": 272
+    },
+    {
+      "file": "jaros/cli.py",
+      "startLine": 500,
+      "endLine": 523
+    }
+  ],
   "REQ-6": [
     {
       "file": "console/server/jaros_introspect.py",
@@ -25,11 +42,6 @@
       "file": "console/server/jarosData.ts",
       "startLine": 14,
       "endLine": 152
-    },
-    {
-      "file": "jaros/cli.py",
-      "startLine": 500,
-      "endLine": 534
     }
   ],
   "REQ-3": [

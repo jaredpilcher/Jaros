@@ -497,41 +497,30 @@ def cmd_init(data_dir: Path, *, with_examples: bool = False, force: bool = False
 # #EXT-008-REQ-7 End
 
 
-# #EXT-010-REQ-1 Start
-def _find_console_dir() -> "Path | None":
-    """Locate the web console (a host-side companion) shipped beside the repo."""
-    here = Path(__file__).resolve()
-    for base in (here.parent.parent, here.parent.parent.parent):
-        cand = base / "console"
-        if (cand / "package.json").is_file():
-            return cand
-    return None
+# #EXT-010-REQ-10 Start
+DEFAULT_CONSOLE_PORT = 5500
 
 
-def _launch_console(data_dir: Path) -> "tuple[str, object] | None":
-    """Start the web console (Vite + bridge) as a separate host-side process.
+def _launch_console(data_dir: Path, port: int) -> "tuple[str, object] | None":
+    """Start the bundled web console on a background thread (no Node required).
 
-    The Jaros node itself stays serverless — this only spawns the *console*
-    (a host-side companion) when Node + the console + its deps are present,
-    pointing it at the same data dir. Returns ``(url, process)`` or ``None``.
+    The server lives in the sibling ``jaros_console`` package and is imported
+    *lazily* here, so the ``jaros`` package itself imports no server framework
+    and the zero-infrastructure guardrails over ``jaros/**`` keep passing. The
+    Jaros node stays serverless; this is a host-side companion, like the CLI.
+    Returns ``(url, httpd)`` — call ``httpd.shutdown()`` to stop — or ``None``
+    if the bundle is unavailable or the port is already in use.
     """
-    import shutil
-    import subprocess
-
-    console_dir = _find_console_dir()
-    npm = shutil.which("npm")
-    if console_dir is None or npm is None or not (console_dir / "node_modules").is_dir():
-        return None
-    env = {**os.environ, "JAROS_DATA_DIR": str(Path(data_dir).resolve())}
     try:
-        proc = subprocess.Popen(
-            [npm, "run", "dev"], cwd=str(console_dir), env=env,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-    except OSError:
+        from jaros_console import serve_console
+    except Exception:
         return None
-    return ("http://localhost:5500", proc)
-# #EXT-010-REQ-1 End
+    try:
+        httpd = serve_console(Path(data_dir), int(port), background=True)
+    except OSError:
+        return None  # port already in use, etc.
+    return (f"http://localhost:{port}", httpd)
+# #EXT-010-REQ-10 End
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -575,6 +564,16 @@ def _build_parser() -> argparse.ArgumentParser:
     p_serve.add_argument(
         "--no-console", dest="no_console", action="store_true",
         help="do not auto-launch the web console",
+    )
+    p_serve.add_argument(
+        "--console-port", dest="console_port", type=int, default=DEFAULT_CONSOLE_PORT,
+        help=f"port for the bundled web console (default {DEFAULT_CONSOLE_PORT})",
+    )
+
+    p_console = add_command("console", "run only the bundled web console (no daemon)")
+    p_console.add_argument(
+        "--console-port", dest="console_port", type=int, default=DEFAULT_CONSOLE_PORT,
+        help=f"port to serve the console on (default {DEFAULT_CONSOLE_PORT})",
     )
 
     p_submit = add_command("submit", "write a job descriptor into inbox/")
@@ -663,26 +662,52 @@ def main(argv: Sequence[str] | None = None) -> int:
         # every agent reaches it through the one LlmClient interface.
         llm_config = resolve_llm_config(data_dir)
 
-        # The web console comes up by default (a host-side companion process; the
-        # node itself stays serverless). --no-console, or no Node/console, skips it.
-        console = None if getattr(args, "no_console", False) else _launch_console(data_dir)
+        # The bundled web console comes up by default (a host-side companion on a
+        # background thread; the node itself stays serverless). --no-console skips
+        # it, and it degrades gracefully if the port is taken or the bundle is absent.
+        no_console = getattr(args, "no_console", False)
+        port = getattr(args, "console_port", DEFAULT_CONSOLE_PORT)
+        console = None if no_console else _launch_console(data_dir, port)
 
         print("Jaros node up.", file=sys.stderr)
         print(f"  data dir : {data_dir}", file=sys.stderr)
         print(f"  model    : {llm_config.provider}", file=sys.stderr)
         if console is not None:
-            print(f"  console  : {console[0]}  (starting…)", file=sys.stderr)
-        elif not getattr(args, "no_console", False):
-            print("  console  : not started — run it with  cd console && npm install && npm run dev", file=sys.stderr)
+            print(f"  console  : {console[0]}", file=sys.stderr)
+        elif not no_console:
+            print(f"  console  : not started — port {port} may be in use; try "
+                  f"jaros console --console-port <port>", file=sys.stderr)
         print("  Ctrl-C to stop. The log below shows events as they happen.", file=sys.stderr)
         try:
             return Daemon(data_dir=data_dir, llm_config=llm_config).run()
         finally:
             if console is not None:
                 try:
-                    console[1].terminate()
+                    console[1].shutdown()
                 except Exception:
                     pass
+
+    if args.command == "console":
+        # Run only the bundled console (no daemon) against the resolved data dir.
+        port = getattr(args, "console_port", DEFAULT_CONSOLE_PORT)
+        try:
+            from jaros_console import serve_console
+        except Exception:
+            print("error: the bundled web console is unavailable in this install.",
+                  file=sys.stderr)
+            return 2
+        print("Jaros console up.", file=sys.stderr)
+        print(f"  data dir : {data_dir}", file=sys.stderr)
+        print(f"  url      : http://localhost:{port}", file=sys.stderr)
+        print("  Ctrl-C to stop.", file=sys.stderr)
+        try:
+            serve_console(data_dir, port, background=False)
+        except OSError as exc:
+            print(f"error: could not start console on port {port}: {exc}", file=sys.stderr)
+            return 2
+        except KeyboardInterrupt:
+            pass
+        return 0
 
     if args.command == "submit":
         try:

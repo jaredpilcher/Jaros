@@ -8,12 +8,12 @@
     {
       "file": "jaros/cli.py",
       "startLine": 400,
-      "endLine": 730
+      "endLine": 755
     },
     {
       "file": "jaros/cli.py",
-      "startLine": 612,
-      "endLine": 635
+      "startLine": 611,
+      "endLine": 634
     }
   ],
   "REQ-2": [
