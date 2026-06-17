@@ -25,7 +25,7 @@ Reasoning components communicate with the rest of the system exclusively via an 
 #### Acceptance Criteria
 - [ ] Define an immutable `Decision` type that is fully JSON-serializable.
 - [ ] Reject (at construction/validation) any `Decision` carrying functions, handles, or non-serializable fields.
-- [ ] Every `Decision` records the agent/source and a discriminated `kind` so the executor can dispatch deterministically.
+- [ ] Every `Decision` records the agent/source and a discriminated `type` so the executor can dispatch deterministically.
 
 ### [REQ-2] Reasoning Boundary Interface
 
@@ -66,11 +66,11 @@ Developers can extend the validation gate with additional deterministic validato
 
 ### [REQ-6] Pluggable Executor Handlers
 
-The executor dispatches an accepted decision to a handler registered for its `kind`, so developers can extend what the system *does* without changing the boundary or the gate. Unknown kinds are refused, not guessed.
+The executor dispatches an accepted decision to a handler registered for its `type`, so developers can extend what the system *does* without changing the boundary or the gate. Unknown types are refused, not guessed.
 
 #### Acceptance Criteria
-- [ ] The executor exposes a registration API (e.g. `register_handler(kind, fn)`) mapping a decision `kind` to a deterministic handler.
-- [ ] `apply` validates via the gate, then dispatches to the handler for the decision's `kind`; a decision whose `kind` has no registered handler is refused with a clear reason and causes no side effect.
+- [ ] The executor exposes a registration API (e.g. `register_handler(decision_type, fn)`) mapping a decision `type` to a deterministic handler.
+- [ ] `apply` validates via the gate, then dispatches to the handler for the decision's `type`; a decision whose `type` has no registered handler is refused with a clear reason and causes no side effect.
 - [ ] Handlers are invoked only with the validated decision and execution-plane collaborators (state machine, granted handles) — never the LLM/reasoning side.
 
 ### [REQ-7] Decision Is the Sole Replayable Non-Deterministic Input

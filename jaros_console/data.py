@@ -100,7 +100,7 @@ def get_jobs(data: Path) -> list[dict]:
             if area == "failed":
                 r = _read_text(data, f"failed/{file}.reason")
                 reason = r.strip() if r else None
-            jobs.append({"id": jid, "kind": body.get("kind"), "area": area, "reason": reason})
+            jobs.append({"id": jid, "agent": body.get("agent"), "area": area, "reason": reason})
     return jobs
 
 
@@ -108,7 +108,7 @@ def get_outbox(data: Path) -> list[dict]:
     results = []
     for file in _list_files(data, "outbox", ".json"):
         body = _read_json(data, f"outbox/{file}") or {}
-        results.append({"id": file[:-5], "kind": body.get("kind"), "result": body.get("result")})
+        results.append({"id": file[:-5], "agent": body.get("agent"), "result": body.get("result")})
     return results
 
 
@@ -171,10 +171,10 @@ def _atomic_write(dest: Path, content: str) -> None:
     os.replace(tmp, dest)
 
 
-def submit_job(data: Path, kind: str, job_input: Any) -> dict:
+def submit_job(data: Path, agent: str, job_input: Any) -> dict:
     jid = uuid.uuid4().hex
     _atomic_write(data / "inbox" / f"{jid}.json",
-                  json.dumps({"id": jid, "kind": kind, "input": job_input}, indent=2))
+                  json.dumps({"id": jid, "agent": agent, "input": job_input}, indent=2))
     return {"id": jid}
 
 

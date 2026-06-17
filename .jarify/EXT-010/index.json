@@ -16,25 +16,11 @@
       "endLine": 523
     }
   ],
-  "REQ-6": [
+  "REQ-2": [
     {
-      "file": "console/server/jaros_introspect.py",
-      "startLine": 21,
-      "endLine": 50
-    }
-  ],
-  "REQ-5": [
-    {
-      "file": "console/server/jaros_introspect.py",
-      "startLine": 53,
-      "endLine": 78
-    }
-  ],
-  "REQ-8": [
-    {
-      "file": "console/server/jaros_introspect.py",
-      "startLine": 81,
-      "endLine": 103
+      "file": "console/server/index.ts",
+      "startLine": 80,
+      "endLine": 106
     }
   ],
   "REQ-1": [
@@ -65,11 +51,25 @@
       "endLine": 245
     }
   ],
-  "REQ-2": [
+  "REQ-6": [
     {
-      "file": "console/server/index.ts",
-      "startLine": 80,
-      "endLine": 106
+      "file": "console/server/jaros_introspect.py",
+      "startLine": 21,
+      "endLine": 50
+    }
+  ],
+  "REQ-5": [
+    {
+      "file": "console/server/jaros_introspect.py",
+      "startLine": 53,
+      "endLine": 78
+    }
+  ],
+  "REQ-8": [
+    {
+      "file": "console/server/jaros_introspect.py",
+      "startLine": 81,
+      "endLine": 103
     }
   ]
 }

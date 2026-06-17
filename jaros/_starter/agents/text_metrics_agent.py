@@ -10,7 +10,7 @@ import uuid
 
 from jaros.core import create_decision
 
-KIND = "text-metrics"
+NAME = "text-metrics"
 
 
 class TextMetricsBoundary:
@@ -21,8 +21,8 @@ class TextMetricsBoundary:
         path = context.get("path", "README.md") if isinstance(context, dict) else "README.md"
         return [create_decision(
             id=f"text-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="text.count",
+            source=NAME,
+            type="text.count",
             payload={"path": path},
         )]
 

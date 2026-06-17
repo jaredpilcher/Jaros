@@ -27,7 +27,7 @@ Reasoning Plane (Non-Deterministic)             Validation & Execution Gates
 ┌───────────────────────────┐                   ┌──────────────────────────────┐
 │  Agent Thread (decide)    │                   │  Validation Gate             │
 │  └─ Emits Decision JSON   │                   │  1. Check role permission    │
-│     kind: db.accounts.read│                   │  2. Run tool.validate()      │
+│     type: db.accounts.read│                   │  2. Run tool.validate()      │
 └─────────────┬─────────────┘                   └──────────────┬───────────────┘
               │                                                │
        (Decisions JSON)                                   (Accepted)

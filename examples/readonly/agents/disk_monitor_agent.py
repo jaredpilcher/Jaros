@@ -10,7 +10,7 @@ import uuid
 
 from jaros.core import create_decision
 
-KIND = "disk-monitor"
+NAME = "disk-monitor"
 
 
 class DiskMonitorBoundary:
@@ -21,8 +21,8 @@ class DiskMonitorBoundary:
         path = context.get("path", ".") if isinstance(context, dict) else "."
         return [create_decision(
             id=f"disk-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="fs.disk_usage",
+            source=NAME,
+            type="fs.disk_usage",
             payload={"path": path},
         )]
 

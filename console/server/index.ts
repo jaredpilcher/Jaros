@@ -152,7 +152,7 @@ const server = http.createServer(async (req, res) => {
     if (pathname === "/api/jobs" && method === "GET") return sendJson(res, 200, getJobs());
     if (pathname === "/api/jobs" && method === "POST") {
       const body = JSON.parse((await readBody(req)) || "{}");
-      if (!body.kind) return sendJson(res, 400, { error: "kind is required" });
+      if (!body.agent) return sendJson(res, 400, { error: "agent is required" });
       let input: unknown = body.input ?? {};
       if (typeof input === "string") {
         try {
@@ -161,7 +161,7 @@ const server = http.createServer(async (req, res) => {
           return sendJson(res, 400, { error: "input must be valid JSON" });
         }
       }
-      return sendJson(res, 200, submitJob(String(body.kind), input));
+      return sendJson(res, 200, submitJob(String(body.agent), input));
     }
     if (pathname === "/api/outbox") return sendJson(res, 200, getOutbox());
     if (pathname === "/api/decisions") return sendJson(res, 200, getDecisions());

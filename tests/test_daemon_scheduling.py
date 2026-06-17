@@ -27,7 +27,7 @@ def _write_schedule(data: Path, name: str, body: dict) -> None:
 
 
 def test_due_schedule_dispatches_job(tmp_path: Path):
-    _write_schedule(tmp_path, "heartbeat", {"id": "heartbeat", "kind": "advance", "input": {}, "every_seconds": 1})
+    _write_schedule(tmp_path, "heartbeat", {"id": "heartbeat", "agent": "advance", "input": {}, "every_seconds": 1})
     d = Daemon(tmp_path)
 
     d.tick()  # first tick: schedule has no prior state -> fires immediately
@@ -40,7 +40,7 @@ def test_due_schedule_dispatches_job(tmp_path: Path):
 
 
 def test_status_reports_schedules(tmp_path: Path):
-    _write_schedule(tmp_path, "nightly", {"id": "nightly", "kind": "advance", "input": {}, "cron": "0 0 * * *"})
+    _write_schedule(tmp_path, "nightly", {"id": "nightly", "agent": "advance", "input": {}, "cron": "0 0 * * *"})
     d = Daemon(tmp_path)
     d.tick()
     status = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
@@ -50,7 +50,7 @@ def test_status_reports_schedules(tmp_path: Path):
 
 
 def test_disabled_schedule_not_dispatched(tmp_path: Path):
-    _write_schedule(tmp_path, "off", {"id": "off", "kind": "advance", "input": {}, "every_seconds": 1, "enabled": False})
+    _write_schedule(tmp_path, "off", {"id": "off", "agent": "advance", "input": {}, "every_seconds": 1, "enabled": False})
     d = Daemon(tmp_path)
     d.tick()
     assert d.scheduled == 0

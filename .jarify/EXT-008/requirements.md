@@ -26,7 +26,7 @@ The CLI runs identically on Windows, macOS, and Linux and uses only the shared f
 `submit` writes a well-formed job descriptor into the daemon's `inbox/`.
 
 #### Acceptance Criteria
-- [ ] `jaros submit <kind> [--input <json>]` writes `inbox/<generated-id>.json` containing `{id, kind, input}`.
+- [ ] `jaros submit <agent> [--input <json>]` writes `inbox/<generated-id>.json` containing `{id, agent, input}`.
 - [ ] The job id is unique; the file is written atomically so the daemon never reads a partial job.
 - [ ] Invalid input (e.g. malformed JSON) is rejected with a clear error and writes nothing.
 
@@ -35,7 +35,7 @@ The CLI runs identically on Windows, macOS, and Linux and uses only the shared f
 `add-agent` installs a new agent module into the watched `agents/` folder.
 
 #### Acceptance Criteria
-- [ ] `jaros add-agent <path-to-module.py> [--name <kind>]` copies the module into `agents/` so the daemon can load it.
+- [ ] `jaros add-agent <path-to-module.py> [--name <name>]` copies the module into `agents/` so the daemon can load it.
 - [ ] The installed module is placed atomically (no partial file visible to the daemon).
 - [ ] A missing/invalid source path is rejected with a clear error.
 

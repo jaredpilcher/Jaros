@@ -11,8 +11,8 @@ the agent proposes inert data, the tool performs only reads.
    Reasoning Plane                 Execution Plane
    +-------------------+           +----------------------------+
    |  agent     |  Decision |  read-only tool            |
-   |  (KIND=...)       | ────────► |  validate() + execute()    |
-   |  emits inert data |  (kind)   |  open('r') / scandir/stat  |
+   |  (NAME=...)       | ────────► |  validate() + execute()    |
+   |  emits inert data |  (type)   |  open('r') / scandir/stat  |
    +-------------------+           +----------------------------+
         held under FsReadRole            performs NO writes
         (no FsWrite / QueueSend)         (structural + by code)
@@ -40,7 +40,7 @@ the agent proposes inert data, the tool performs only reads.
 
 ## Running many at once
 
-Each agent kind is independent; the daemon runs them as lightweight threads in
+Each agent is independent; the daemon runs them as lightweight threads in
 its bounded pool. Submitting jobs for all four (on demand, scheduled, or from the
 console) runs four agent systems concurrently on one node. Across containers
 sharing a data dir, the existing inbox→processed claim (EXT-002 / REQ-7) means

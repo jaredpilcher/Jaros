@@ -22,7 +22,7 @@ def _reset_gate():
 
 
 def _good() -> Decision:
-    return create_decision(id="d1", source="agent-a", kind="noop", payload={"n": 1})
+    return create_decision(id="d1", source="agent-a", type="noop", payload={"n": 1})
 
 
 def test_validate_accepts_good_decision():
@@ -35,9 +35,9 @@ def test_validate_accepts_good_decision():
 @pytest.mark.parametrize(
     "kwargs",
     [
-        {"id": "", "source": "a", "kind": "k"},
-        {"id": "d", "source": "", "kind": "k"},
-        {"id": "d", "source": "a", "kind": ""},
+        {"id": "", "source": "a", "type": "k"},
+        {"id": "d", "source": "", "type": "k"},
+        {"id": "d", "source": "a", "type": ""},
     ],
 )
 def test_validate_rejects_malformed_fields(kwargs):
@@ -50,7 +50,7 @@ def test_validate_rejects_malformed_fields(kwargs):
 
 def test_validate_rejects_non_serializable_payload():
     # Bypass create_decision to plant a bad payload directly on the frozen type.
-    d = Decision(id="d", source="a", kind="k", payload={"f": lambda: 1})  # type: ignore[dict-item]
+    d = Decision(id="d", source="a", type="k", payload={"f": lambda: 1})  # type: ignore[dict-item]
     result = validate_decision(d)
     assert result.ok is False
     assert "serializable" in (result.reason or "")
@@ -63,7 +63,7 @@ def test_registered_validator_can_reject():
         return ValidationResult.accept(d)
 
     register_validator(no_forbidden)
-    bad = create_decision(id="d", source="a", kind="k", payload={"forbidden": True})
+    bad = create_decision(id="d", source="a", type="k", payload={"forbidden": True})
     result = validate_decision(bad)
     assert result.ok is False
     assert result.reason == "payload is forbidden"
@@ -80,7 +80,7 @@ def test_structural_check_runs_before_registered_validators():
 
     register_validator(custom)
     # Malformed (empty id) must be rejected by structural check; custom never runs.
-    bad = Decision(id="", source="a", kind="k", payload={})
+    bad = Decision(id="", source="a", type="k", payload={})
     result = validate_decision(bad)
     assert result.ok is False
     assert calls == []  # short-circuited before the registered validator

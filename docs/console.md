@@ -57,7 +57,7 @@ it's completed, and the current step is highlighted with a direct link:
 Every screen documents itself: a one-line intro with a **Learn more →** link, and
 hover tooltips on key controls.
 
-![A hover tooltip explaining the job kind field](../console/docs/screenshots/tooltip.png)
+![A hover tooltip explaining the agent field](../console/docs/screenshots/tooltip.png)
 
 The in-app **Help & Docs** page collects all of this — every page with pictures
 plus a copy-pasteable CLI quickstart:
@@ -74,7 +74,7 @@ runtime profile. New operators also see the get-started checklist here.
 
 ## Jobs
 
-Submit a job (an agent `kind` + JSON input); it is written atomically to the
+Submit a job (an agent `name` + JSON input); it is written atomically to the
 shared `inbox/` — the only way work enters Jaros. Watch it flow
 inbox → processed → outbox. Preset buttons give a one-click start.
 

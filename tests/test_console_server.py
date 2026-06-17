@@ -60,22 +60,22 @@ def test_snapshot_shape(server):
 
 def test_submit_writes_job_to_inbox(server):
     data, port = server
-    status, raw = _request(port, "POST", "/api/jobs", {"kind": "advance", "input": {}})
+    status, raw = _request(port, "POST", "/api/jobs", {"agent": "advance", "input": {}})
     assert status == 200
     job_id = json.loads(raw)["id"]
     written = data / "inbox" / f"{job_id}.json"
     assert written.is_file()
-    assert json.loads(written.read_text())["kind"] == "advance"
+    assert json.loads(written.read_text())["agent"] == "advance"
     # and it now shows up in the jobs listing
     _, jobs_raw = _request(port, "GET", "/api/jobs")
     assert any(j["id"] == job_id and j["area"] == "inbox" for j in json.loads(jobs_raw))
 
 
-def test_submit_requires_kind(server):
+def test_submit_requires_agent(server):
     _, port = server
     status, raw = _request(port, "POST", "/api/jobs", {"input": {}})
     assert status == 400
-    assert "kind" in json.loads(raw)["error"]
+    assert "agent" in json.loads(raw)["error"]
 
 
 def test_serves_spa_with_fallback(server):

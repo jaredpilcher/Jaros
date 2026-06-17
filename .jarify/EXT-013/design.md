@@ -12,10 +12,10 @@ reproduces exactly. The framework is small, pure, and host-side — it imports o
                                         │
                           run_suite     ▼   (per case)
                        ┌──────────────────────────────────────────┐
-                       │ registry.resolve(kind) ► boundary.decide() │
+                       │ registry.resolve(agent) ► boundary.decide() │
                        │            │ decisions (inert data)        │
                        │            ▼                                │
-                       │ checks: count · kind · source · payload    │
+                       │ checks: count · type · source · payload    │
                        │         gate(accept/reject)                 │
                        │         result_contains ► executor.apply()  │  (no model call)
                        └──────────────────────────────────────────┘

@@ -42,8 +42,8 @@
   "REQ-3": [
     {
       "file": "jaros/registry.py",
-      "startLine": 33,
-      "endLine": 163
+      "startLine": 34,
+      "endLine": 165
     }
   ]
 }

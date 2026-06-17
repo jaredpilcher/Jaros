@@ -13,7 +13,7 @@ import uuid
 from jaros.core import create_decision
 from jaros.llm import LlmRequest
 
-KIND = "reviewer"
+NAME = "reviewer"
 
 
 def _approves(text: str) -> bool:
@@ -41,8 +41,8 @@ class ReviewerBoundary:
         events = ["start", "complete"] if approved else ["start", "block"]
         return [create_decision(
             id=f"rev-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="advance",
+            source=NAME,
+            type="advance",
             payload={
                 "events": events,
                 "verdict": "approve" if approved else "revise",

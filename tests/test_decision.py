@@ -34,19 +34,19 @@ def test_assert_serializable_rejects_non_string_dict_key():
 
 
 def test_create_decision_returns_frozen_immutable():
-    d = create_decision(id="d1", source="agent-a", kind="noop", payload={"n": 1})
+    d = create_decision(id="d1", source="agent-a", type="noop", payload={"n": 1})
     assert isinstance(d, Decision)
-    assert d.id == "d1" and d.source == "agent-a" and d.kind == "noop"
+    assert d.id == "d1" and d.source == "agent-a" and d.type == "noop"
     with pytest.raises(dataclasses.FrozenInstanceError):
         d.id = "other"  # type: ignore[misc]
 
 
 def test_create_decision_rejects_non_serializable_payload():
     with pytest.raises(NotSerializableError):
-        create_decision(id="d", source="a", kind="k", payload={"f": lambda: 1})
+        create_decision(id="d", source="a", type="k", payload={"f": lambda: 1})
 
 
 def test_create_decision_payload_round_trips():
     payload = {"items": [1, "two", {"three": 3}], "flag": False}
-    d = create_decision(id="d", source="a", kind="k", payload=payload)
+    d = create_decision(id="d", source="a", type="k", payload=payload)
     assert d.payload == payload

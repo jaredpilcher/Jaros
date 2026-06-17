@@ -29,7 +29,7 @@ jaros replay --json   # { decisions, modelCalls:0, byteIdentical, ok }
 | Command | What it does |
 | --- | --- |
 | `jaros serve` | Run the node: watch `inbox/`, load `agents/`+`tools/`, process jobs. |
-| `jaros submit <kind> --input <json>` | Write a job to `inbox/` (the only entry point). |
+| `jaros submit <agent> --input <json>` | Write a job to `inbox/` (the only entry point). |
 | `jaros status` / `jaros watch` | Inspect / live-follow state, counts, schedules. |
 | `jaros add-agent <file.py>` | Install an agent module into `agents/`. |
 | `jaros eval` | Run `evals/*.json`; exit 0 iff all pass (CI-friendly). |

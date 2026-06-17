@@ -7,7 +7,7 @@ Read-only is enforced two ways: structurally (spawn agents under a read-only
 capability role — they hold no `FsWrite`/`QueueSend` handle) and by the tools
 themselves (they only `read`/`scandir`/`stat`).
 
-| Agent (`KIND`) | Decision kind / tool | Purpose (read-only) |
+| Agent (`NAME`) | Decision type / tool | Purpose (read-only) |
 | --- | --- | --- |
 | `system-health` | `sys.info` | Host platform / Python / CPU snapshot |
 | `disk-monitor` | `fs.disk_usage` | Free / used bytes for a path |

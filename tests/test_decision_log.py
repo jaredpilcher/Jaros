@@ -46,9 +46,9 @@ def _clean_handlers():
 def _decisions():
     # Each decision is an independent job: a full PENDING->RUNNING->DONE sequence.
     return [
-        create_decision(id="d1", source="agent", kind="advance",
+        create_decision(id="d1", source="agent", type="advance",
                         payload={"events": ["start", "complete"]}),
-        create_decision(id="d2", source="agent", kind="advance",
+        create_decision(id="d2", source="agent", type="advance",
                         payload={"events": ["start", "complete"]}),
     ]
 
@@ -60,7 +60,7 @@ def test_record_and_read_round_trip(tmp_path):
 
     read = read_decisions(dlog)
     assert [d.id for d in read] == ["d1", "d2"]
-    assert read[0].kind == "advance"
+    assert read[0].type == "advance"
     assert read[1].payload == {"events": ["start", "complete"]}
 
 

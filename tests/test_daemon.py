@@ -26,9 +26,9 @@ def _isolate_executor():
     reset_validators()
 
 
-def _submit_job(data: Path, job_id: str, kind: str, job_input: object) -> None:
+def _submit_job(data: Path, job_id: str, agent: str, job_input: object) -> None:
     (data / "inbox" / f"{job_id}.json").write_text(
-        json.dumps({"id": job_id, "kind": kind, "input": job_input}),
+        json.dumps({"id": job_id, "agent": agent, "input": job_input}),
         encoding="utf-8",
     )
 
@@ -120,16 +120,16 @@ def test_status_reflects_counts_after_multiple_ticks(tmp_path: Path):
     assert (tmp_path / "outbox" / "b.json").is_file()
 
 
-def _write_agent(data: Path, name: str, kind: str) -> None:
+def _write_agent(data: Path, name: str, agent: str) -> None:
     (data / "agents" / f"{name}.py").write_text(
         "from jaros.core import create_decision\n"
         "import uuid\n"
-        f"KIND = {kind!r}\n"
+        f"NAME = {agent!r}\n"
         "def build(llm):\n"
         "    class _B:\n"
         "        def decide(self, context):\n"
         "            return [create_decision(id='p-'+uuid.uuid4().hex,\n"
-        f"                source={kind!r}, kind='advance',\n"
+        f"                source={agent!r}, type='advance',\n"
         "                payload={'events': ['start', 'complete'], 'note': 'via-agent'})]\n"
         "    return _B()\n",
         encoding="utf-8",

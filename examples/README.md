@@ -5,8 +5,8 @@ shared file system at runtime — no daemon restart, no code changes to core.
 
 | File | Where it goes | What it shows |
 | --- | --- | --- |
-| `agents/echo_agent.py` | `<data>/agents/` | An agent (`KIND = "echo"`) that emits an inert `advance` Decision driving a job to `DONE`. |
-| `agents/greeter_agent.py` | `<data>/agents/` | An agent (`KIND = "greeter"`) that proposes a *custom tool* action (`demo.greet`). |
+| `agents/echo_agent.py` | `<data>/agents/` | An agent (`NAME = "echo"`) that emits an inert `advance` Decision driving a job to `DONE`. |
+| `agents/greeter_agent.py` | `<data>/agents/` | An agent (`NAME = "greeter"`) that proposes a *custom tool* action (`demo.greet`). |
 | `tools/greet_tool.py` | `<data>/tools/` | A custom Execution-Plane tool (`NAME = "demo.greet"`) with its own deterministic `validate()`/`execute()`. |
 
 ## Try it

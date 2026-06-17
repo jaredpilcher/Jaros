@@ -2,12 +2,12 @@
 
 ### [TASK-1] Implement the agent registry with agent loading
 
-Map agent kinds to factories; load built-ins and runtime agents.
+Map agent names to factories; load built-ins and runtime agents.
 
 #### Steps
-1. Create `jaros/registry.py` with an `AgentRegistry` class: `register(kind, factory)`, `resolve(kind) -> ReasoningBoundary`, `kinds()`.
-2. Register at least one built-in kind (e.g. `"advance"`) in `register_builtins(registry, llm)` returning a `ReasoningBoundary` that consults the `LlmClient` and emits an `advance` `Decision`.
-3. Implement `load_agents(registry, agents_dir)` that imports each `*.py` in the dir via `importlib.util`, reads its module-level `KIND` and `build(llm)` factory, and registers it; track already-loaded files so re-scans are idempotent.
+1. Create `jaros/registry.py` with an `AgentRegistry` class: `register(name, factory)`, `resolve(name) -> ReasoningBoundary`, `names()`.
+2. Register at least one built-in agent (e.g. `"advance"`) in `register_builtins(registry, llm)` returning a `ReasoningBoundary` that consults the `LlmClient` and emits an `advance` `Decision`.
+3. Implement `load_agents(registry, agents_dir)` that imports each `*.py` in the dir via `importlib.util`, reads its module-level `NAME` and `build(llm)` factory, and registers it; track already-loaded files so re-scans are idempotent.
 
 #### Implements
 - [REQ-3] Runtime Agent Registry and Agent Loading
@@ -29,7 +29,7 @@ Boot every plane and loop until signaled.
 Turn inbox job files into validated, durable transitions; isolate failures.
 
 #### Steps
-1. In `jaros/daemon.py`, add `_process_inbox()` that lists `inbox/*.json`, parses `{id, kind, input}`, resolves the kind, and runs the agent under the `AgentPool`.
+1. In `jaros/daemon.py`, add `_process_inbox()` that lists `inbox/*.json`, parses `{id, agent, input}`, resolves the agent, and runs the agent under the `AgentPool`.
 2. Pipe the emitted `Decision` through `validate_decision` then `executor.apply`, then drive `commit(log, state, event)` transitions and write `outbox/<id>.json` via a harness-granted `fs.write`.
 3. Wrap each job in try/except: on success move the job file to `processed/`; on error move it to `failed/` with a `.reason` and increment the failure count — never let the loop die.
 

@@ -18,7 +18,7 @@ Provide the command dispatcher and shared-FS targeting.
 Write a job descriptor into the daemon inbox atomically.
 
 #### Steps
-1. In `jaros/cli.py`, implement `cmd_submit(kind, input_json, data_dir)` that builds `{id, kind, input}` with a unique id (`uuid4`), validating that `--input` parses as JSON (clear error otherwise).
+1. In `jaros/cli.py`, implement `cmd_submit(agent, input_json, data_dir)` that builds `{id, agent, input}` with a unique id (`uuid4`), validating that `--input` parses as JSON (clear error otherwise).
 2. Write to `inbox/.tmp-<id>` then `os.replace()` to `inbox/<id>.json` for atomicity.
 3. Print the created job id and path.
 
@@ -32,7 +32,7 @@ Install a new agent module into the watched folder.
 #### Steps
 1. In `jaros/cli.py`, implement `cmd_add_agent(path, name, data_dir)` that validates the source `*.py` exists and reads it.
 2. Copy it to `agents/.tmp-<file>` then `os.replace()` to `agents/<name-or-filename>.py` (atomic install).
-3. Print the installed agent path and the kind it will register (if discoverable).
+3. Print the installed agent path and the agent name it will register (if discoverable).
 
 #### Implements
 - [REQ-3] Add Agent Agents

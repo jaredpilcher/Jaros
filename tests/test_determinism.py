@@ -34,7 +34,7 @@ def test_deterministic_handler_replays_agree(tmp_path: Path):
     executor.register_handler("act", lambda d, **_: {"v": d.payload.get("n")})
     dlog = DecisionLog(tmp_path / "state")
     for i in range(3):
-        record_decision(dlog, create_decision(id=f"d{i}", source="a", kind="act", payload={"n": i}))
+        record_decision(dlog, create_decision(id=f"d{i}", source="a", type="act", payload={"n": i}))
 
     def replay_once():
         return [digest(r.output) for r in replay(dlog, executor.apply)]
@@ -51,7 +51,7 @@ def test_nondeterministic_handler_is_detected(tmp_path: Path):
 
     executor.register_handler("act", bad)
     dlog = DecisionLog(tmp_path / "state")
-    record_decision(dlog, create_decision(id="d0", source="a", kind="act", payload={}))
+    record_decision(dlog, create_decision(id="d0", source="a", type="act", payload={}))
 
     def replay_once():
         return [digest(r.output) for r in replay(dlog, executor.apply)]

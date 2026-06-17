@@ -2,7 +2,7 @@
 
 The executor is the only thing that acts on a Decision, and only after the gate
 accepts it. It dispatches an accepted decision to a handler registered for the
-decision's ``kind``; unknown kinds are refused with a reason and cause no side
+decision's ``type``; unknown types are refused with a reason and cause no side
 effect. This module MUST NOT import ``jaros.llm`` or ``reasoning_boundary`` —
 the boundary is enforced structurally by ``scripts/check_planes.py``.
 
@@ -55,12 +55,12 @@ Handler = Callable[..., Any]
 _handlers: dict[str, Handler] = {}
 
 
-def register_handler(kind: str, fn: Handler) -> Handler:
-    """Register the handler that the executor dispatches to for ``kind``.
+def register_handler(decision_type: str, fn: Handler) -> Handler:
+    """Register the handler that the executor dispatches to for ``decision_type``.
 
     Returns ``fn`` so it may also be used as a decorator factory's target.
     """
-    _handlers[kind] = fn
+    _handlers[decision_type] = fn
     return fn
 
 
@@ -75,10 +75,10 @@ def apply(
     on_accept: "Callable[[Decision], None] | None" = None,
     **collaborators: Any,
 ) -> ExecutionResult:
-    """Validate ``d`` via the gate, then dispatch to its ``kind`` handler.
+    """Validate ``d`` via the gate, then dispatch to its ``type`` handler.
 
     On gate rejection the reason is logged and a non-applied result is returned
-    with no state mutation. If the decision's ``kind`` has no registered handler
+    with no state mutation. If the decision's ``type`` has no registered handler
     the decision is refused with a clear reason and no side effect. Otherwise the
     handler is invoked with the validated decision and any execution-plane
     ``collaborators`` (state machine, granted handles) — never the reasoning side.
@@ -96,9 +96,9 @@ def apply(
     validated = result.value
     assert validated is not None
 
-    handler = _handlers.get(validated.kind)
+    handler = _handlers.get(validated.type)
     if handler is None:
-        reason = f"no handler registered for kind {validated.kind!r}"
+        reason = f"no handler registered for decision type {validated.type!r}"
         logger.warning("decision %r refused: %s", validated.id, reason)
         return ExecutionResult(applied=False, reason=reason, accepted=validated)
 

@@ -28,7 +28,7 @@ defines the agent job to run and when, and is owned by the operator (added,
 edited, or removed by dropping/removing files) — never by agents at runtime.
 
 #### Acceptance Criteria
-- [x] A schedule file `schedules/<name>.json` defines `{id, kind, input, enabled}`
+- [x] A schedule file `schedules/<name>.json` defines `{id, agent, input, enabled}`
       plus exactly one trigger (`every_seconds`, `cron`, or `at`).
 - [x] Malformed or unparseable schedule files are skipped with a logged reason and
       never crash the daemon.
@@ -68,7 +68,7 @@ jobs to the inbox atomically — the same entry point the CLI and console use.
 #### Acceptance Criteria
 - [x] Each tick, the daemon asks the scheduler for due schedules and writes one
       `inbox/<job-id>.json` per due schedule (atomic temp + rename).
-- [x] A dispatched job carries the schedule's `kind` and `input`, and is processed
+- [x] A dispatched job carries the schedule's `agent` and `input`, and is processed
       by the normal pipeline (gate → executor → durable log).
 - [x] A failure while evaluating or dispatching one schedule is contained and does
       not affect other schedules or stop the daemon.

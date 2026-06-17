@@ -6,7 +6,7 @@ import { Card, Empty, PageIntro, Tip } from "../components/ui";
 const AGENT_TEMPLATE = `import uuid
 from jaros.core import create_decision
 
-KIND = "my_agent"
+NAME = "my_agent"
 
 class MyBoundary:
     def __init__(self, llm):
@@ -15,8 +15,8 @@ class MyBoundary:
     def decide(self, context) -> list:
         return [create_decision(
             id=f"my-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="advance",
+            source=NAME,
+            type="advance",
             payload={"events": ["start", "complete"], "note": str(context)},
         )]
 

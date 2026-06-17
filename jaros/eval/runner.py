@@ -25,7 +25,7 @@ class Expect:
     """Declarative, all-optional assertions about an agent's output."""
 
     decision_count: int | None = None
-    decision_kind: str | None = None
+    decision_type: str | None = None
     source: str | None = None
     payload_contains: dict[str, Any] | None = None
     gate: str | None = None  # "accept" | "reject"
@@ -38,24 +38,24 @@ class EvalCase:
     """One declarative agent evaluation case."""
 
     name: str
-    kind: str
+    agent: str
     input: Any = None
     expect: Expect = field(default_factory=Expect)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "EvalCase":
-        if not data.get("name") or not data.get("kind"):
-            raise ValueError("eval case requires 'name' and 'kind'")
+        if not data.get("name") or not data.get("agent"):
+            raise ValueError("eval case requires 'name' and 'agent'")
         exp = data.get("expect", {}) or {}
         if not isinstance(exp, dict):
             raise ValueError(f"eval case {data['name']!r} 'expect' must be an object")
         return cls(
             name=str(data["name"]),
-            kind=str(data["kind"]),
+            agent=str(data["agent"]),
             input=data.get("input"),
             expect=Expect(
                 decision_count=exp.get("decision_count"),
-                decision_kind=exp.get("decision_kind"),
+                decision_type=exp.get("decision_type"),
                 source=exp.get("source"),
                 payload_contains=exp.get("payload_contains"),
                 gate=exp.get("gate"),
@@ -92,13 +92,13 @@ def _is_subset(expected: dict[str, Any], actual: Any) -> bool:
 def run_case(case: EvalCase, registry: Any, *, execute: bool = True) -> EvalResult:
     """Run one eval case against a resolved agent and report each check.
 
-    ``registry`` resolves ``case.kind`` to a fresh ``ReasoningBoundary``. The
+    ``registry`` resolves ``case.agent`` to a fresh ``ReasoningBoundary``. The
     executor handlers required for ``result_contains`` checks must already be
     registered by the caller (e.g. via ``load_custom_tools``).
     """
     result = EvalResult(case=case.name, passed=False)
     try:
-        boundary = registry.resolve(case.kind)
+        boundary = registry.resolve(case.agent)
         decisions = boundary.decide(case.input)
     except Exception as exc:  # resolution / reasoning failure is a failed eval
         result.error = f"{type(exc).__name__}: {exc}"
@@ -115,14 +115,14 @@ def run_case(case: EvalCase, registry: Any, *, execute: bool = True) -> EvalResu
 
     first = decisions[0] if decisions else None
     if first is None and any(
-        v is not None for v in (exp.decision_kind, exp.source, exp.payload_contains, exp.gate, exp.result_contains)
+        v is not None for v in (exp.decision_type, exp.source, exp.payload_contains, exp.gate, exp.result_contains)
     ):
         checks.append(EvalCheck("emits_decision", False, "agent emitted no decisions"))
         result.passed = all(c.ok for c in checks)
         return result
 
-    if exp.decision_kind is not None and first is not None:
-        checks.append(EvalCheck("decision_kind", first.kind == exp.decision_kind, f"got {first.kind!r}"))
+    if exp.decision_type is not None and first is not None:
+        checks.append(EvalCheck("decision_type", first.type == exp.decision_type, f"got {first.type!r}"))
     if exp.source is not None and first is not None:
         checks.append(EvalCheck("source", first.source == exp.source, f"got {first.source!r}"))
     if exp.payload_contains is not None and first is not None:

@@ -10,8 +10,8 @@ Commands::
 
     jaros init [--with-examples]           scaffold a data dir (+ bundled examples)
     jaros serve                            run the daemon (inside the container)
-    jaros submit <kind> [--input JSON]     -> inbox/<id>.json
-    jaros add-agent <file.py> [--name K]   -> agents/<name-or-file>.py
+    jaros submit <agent> [--input JSON]    -> inbox/<id>.json
+    jaros add-agent <file.py> [--name N]   -> agents/<name-or-file>.py
     jaros status                           -> print status.json
     jaros watch [--interval S]             -> live status + new outbox results
     jaros logs                             -> print the daemon log (if present)
@@ -80,14 +80,14 @@ def _atomic_write(target: Path, data: str) -> None:
 
 
 # #EXT-008-REQ-2 Start
-def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
-    """Write a job descriptor ``{id, kind, input}`` into ``inbox/`` atomically.
+def cmd_submit(agent: str, input_json: str | None, data_dir: Path) -> Path:
+    """Write a job descriptor ``{id, agent, input}`` into ``inbox/`` atomically.
 
-    The ``--input`` string (if given) must parse as JSON; on malformed JSON a
-    :class:`ValueError` is raised and *nothing* is written. The job id is a fresh
-    ``uuid4``; the file is written to ``inbox/.tmp-<id>`` then ``os.replace``-d to
-    ``inbox/<id>.json`` so the daemon never reads a partial job. Returns the path
-    of the created job file.
+    ``agent`` is the name of the agent that should handle the job. The ``--input``
+    string (if given) must parse as JSON; on malformed JSON a :class:`ValueError`
+    is raised and *nothing* is written. The job id is a fresh ``uuid4``; the file
+    is written to ``inbox/.tmp-<id>`` then ``os.replace``-d to ``inbox/<id>.json``
+    so the daemon never reads a partial job. Returns the path of the created job file.
     """
     data_dir = Path(data_dir)
     if input_json is None:
@@ -99,7 +99,7 @@ def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
             raise ValueError(f"--input is not valid JSON: {exc}") from exc
 
     job_id = uuid.uuid4().hex
-    job = {"id": job_id, "kind": kind, "input": parsed_input}
+    job = {"id": job_id, "agent": agent, "input": parsed_input}
     target = data_dir / "inbox" / f"{job_id}.json"
     # Validate-then-write: the bad-JSON path above never reaches here, so a
     # rejected submission leaves the inbox untouched.
@@ -112,11 +112,11 @@ def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
 
 
 # #EXT-008-REQ-3 Start
-def _discover_kind(source: str) -> str | None:
-    """Statically read an agent module's top-level ``KIND`` string, if any.
+def _discover_name(source: str) -> str | None:
+    """Statically read an agent module's top-level ``NAME`` string, if any.
 
     Parses the source with :mod:`ast` (no import, so no agent side effects run on
-    the host) and returns the literal value of a module-level ``KIND = "..."``
+    the host) and returns the literal value of a module-level ``NAME = "..."``
     assignment, or ``None`` when it is absent / not a string literal.
     """
     try:
@@ -131,7 +131,7 @@ def _discover_kind(source: str) -> str | None:
         else:
             continue
         for target in targets:
-            if isinstance(target, ast.Name) and target.id == "KIND":
+            if isinstance(target, ast.Name) and target.id == "NAME":
                 value = getattr(node, "value", None)
                 if isinstance(value, ast.Constant) and isinstance(value.value, str):
                     return value.value
@@ -145,7 +145,7 @@ def cmd_add_agent(path: str, name: str | None, data_dir: Path) -> tuple[Path, st
     ``agents/.tmp-<file>`` and ``os.replace``-s it to
     ``agents/<name-or-filename>.py`` so the daemon never loads a partial module.
     The destination filename defaults to the source filename; ``name`` overrides
-    its stem. Returns ``(installed_path, discovered_kind)``.
+    its stem. Returns ``(installed_path, discovered_agent_name)``.
     """
     source = Path(path)
     if not source.is_file():
@@ -161,7 +161,7 @@ def cmd_add_agent(path: str, name: str | None, data_dir: Path) -> tuple[Path, st
         filename = source.name
     target = data_dir / "agents" / filename
     _atomic_write(target, content)
-    return target, _discover_kind(content)
+    return target, _discover_name(content)
 # #EXT-008-REQ-3 End
 
 
@@ -234,12 +234,12 @@ def cmd_watch(data_dir: Path, interval: float, stream=None) -> int:
                     if result.name in seen:
                         continue
                     seen.add(result.name)
-                    kind = "?"
+                    agent = "?"
                     try:
-                        kind = json.loads(result.read_text(encoding="utf-8")).get("kind", "?")
+                        agent = json.loads(result.read_text(encoding="utf-8")).get("agent", "?")
                     except (OSError, ValueError):
                         pass
-                    print(f"  -> outbox/{result.name}  ({kind})", file=out)
+                    print(f"  -> outbox/{result.name}  ({agent})", file=out)
             time.sleep(max(interval, 0.0))
     except KeyboardInterrupt:
         print("watch stopped.", file=out)
@@ -577,7 +577,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
 
     p_submit = add_command("submit", "write a job descriptor into inbox/")
-    p_submit.add_argument("kind", help="agent kind that should handle the job")
+    p_submit.add_argument("agent", help="name of the agent that should handle the job")
     p_submit.add_argument(
         "--input", dest="input", default=None, help="job input as a JSON string"
     )
@@ -585,7 +585,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_add = add_command("add-agent", "install an agent module into agents/")
     p_add.add_argument("path", help="path to the agent module (*.py)")
     p_add.add_argument(
-        "--name", dest="name", default=None, help="override the installed kind/filename"
+        "--name", dest="name", default=None, help="override the installed agent name/filename"
     )
 
     add_command("status", "read and print status.json")
@@ -711,7 +711,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "submit":
         try:
-            target = cmd_submit(args.kind, args.input, data_dir)
+            target = cmd_submit(args.agent, args.input, data_dir)
         except ValueError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
@@ -721,12 +721,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "add-agent":
         try:
-            target, kind = cmd_add_agent(args.path, args.name, data_dir)
+            target, agent = cmd_add_agent(args.path, args.name, data_dir)
         except (FileNotFoundError, OSError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-        if kind:
-            print(f"installed agent -> {target} (registers kind {kind!r})")
+        if agent:
+            print(f"installed agent -> {target} (registers agent {agent!r})")
         else:
             print(f"installed agent -> {target}")
         return 0

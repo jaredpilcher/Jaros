@@ -43,9 +43,9 @@ A library of distinct read-only agents covers several operational purposes.
 #### Acceptance Criteria
 - [x] Includes `system-health` (`sys.info`), `disk-monitor` (`fs.disk_usage`),
       `inventory` (`fs.stat`), and `text-metrics` (`text.count`).
-- [x] Each agent is a drop-in agent (`KIND` + `build(llm)`) and each tool a
+- [x] Each agent is a drop-in agent (`NAME` + `build(llm)`) and each tool a
       drop-in module (`NAME` + `validate` + `execute`), loadable at runtime.
-- [x] Each agent proposes the decision kind its tool handles, end to end.
+- [x] Each agent proposes the decision type its tool handles, end to end.
 
 ### [REQ-3] Concurrent Multi-Agent Operation
 
@@ -54,7 +54,7 @@ Many of these agents run at once under a single daemon, as lightweight threads.
 #### Acceptance Criteria
 - [x] All four agents can be submitted and processed under one daemon with no
       failures, each producing its read-only result in the outbox.
-- [x] A test drives the four kinds concurrently and asserts the read-only outputs.
+- [x] A test drives the four agents concurrently and asserts the read-only outputs.
 - [x] Operation composes with native scheduling (EXT-011) for unattended runs.
 
 ### [REQ-4] Configuration & Run Documentation

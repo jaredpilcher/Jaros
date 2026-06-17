@@ -108,7 +108,7 @@ An agent is a `ReasoningBoundary`: **data in → `Decision` data out**, no side 
 import uuid
 from jaros.core import create_decision
 
-KIND = "greeter"  # the agent kind the daemon registers
+NAME = "greeter"  # the agent's name the daemon registers
 
 class GreeterBoundary:
     def __init__(self, llm):
@@ -120,7 +120,7 @@ class GreeterBoundary:
         return [create_decision(
             id=f"greet-{uuid.uuid4().hex}",
             source="greeter",
-            kind="advance",                       # built-in handler drives the state machine
+            type="advance",                       # built-in handler drives the state machine
             payload={"events": ["start", "complete"], "note": f"hello {name}"},
         )]
 

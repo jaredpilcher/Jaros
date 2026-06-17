@@ -43,7 +43,7 @@ def make_advance_handler():
         return {
             "decision": decision.id,
             "source": decision.source,
-            "kind": decision.kind,
+            "type": decision.type,
             "finalState": state,
             "events": list(events),
             "logIndices": indices,

@@ -6,22 +6,22 @@ description: Use when creating a Jaros custom tool — the deterministic Executi
 # Build a Jaros custom tool
 
 A tool is the Execution-Plane side of a decision. The daemon dispatches a decision
-to the tool whose `NAME` equals the decision's `kind`, running `validate()` at the
+to the tool whose `NAME` equals the decision's `type`, running `validate()` at the
 gate and then `execute()` for the effect. Pair it with an agent that emits that
-`kind` (see [jaros-build-agent](../jaros-build-agent/SKILL.md)).
+`type` (see [jaros-build-agent](../jaros-build-agent/SKILL.md)).
 
 ## Contract
 
 A class in the data dir's `tools/` folder:
 
-- `NAME: str` — equals the decision `kind` it handles.
+- `NAME: str` — equals the decision `type` it handles.
 - `validate(self, decision) -> ValidationResult` — cheap, pure checks.
 - `execute(self, decision, **collaborators) -> dict` — the effect; returns inert data.
 
 ## Steps
 
 1. Copy [`templates/tool.py`](../../templates/tool.py) into `<data-dir>/tools/`.
-2. Set `NAME` to the decision `kind` your agent emits.
+2. Set `NAME` to the decision `type` your agent emits.
 3. In `validate`, reject early with a clear reason if the payload is malformed:
    `return ValidationResult.reject("needs a 'path'")`; otherwise
    `return ValidationResult.accept(decision)`.

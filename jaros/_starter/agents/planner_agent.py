@@ -14,7 +14,7 @@ import uuid
 from jaros.core import create_decision
 from jaros.llm import LlmRequest
 
-KIND = "planner"
+NAME = "planner"
 
 
 def _accepts(text: str) -> bool:
@@ -42,8 +42,8 @@ class PlannerBoundary:
         events = ["start", "complete"] if accepted else ["start", "fail"]
         return [create_decision(
             id=f"plan-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="advance",
+            source=NAME,
+            type="advance",
             payload={
                 "events": events,
                 "verdict": "accept" if accepted else "reject",

@@ -80,7 +80,7 @@ Extend the durable log from `(event, state)` transitions to the accepted
 `Decision` payloads required for deterministic re-execution.
 
 #### Steps
-1. In `jaros/state/log.py`, extend `LogEntry` with a `decision: dict` field (the accepted `Decision` serialized via its JSON payload — `id`, `source`, `kind`, `payload`) and include it in `compute_checksum`, `to_json`, and `read()` parsing; keep `index`/`event`/`state` for backward-compatible recovery.
+1. In `jaros/state/log.py`, extend `LogEntry` with a `decision: dict` field (the accepted `Decision` serialized via its JSON payload — `id`, `source`, `type`, `payload`) and include it in `compute_checksum`, `to_json`, and `read()` parsing; keep `index`/`event`/`state` for backward-compatible recovery.
 2. Add a `commit_decision(log, state, machine_event, decision)` path (in `jaros/state/machine.py`) that appends the decision-bearing entry durably *before* the executor applies it, preserving the append-before-observable invariant.
 3. Update the `#EXT-002-REQ-3` comment block bounds and `.jarify/EXT-002/index.json`; add a test asserting a committed entry round-trips its decision payload.
 

@@ -14,7 +14,7 @@ import uuid
 from jaros.core import create_decision
 from jaros.llm import LlmRequest
 
-KIND = "worker"
+NAME = "worker"
 
 
 def _confident(text: str) -> bool:
@@ -45,8 +45,8 @@ class WorkerBoundary:
         ok = confident and not bool(ctx.get("bad", False))
         return [create_decision(
             id=f"work-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="swarm.handoff",
+            source=NAME,
+            type="swarm.handoff",
             payload={"draft": draft[:80], "ok": ok, "confidence": "yes" if confident else "no"},
         )]
 

@@ -97,15 +97,15 @@ class _Handler(BaseHTTPRequestHandler):
         try:
             if path == "/api/jobs":
                 body = self._read_body()
-                if not body.get("kind"):
-                    return self._json(400, {"error": "kind is required"})
+                if not body.get("agent"):
+                    return self._json(400, {"error": "agent is required"})
                 job_input = body.get("input", {})
                 if isinstance(job_input, str):
                     try:
                         job_input = json.loads(job_input) if job_input.strip() else {}
                     except ValueError:
                         return self._json(400, {"error": "input must be valid JSON"})
-                return self._json(200, D.submit_job(d, str(body["kind"]), job_input))
+                return self._json(200, D.submit_job(d, str(body["agent"]), job_input))
             if path in ("/api/agents", "/api/tools"):
                 area = "tools" if path.endswith("/tools") else "agents"
                 body = self._read_body()

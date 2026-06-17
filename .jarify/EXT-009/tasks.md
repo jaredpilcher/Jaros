@@ -58,7 +58,7 @@ Retire the authorization-gateway layer so the system aligns with the directive's
 
 #### Steps
 1. In `jaros/execution/tools.py`, delete the `#EXT-009-REQ-3` block (`PolicyManager`), the global `policy_manager`, `register_permission_gate`/`role_permission_gate`, and the `_permission_gate_registered` flag; simplify `load_custom_tools(tools_dir)` to scan + register tool validators/handlers only (drop the `harness` and `permissions_path` params and the gate registration call).
-2. In `jaros/daemon.py`, update both `load_custom_tools(...)` calls to pass only the tools dir; replace the `policy_manager.get_policy()["assignments"]` role lookup with a fixed least-privilege default role (`GuestRole`) for spawned job kinds; remove the now-unused `policy_manager` import.
+2. In `jaros/daemon.py`, update both `load_custom_tools(...)` calls to pass only the tools dir; replace the `policy_manager.get_policy()["assignments"]` role lookup with a fixed least-privilege default role (`GuestRole`) for spawned agents; remove the now-unused `policy_manager` import.
 3. `git rm config/permissions.json` (and stop referencing `config/permissions.local.json`); update `tests/test_dynamic_tools.py` to drop the permission-gate and `PolicyManager` tests and the `permissions_path` argument; remove `REQ-3` from `.jarify/EXT-009/index.json`.
 4. Update `docs/building-agents.md` and `docs/agent-playbook.md` to remove the role-permission/`permissions.json` enforcement sections, reframing capability-safety as structural least-privilege via harness handles. Run `pytest`.
 

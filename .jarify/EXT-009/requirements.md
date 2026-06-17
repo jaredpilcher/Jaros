@@ -26,7 +26,7 @@ The system dynamically scans, imports, and instantiates Python tool modules drop
 Once a tool is loaded, its `validate` and `execute` methods are dynamically registered as first-class citizens in the global validation gate and executor pipelines.
 
 #### Acceptance Criteria
-- [ ] Decisions with `kind` matching the tool's `NAME` (e.g. `"db.accounts.read"`) automatically trigger the tool's custom `validate()` gate during validation.
+- [ ] Decisions with `type` matching the tool's `NAME` (e.g. `"db.accounts.read"`) automatically trigger the tool's custom `validate()` gate during validation.
 - [ ] If validation fails, the gate rejects the decision and halts execution.
 - [ ] Validated decisions are dispatched to the tool's `execute()` handler inside the pluggable executor.
 

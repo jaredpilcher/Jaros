@@ -11,7 +11,7 @@ import uuid
 
 from jaros.core import create_decision
 
-KIND = "system-health"
+NAME = "system-health"
 
 
 class SystemHealthBoundary:
@@ -21,8 +21,8 @@ class SystemHealthBoundary:
     def decide(self, context) -> list:
         return [create_decision(
             id=f"health-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="sys.info",
+            source=NAME,
+            type="sys.info",
             payload={},
         )]
 

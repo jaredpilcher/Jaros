@@ -19,7 +19,7 @@ shared data directory.
 
 #### Steps
 1. Create `console/server/jarosData.ts` with `resolveDataDir()` (from `--data-dir=`/`JAROS_DATA_DIR`/default) and safe readers: `getStatus()`, `getDecisions()`/`getTransitions()` (newline-delimited JSON, torn-trailing tolerant), `getJobs()` (inbox/processed/failed + `.reason`), `getOutbox()`, `getAgents()`/`getTools()`.
-2. Add atomic writers: `submitJob(kind, input)` (temp file + `renameSync` into `inbox/`) and `installModule(area, name, source)` with a name guard rejecting `/`, `\\`, and leading `.` to prevent traversal.
+2. Add atomic writers: `submitJob(agent, input)` (temp file + `renameSync` into `inbox/`) and `installModule(area, name, source)` with a name guard rejecting `/`, `\\`, and leading `.` to prevent traversal.
 
 #### Implements
 - [REQ-1] Host-Side Console; Serverless Node Preserved
@@ -68,7 +68,7 @@ The live dashboard and the job lifecycle workflow.
 
 #### Steps
 1. Create `console/src/pages/Overview.tsx` rendering machine state, processed/failed/decisions stats, a throughput `Sparkline` accumulated from live snapshots, the agent-pool panel, the zero-infra profile, and the last result.
-2. Create `console/src/pages/Jobs.tsx` with a submit form (kind + JSON input, with `advance`/`echo`/`greeter` presets) posting to `/api/jobs`, plus inbox/processed/failed lists and an outbox result viewer.
+2. Create `console/src/pages/Jobs.tsx` with a submit form (agent + JSON input, with `advance`/`echo`/`greeter` presets) posting to `/api/jobs`, plus inbox/processed/failed lists and an outbox result viewer.
 
 #### Implements
 - [REQ-2] Live Monitoring & Status

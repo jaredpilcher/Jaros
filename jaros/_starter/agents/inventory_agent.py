@@ -10,7 +10,7 @@ import uuid
 
 from jaros.core import create_decision
 
-KIND = "inventory"
+NAME = "inventory"
 
 
 class InventoryBoundary:
@@ -21,8 +21,8 @@ class InventoryBoundary:
         path = context.get("path", ".") if isinstance(context, dict) else "."
         return [create_decision(
             id=f"inv-{uuid.uuid4().hex}",
-            source=KIND,
-            kind="fs.stat",
+            source=NAME,
+            type="fs.stat",
             payload={"path": path},
         )]
 

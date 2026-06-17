@@ -68,7 +68,7 @@ The operator can submit jobs and inspect every stage of their lifecycle, purely
 over the shared FS.
 
 #### Acceptance Criteria
-- [x] Submitting `{kind, input}` writes a well-formed descriptor atomically to
+- [x] Submitting `{agent, input}` writes a well-formed descriptor atomically to
       `inbox/` (temp file + rename), with invalid JSON rejected and nothing written.
 - [x] The console lists `inbox/`, `processed/`, and `failed/` jobs (with failure
       reasons) and renders `outbox/` results.
@@ -92,7 +92,7 @@ first-class operator workflow.
 
 #### Acceptance Criteria
 - [x] The durable decision log (`state/decisions.log`) is rendered as an ordered,
-      inspectable list of accepted decisions (kind, source, payload, checksum).
+      inspectable list of accepted decisions (type, source, payload, checksum).
 - [x] A one-click action replays the recorded decisions through the deterministic
       executor — with no model call — and reports the reconstructed final state.
 - [x] The result indicates whether replay reproduced the run to byte-identical

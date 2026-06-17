@@ -101,14 +101,14 @@ export function Replay() {
         ) : (
           <table>
             <thead>
-              <tr><th>#</th><th>kind</th><th>source</th><th>decision id</th><th>checksum</th></tr>
+              <tr><th>#</th><th>type</th><th>source</th><th>decision id</th><th>checksum</th></tr>
             </thead>
             <tbody>
               {decisions.map((d) => (
                 <Fragment key={d.index}>
                   <tr style={{ cursor: "pointer" }} onClick={() => setOpen(open === d.index ? null : d.index)}>
                     <td style={{ color: "var(--muted)" }}>{d.index}</td>
-                    <td><span className="tag kind">{d.decision.kind}</span></td>
+                    <td><span className="tag kind">{d.decision.type}</span></td>
                     <td>{d.decision.source}</td>
                     <td style={{ color: "var(--muted)" }}>{d.decision.id.slice(0, 16)}</td>
                     <td style={{ color: "var(--green-dim)" }}>{d.checksum.slice(0, 10)}…</td>

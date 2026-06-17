@@ -28,17 +28,17 @@ The daemon watches the shared-FS `inbox/` for job descriptors and processes each
 
 #### Acceptance Criteria
 - [ ] New job files appearing in `inbox/` are detected by the run loop (polling, cross-platform — no OS-specific file events).
-- [ ] Each job names an agent `kind` + inert input; the daemon resolves the kind via the registry and runs it under the agent pool.
+- [ ] Each job names an `agent` + inert input; the daemon resolves the agent via the registry and runs it under the agent pool.
 - [ ] A processed job is moved to a `processed/` (or `failed/`) area so it is never run twice.
 
 ### [REQ-3] Runtime Agent Registry and Agent Loading
 
-Built-in agent kinds are registered at boot; new agent modules placed in the shared-FS `agents/` folder are imported and registered at runtime without restarting the OS.
+Built-in agents are registered at boot; new agent modules placed in the shared-FS `agents/` folder are imported and registered at runtime without restarting the OS.
 
 #### Acceptance Criteria
-- [ ] A registry maps an agent `kind` to a factory producing a `ReasoningBoundary`.
-- [ ] At least one built-in agent kind is registered at boot.
-- [ ] A new `*.py` agent module dropped into `agents/` is imported, its declared kind registered, and becomes usable — no daemon restart required.
+- [ ] A registry maps an agent `name` to a factory producing a `ReasoningBoundary`.
+- [ ] At least one built-in agent is registered at boot.
+- [ ] A new `*.py` agent module dropped into `agents/` is imported, its declared name registered, and becomes usable — no daemon restart required.
 
 ### [REQ-4] Observable Status and Heartbeat
 

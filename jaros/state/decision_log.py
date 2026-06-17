@@ -13,7 +13,7 @@ on append, and tolerant of a single torn trailing line — mirroring
 :class:`~jaros.state.log.TransitionLog`. Each record carries:
 
 - ``index``     — 1-based, strictly increasing position;
-- ``decision``  — the accepted decision serialized as ``{id, source, kind,
+- ``decision``  — the accepted decision serialized as ``{id, source, type,
   payload}`` (inert data only — EXT-001 guarantees it is JSON-serializable);
 - ``checksum``  — SHA-256 over the record's canonical payload.
 """
@@ -37,7 +37,7 @@ def _decision_to_dict(decision: Decision) -> dict[str, Any]:
     return {
         "id": decision.id,
         "source": decision.source,
-        "kind": decision.kind,
+        "type": decision.type,
         "payload": decision.payload,
     }
 
@@ -47,7 +47,7 @@ def _decision_from_dict(data: dict[str, Any]) -> Decision:
     return create_decision(
         id=data["id"],
         source=data["source"],
-        kind=data["kind"],
+        type=data["type"],
         payload=data["payload"],
     )
 
