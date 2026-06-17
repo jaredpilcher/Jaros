@@ -6,12 +6,12 @@ Provide a matched, copy-pasteable `word-count` example that passes `jaros eval`
 unmodified, as the executable backbone of the kit.
 
 #### Steps
-1. Add `agent-kit/templates/agent.py` — a `WordCountBoundary` with `KIND` and
+1. Add `agent-kit/templates/agent.py` — a `WordCountBoundary` with `NAME` and
    `build(llm)`, emitting a `text.wordcount` decision with a `{path}` payload.
 2. Add `agent-kit/templates/tool.py` — a `WordCountTool` (`NAME = "text.wordcount"`)
    with `validate()` and a deterministic `execute()` that counts words in the file.
 3. Add `agent-kit/templates/eval.json` and `schedule.json` for the same `word-count`
-   kind.
+   agent.
 4. Verify: stage agent + tool + eval into a throwaway data dir and confirm
    `jaros eval` exits 0.
 

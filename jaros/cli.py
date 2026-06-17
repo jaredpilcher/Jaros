@@ -8,16 +8,18 @@ made — the CLI reaches the daemon exclusively through files.
 
 Commands::
 
+    jaros init [--with-examples]           scaffold a data dir (+ bundled examples)
     jaros serve                            run the daemon (inside the container)
-    jaros submit <kind> [--input JSON]     -> inbox/<id>.json
-    jaros add-agent <file.py> [--name K]   -> agents/<name-or-file>.py
+    jaros submit <agent> [--input JSON]    -> inbox/<id>.json
+    jaros add-agent <file.py> [--name N]   -> agents/<name-or-file>.py
     jaros status                           -> print status.json
     jaros watch [--interval S]             -> live status + new outbox results
     jaros logs                             -> print the daemon log (if present)
     jaros eval                             -> run the agent eval suite (evals/)
     jaros replay [--json]                  -> reconstruct + verify a run (byte-identical, no model call)
 
-    global: --data-dir DIR (else $JAROS_DATA_DIR, else ./.jaros-data)
+    The data dir is discovered automatically: ./.jaros-data by default, else
+    $JAROS_DATA_DIR, else pass --data-dir DIR to override.
 
 Writes are atomic (temp file + :func:`os.replace`), so the daemon never observes a
 partial job or agent. This module lives directly under ``jaros/`` (not under an
@@ -78,14 +80,14 @@ def _atomic_write(target: Path, data: str) -> None:
 
 
 # #EXT-008-REQ-2 Start
-def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
-    """Write a job descriptor ``{id, kind, input}`` into ``inbox/`` atomically.
+def cmd_submit(agent: str, input_json: str | None, data_dir: Path) -> Path:
+    """Write a job descriptor ``{id, agent, input}`` into ``inbox/`` atomically.
 
-    The ``--input`` string (if given) must parse as JSON; on malformed JSON a
-    :class:`ValueError` is raised and *nothing* is written. The job id is a fresh
-    ``uuid4``; the file is written to ``inbox/.tmp-<id>`` then ``os.replace``-d to
-    ``inbox/<id>.json`` so the daemon never reads a partial job. Returns the path
-    of the created job file.
+    ``agent`` is the name of the agent that should handle the job. The ``--input``
+    string (if given) must parse as JSON; on malformed JSON a :class:`ValueError`
+    is raised and *nothing* is written. The job id is a fresh ``uuid4``; the file
+    is written to ``inbox/.tmp-<id>`` then ``os.replace``-d to ``inbox/<id>.json``
+    so the daemon never reads a partial job. Returns the path of the created job file.
     """
     data_dir = Path(data_dir)
     if input_json is None:
@@ -97,7 +99,7 @@ def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
             raise ValueError(f"--input is not valid JSON: {exc}") from exc
 
     job_id = uuid.uuid4().hex
-    job = {"id": job_id, "kind": kind, "input": parsed_input}
+    job = {"id": job_id, "agent": agent, "input": parsed_input}
     target = data_dir / "inbox" / f"{job_id}.json"
     # Validate-then-write: the bad-JSON path above never reaches here, so a
     # rejected submission leaves the inbox untouched.
@@ -110,11 +112,11 @@ def cmd_submit(kind: str, input_json: str | None, data_dir: Path) -> Path:
 
 
 # #EXT-008-REQ-3 Start
-def _discover_kind(source: str) -> str | None:
-    """Statically read an agent module's top-level ``KIND`` string, if any.
+def _discover_name(source: str) -> str | None:
+    """Statically read an agent module's top-level ``NAME`` string, if any.
 
     Parses the source with :mod:`ast` (no import, so no agent side effects run on
-    the host) and returns the literal value of a module-level ``KIND = "..."``
+    the host) and returns the literal value of a module-level ``NAME = "..."``
     assignment, or ``None`` when it is absent / not a string literal.
     """
     try:
@@ -129,7 +131,7 @@ def _discover_kind(source: str) -> str | None:
         else:
             continue
         for target in targets:
-            if isinstance(target, ast.Name) and target.id == "KIND":
+            if isinstance(target, ast.Name) and target.id == "NAME":
                 value = getattr(node, "value", None)
                 if isinstance(value, ast.Constant) and isinstance(value.value, str):
                     return value.value
@@ -143,7 +145,7 @@ def cmd_add_agent(path: str, name: str | None, data_dir: Path) -> tuple[Path, st
     ``agents/.tmp-<file>`` and ``os.replace``-s it to
     ``agents/<name-or-filename>.py`` so the daemon never loads a partial module.
     The destination filename defaults to the source filename; ``name`` overrides
-    its stem. Returns ``(installed_path, discovered_kind)``.
+    its stem. Returns ``(installed_path, discovered_agent_name)``.
     """
     source = Path(path)
     if not source.is_file():
@@ -159,7 +161,7 @@ def cmd_add_agent(path: str, name: str | None, data_dir: Path) -> tuple[Path, st
         filename = source.name
     target = data_dir / "agents" / filename
     _atomic_write(target, content)
-    return target, _discover_kind(content)
+    return target, _discover_name(content)
 # #EXT-008-REQ-3 End
 
 
@@ -205,20 +207,39 @@ def cmd_watch(data_dir: Path, interval: float, stream=None) -> int:
     """
     out = stream if stream is not None else sys.stdout
     outbox = data_dir / "outbox"
+    # Each result is surfaced once: existing results on the first pass, new ones
+    # as they appear. (The status line, by contrast, prints only when it changes.)
     seen: set[str] = set()
+    last_sig: object = object()  # sentinel -> the first read always prints
+    print(f"watching {data_dir} — Ctrl-C to stop", file=out)
     try:
         while True:
-            cmd_status(data_dir, stream=out)
+            status = _read_status(data_dir)
+            if status is None:
+                sig: object = None
+                line = "waiting for the daemon…"
+            else:
+                pool = status.get("pool", {}) or {}
+                sig = (status.get("state"), status.get("processed"), status.get("failed"),
+                       status.get("scheduled"), pool.get("active"))
+                line = (f"state={status.get('state')}  processed={status.get('processed')}  "
+                        f"failed={status.get('failed')}  active={pool.get('active', 0)}")
+            # Print the status line only when something changed.
+            if sig != last_sig:
+                last_sig = sig
+                print(f"  [{time.strftime('%H:%M:%S')}] {line}", file=out)
+            # And a line for each new outbox result.
             if outbox.is_dir():
                 for result in sorted(outbox.glob("*.json")):
                     if result.name in seen:
                         continue
                     seen.add(result.name)
-                    print(f"--- new result: outbox/{result.name} ---", file=out)
+                    agent = "?"
                     try:
-                        print(result.read_text(encoding="utf-8"), file=out)
-                    except OSError:
+                        agent = json.loads(result.read_text(encoding="utf-8")).get("agent", "?")
+                    except (OSError, ValueError):
                         pass
+                    print(f"  -> outbox/{result.name}  ({agent})", file=out)
             time.sleep(max(interval, 0.0))
     except KeyboardInterrupt:
         print("watch stopped.", file=out)
@@ -377,6 +398,131 @@ def cmd_replay(data_dir: Path, *, as_json: bool = False, verbose: bool = False, 
 
 
 # #EXT-008-REQ-1 Start
+# #EXT-008-REQ-7 Start
+#: The full layout ``jaros init`` creates — the daemon's runtime LAYOUT_DIRS plus
+#: the host-side folders (tools/evals/schedules/config) the runtime layout omits.
+INIT_DIRS: tuple[str, ...] = (
+    "state", "inbox", "outbox", "processed", "failed", "artifacts",
+    "agents", "tools", "evals", "schedules", "config",
+)
+
+#: Bundled starter areas -> (resource/data-dir subdir, file suffix).
+_STARTER_AREAS: tuple[tuple[str, str], ...] = (
+    ("agents", ".py"), ("tools", ".py"), ("evals", ".json"), ("schedules", ".json"),
+)
+
+
+def _stage_starter(data_dir: Path, *, force: bool) -> dict[str, int] | None:
+    """Copy the bundled starter agents/tools/evals/schedules into ``data_dir``.
+
+    Reads from the packaged :mod:`jaros._starter` via :mod:`importlib.resources`,
+    so it works from a plain ``pip install jaros`` (not only a source checkout).
+    Returns a per-area count, or ``None`` if the bundled resources are absent.
+    Existing files are left intact unless ``force`` is given.
+    """
+    from importlib import resources
+
+    try:
+        root = resources.files("jaros._starter")
+    except (ModuleNotFoundError, FileNotFoundError, TypeError):
+        return None
+    staged = {area: 0 for area, _ in _STARTER_AREAS}
+    for area, suffix in _STARTER_AREAS:
+        src_dir = root / area
+        try:
+            if not src_dir.is_dir():
+                continue
+            entries = list(src_dir.iterdir())
+        except (FileNotFoundError, NotADirectoryError):
+            continue
+        for entry in entries:
+            if not entry.name.endswith(suffix):
+                continue
+            dest = data_dir / area / entry.name
+            if dest.exists() and not force:
+                continue
+            dest.write_bytes(entry.read_bytes())
+            staged[area] += 1
+    return staged
+
+
+def cmd_init(data_dir: Path, *, with_examples: bool = False, force: bool = False, stream=None) -> int:
+    """Scaffold a ready-to-use data dir; optionally stage the bundled examples.
+
+    Creates the full directory layout (idempotent) and, with ``with_examples``,
+    copies the packaged starter agents/tools/evals/schedules so the console shows
+    installed agents and ``jaros submit``/``eval`` work right away. Writes only
+    under ``data_dir`` — no socket, no network (consistent with REQ-5).
+    """
+    out = stream if stream is not None else sys.stdout
+    data_dir = Path(data_dir)
+
+    created: list[str] = []
+    for name in INIT_DIRS:
+        d = data_dir / name
+        if not d.exists():
+            created.append(name)
+        d.mkdir(parents=True, exist_ok=True)
+
+    print(f"initialized Jaros data dir: {data_dir}", file=out)
+    print(
+        f"  layout: {', '.join(INIT_DIRS)}"
+        + (f"  ({len(created)} created)" if created else "  (already present)"),
+        file=out,
+    )
+
+    if with_examples:
+        staged = _stage_starter(data_dir, force=force)
+        if staged is None:
+            print("  examples: bundled starter not found in this install — layout created without them", file=out)
+        else:
+            print(
+                f"  examples staged: agents={staged['agents']} tools={staged['tools']} "
+                f"evals={staged['evals']} schedules={staged['schedules']}",
+                file=out,
+            )
+
+    # The CLI discovers the data dir automatically (default ./.jaros-data, else
+    # $JAROS_DATA_DIR), so the next steps need no --data-dir. Only when a
+    # non-default dir was initialized do we point the env var at it.
+    print("", file=out)
+    print("next:", file=out)
+    if str(data_dir) != DEFAULT_DATA_DIR:
+        print(f"  set JAROS_DATA_DIR={data_dir}   # so jaros discovers this node", file=out)
+    print("  jaros serve                   # boot the node", file=out)
+    if with_examples:
+        print("  jaros submit system-health    # run a bundled example agent", file=out)
+        print("  jaros eval                    # run the bundled eval suite", file=out)
+    return 0
+# #EXT-008-REQ-7 End
+
+
+# #EXT-010-REQ-10 Start
+DEFAULT_CONSOLE_PORT = 5500
+
+
+def _launch_console(data_dir: Path, port: int) -> "tuple[str, object] | None":
+    """Start the bundled web console on a background thread (no Node required).
+
+    The server lives in the sibling ``jaros_console`` package and is imported
+    *lazily* here, so the ``jaros`` package itself imports no server framework
+    and the zero-infrastructure guardrails over ``jaros/**`` keep passing. The
+    Jaros node stays serverless; this is a host-side companion, like the CLI.
+    Returns ``(url, httpd)`` — call ``httpd.shutdown()`` to stop — or ``None``
+    if the bundle is unavailable or the port is already in use.
+    """
+    try:
+        from jaros_console import serve_console
+    except Exception:
+        return None
+    try:
+        httpd = serve_console(Path(data_dir), int(port), background=True)
+    except OSError:
+        return None  # port already in use, etc.
+    return (f"http://localhost:{port}", httpd)
+# #EXT-010-REQ-10 End
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """Construct the argparse parser with ``--data-dir`` + subcommands.
 
@@ -404,10 +550,34 @@ def _build_parser() -> argparse.ArgumentParser:
         )
         return p
 
-    add_command("serve", "run the daemon (used inside the container)")
+    p_init = add_command("init", "scaffold a data dir layout (optionally with example agents)")
+    p_init.add_argument(
+        "--with-examples", dest="with_examples", action="store_true",
+        help="stage the bundled example agents/tools/evals/schedules",
+    )
+    p_init.add_argument(
+        "--force", dest="force", action="store_true",
+        help="overwrite existing example files when staging",
+    )
+
+    p_serve = add_command("serve", "run the daemon (and the web console by default)")
+    p_serve.add_argument(
+        "--no-console", dest="no_console", action="store_true",
+        help="do not auto-launch the web console",
+    )
+    p_serve.add_argument(
+        "--console-port", dest="console_port", type=int, default=DEFAULT_CONSOLE_PORT,
+        help=f"port for the bundled web console (default {DEFAULT_CONSOLE_PORT})",
+    )
+
+    p_console = add_command("console", "run only the bundled web console (no daemon)")
+    p_console.add_argument(
+        "--console-port", dest="console_port", type=int, default=DEFAULT_CONSOLE_PORT,
+        help=f"port to serve the console on (default {DEFAULT_CONSOLE_PORT})",
+    )
 
     p_submit = add_command("submit", "write a job descriptor into inbox/")
-    p_submit.add_argument("kind", help="agent kind that should handle the job")
+    p_submit.add_argument("agent", help="name of the agent that should handle the job")
     p_submit.add_argument(
         "--input", dest="input", default=None, help="job input as a JSON string"
     )
@@ -415,7 +585,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_add = add_command("add-agent", "install an agent module into agents/")
     p_add.add_argument("path", help="path to the agent module (*.py)")
     p_add.add_argument(
-        "--name", dest="name", default=None, help="override the installed kind/filename"
+        "--name", dest="name", default=None, help="override the installed agent name/filename"
     )
 
     add_command("status", "read and print status.json")
@@ -475,6 +645,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     data_dir = resolve_data_dir(args)
 
+    if args.command == "init":
+        return cmd_init(
+            data_dir,
+            with_examples=getattr(args, "with_examples", False),
+            force=getattr(args, "force", False),
+        )
+
     if args.command == "serve":
         # Imported lazily so the lightweight host commands don't pull in the whole
         # daemon dependency graph just to submit a job or read status.
@@ -484,12 +661,57 @@ def main(argv: Sequence[str] | None = None) -> int:
         # The default LLM is config-driven (config/llm.json or JAROS_LLM_PROVIDER);
         # every agent reaches it through the one LlmClient interface.
         llm_config = resolve_llm_config(data_dir)
-        print(f"[jaros] default LLM provider: {llm_config.provider}", file=sys.stderr)
-        return Daemon(data_dir=data_dir, llm_config=llm_config).run()
+
+        # The bundled web console comes up by default (a host-side companion on a
+        # background thread; the node itself stays serverless). --no-console skips
+        # it, and it degrades gracefully if the port is taken or the bundle is absent.
+        no_console = getattr(args, "no_console", False)
+        port = getattr(args, "console_port", DEFAULT_CONSOLE_PORT)
+        console = None if no_console else _launch_console(data_dir, port)
+
+        print("Jaros node up.", file=sys.stderr)
+        print(f"  data dir : {data_dir}", file=sys.stderr)
+        print(f"  model    : {llm_config.provider}", file=sys.stderr)
+        if console is not None:
+            print(f"  console  : {console[0]}", file=sys.stderr)
+        elif not no_console:
+            print(f"  console  : not started — port {port} may be in use; try "
+                  f"jaros console --console-port <port>", file=sys.stderr)
+        print("  Ctrl-C to stop. The log below shows events as they happen.", file=sys.stderr)
+        try:
+            return Daemon(data_dir=data_dir, llm_config=llm_config).run()
+        finally:
+            if console is not None:
+                try:
+                    console[1].shutdown()
+                except Exception:
+                    pass
+
+    if args.command == "console":
+        # Run only the bundled console (no daemon) against the resolved data dir.
+        port = getattr(args, "console_port", DEFAULT_CONSOLE_PORT)
+        try:
+            from jaros_console import serve_console
+        except Exception:
+            print("error: the bundled web console is unavailable in this install.",
+                  file=sys.stderr)
+            return 2
+        print("Jaros console up.", file=sys.stderr)
+        print(f"  data dir : {data_dir}", file=sys.stderr)
+        print(f"  url      : http://localhost:{port}", file=sys.stderr)
+        print("  Ctrl-C to stop.", file=sys.stderr)
+        try:
+            serve_console(data_dir, port, background=False)
+        except OSError as exc:
+            print(f"error: could not start console on port {port}: {exc}", file=sys.stderr)
+            return 2
+        except KeyboardInterrupt:
+            pass
+        return 0
 
     if args.command == "submit":
         try:
-            target = cmd_submit(args.kind, args.input, data_dir)
+            target = cmd_submit(args.agent, args.input, data_dir)
         except ValueError as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
@@ -499,12 +721,12 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     if args.command == "add-agent":
         try:
-            target, kind = cmd_add_agent(args.path, args.name, data_dir)
+            target, agent = cmd_add_agent(args.path, args.name, data_dir)
         except (FileNotFoundError, OSError) as exc:
             print(f"error: {exc}", file=sys.stderr)
             return 2
-        if kind:
-            print(f"installed agent -> {target} (registers kind {kind!r})")
+        if agent:
+            print(f"installed agent -> {target} (registers agent {agent!r})")
         else:
             print(f"installed agent -> {target}")
         return 0

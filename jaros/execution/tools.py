@@ -75,7 +75,7 @@ def load_custom_tools(tools_dir: Path) -> list[str]:
             # 1. Register Validation Gate for this action
             def make_validator(inst: Any) -> Callable[[Decision], ValidationResult]:
                 def validator(d: Decision) -> ValidationResult:
-                    if d.kind == inst.NAME:
+                    if d.type == inst.NAME:
                         return inst.validate(d)
                     return ValidationResult.accept(d)
                 return validator

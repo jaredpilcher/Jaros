@@ -55,10 +55,10 @@ def _stage_swarm(data: Path) -> None:
             shutil.copy(f, data / area / f.name)
 
 
-def _submit(data: Path, kind: str, payload: dict) -> subprocess.CompletedProcess:
+def _submit(data: Path, agent: str, payload: dict) -> subprocess.CompletedProcess:
     return _run(
         [sys.executable, "-m", "jaros.cli", "--data-dir", str(data),
-         "submit", kind, "--input", json.dumps(payload)],
+         "submit", agent, "--input", json.dumps(payload)],
         cwd=str(REPO_ROOT),
     )
 

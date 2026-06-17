@@ -26,7 +26,7 @@ The CLI runs identically on Windows, macOS, and Linux and uses only the shared f
 `submit` writes a well-formed job descriptor into the daemon's `inbox/`.
 
 #### Acceptance Criteria
-- [ ] `jaros submit <kind> [--input <json>]` writes `inbox/<generated-id>.json` containing `{id, kind, input}`.
+- [ ] `jaros submit <agent> [--input <json>]` writes `inbox/<generated-id>.json` containing `{id, agent, input}`.
 - [ ] The job id is unique; the file is written atomically so the daemon never reads a partial job.
 - [ ] Invalid input (e.g. malformed JSON) is rejected with a clear error and writes nothing.
 
@@ -35,7 +35,7 @@ The CLI runs identically on Windows, macOS, and Linux and uses only the shared f
 `add-agent` installs a new agent module into the watched `agents/` folder.
 
 #### Acceptance Criteria
-- [ ] `jaros add-agent <path-to-module.py> [--name <kind>]` copies the module into `agents/` so the daemon can load it.
+- [ ] `jaros add-agent <path-to-module.py> [--name <name>]` copies the module into `agents/` so the daemon can load it.
 - [ ] The installed module is placed atomically (no partial file visible to the daemon).
 - [ ] A missing/invalid source path is rejected with a clear error.
 
@@ -82,3 +82,28 @@ not a re-implementation.
       `2` nothing to replay (empty/missing decision log, with a friendly message).
 - [ ] `--json` emits `{decisions, modelCalls, finalState, byteIdentical, ok}` for
       the console/CI; the default output is human-readable.
+
+### [REQ-7] Initialize a Data Directory
+
+`jaros init` scaffolds a ready-to-use shared data directory in one command, so a
+new user (or the console) is never staring at an empty workspace. It creates the
+full directory layout the host and daemon expect — including the `tools/`,
+`evals/`, and `schedules/` folders the runtime layout omits — and, with
+`--with-examples`, stages the bundled example agents and tools so the console's
+Agents & Tools view is populated immediately and jobs can be submitted at once.
+
+#### Acceptance Criteria
+- [ ] `jaros init [--data-dir D]` resolves the data dir like every other command
+      and creates the complete layout (`state/`, `inbox/`, `outbox/`, `processed/`,
+      `failed/`, `artifacts/`, `agents/`, `tools/`, `evals/`, `schedules/`,
+      `config/`). It is idempotent: re-running it never errors or clobbers content.
+- [ ] `--with-examples` copies the bundled example agents/tools (and example
+      evals/schedules) into the new layout so the console shows installed agents and
+      `jaros submit`/`jaros eval` work right away; existing files are left intact
+      unless `--force` is given.
+- [ ] It writes only under the data directory (no socket, no network — consistent
+      with REQ-5), prints what it created/staged and a clear next step, and returns
+      `0` on success.
+- [ ] When the bundled examples cannot be located (e.g. a packaged install without
+      them), `--with-examples` still creates the layout and reports that examples
+      were unavailable rather than failing.

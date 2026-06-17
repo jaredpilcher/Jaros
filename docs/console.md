@@ -6,13 +6,31 @@ install agents and tools, manage schedules, run evals, browse and replay the
 decision log, and introspect the state machine and harness — all over the shared
 file system. The node itself stays serverless.
 
+**The console ships in the wheel — no Node required.** `pip install jaros`
+bundles a prebuilt SPA and a pure-stdlib server, so **`jaros serve` brings the
+console up by default** — boot a node and open **http://localhost:5500**. Run it
+standalone with `jaros console`, choose the port with `--console-port`, or skip
+it with `jaros serve --no-console`:
+
+```bash
+jaros serve                          # node + console
+jaros console                        # just the console, against the discovered data dir
+jaros console --console-port 8080    # …on a port you pick
+```
+
+> Point `$JAROS_DATA_DIR` (or `--data-dir`) at the same data dir a `jaros serve`
+> daemon is using. Use a throwaway dir for experiments — never one another daemon owns.
+
+### Developing the console
+
+The bundled server is the Python twin of the TypeScript bridge under `console/`.
+For React hot-reload while hacking on the UI, run the TS dev server against a
+checkout (and re-bundle with `python scripts/sync_console_dist.py` when done):
+
 ```bash
 cd console && npm install
 JAROS_DATA_DIR=/tmp/jaros npm run dev        # open http://localhost:5500
 ```
-
-> Point `JAROS_DATA_DIR` at the same data dir a `jaros serve` daemon is using.
-> Use a throwaway dir for experiments — never one another daemon owns.
 
 ## Finding your way around
 
@@ -39,7 +57,7 @@ it's completed, and the current step is highlighted with a direct link:
 Every screen documents itself: a one-line intro with a **Learn more →** link, and
 hover tooltips on key controls.
 
-![A hover tooltip explaining the job kind field](../console/docs/screenshots/tooltip.png)
+![A hover tooltip explaining the agent field](../console/docs/screenshots/tooltip.png)
 
 The in-app **Help & Docs** page collects all of this — every page with pictures
 plus a copy-pasteable CLI quickstart:
@@ -56,15 +74,15 @@ runtime profile. New operators also see the get-started checklist here.
 
 ## Jobs
 
-Submit a job (an agent `kind` + JSON input); it is written atomically to the
+Submit a job (an agent `name` + JSON input); it is written atomically to the
 shared `inbox/` — the only way work enters Jaros. Watch it flow
 inbox → processed → outbox. Preset buttons give a one-click start.
 
 ![Jobs — submit, then watch the queue and outbox update live](../console/docs/screenshots/jobs.png)
 
 ```bash
-jaros submit advance --input '{}' --data-dir $DATA
-jaros status --data-dir $DATA
+jaros submit advance --input '{}'
+jaros status
 ```
 
 ## Agents & Tools
@@ -77,8 +95,8 @@ executes a namespaced action.
 ![Agents & Tools — loaded extensions and the runtime installer](../console/docs/screenshots/agents.png)
 
 ```bash
-jaros add-agent ./my_agent.py --data-dir $DATA
-cp examples/readonly/agents/*.py $DATA/agents/
+jaros add-agent ./my_agent.py
+cp examples/readonly/agents/*.py $JAROS_DATA_DIR/agents/
 ```
 
 ## Reproducibility
@@ -91,7 +109,7 @@ confirms the rebuilt run is **byte-identical** with **zero model calls**.
 ![Reproducibility — replay reconstructs a run byte-identically, no model call](../console/docs/screenshots/reproducibility.png)
 
 ```bash
-jaros replay --data-dir $DATA --json    # { decisions, modelCalls:0, byteIdentical, ok }
+jaros replay --json    # { decisions, modelCalls:0, byteIdentical, ok }
 ```
 
 ## Schedules
@@ -111,7 +129,7 @@ iff all pass, so the same suite gates CI.
 ![Evaluations — declarative, reproducible agent tests](../console/docs/screenshots/evaluations.png)
 
 ```bash
-jaros eval --data-dir $DATA        # exit 0 iff all pass
+jaros eval        # exit 0 iff all pass
 ```
 
 ## State Machine

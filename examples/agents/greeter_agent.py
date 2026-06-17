@@ -17,7 +17,7 @@ import uuid
 from jaros.core import create_decision
 
 
-KIND = "greeter"
+NAME = "greeter"
 
 
 class GreeterBoundary:
@@ -30,7 +30,7 @@ class GreeterBoundary:
             create_decision(
                 id=f"greet-{uuid.uuid4().hex}",
                 source="greeter",
-                kind="demo.greet",
+                type="demo.greet",
                 payload={"name": name},
             )
         ]

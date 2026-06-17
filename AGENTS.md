@@ -19,7 +19,7 @@ transitions over a shared file system.
 
 1. **Agents emit inert data; tools run it.** An agent's `decide()` returns
    `Decision` objects (JSON-serializable data only) and performs no side effect.
-   The effect lives in a tool whose `NAME` equals the decision's `kind`.
+   The effect lives in a tool whose `NAME` equals the decision's `type`.
 2. **`execute()` must be deterministic.** No clock, RNG, network, or ambient
    state. This is what makes every run reproducible by `jaros replay`
    (byte-identical, zero model calls).

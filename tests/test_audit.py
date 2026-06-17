@@ -48,7 +48,7 @@ def test_daemon_writes_audit_for_mediated_writes(tmp_path: Path):
     try:
         d = Daemon(tmp_path)
         (tmp_path / "inbox" / "j.json").write_text(
-            json.dumps({"id": "j", "kind": "advance", "input": {}}), encoding="utf-8"
+            json.dumps({"id": "j", "agent": "advance", "input": {}}), encoding="utf-8"
         )
         for _ in range(40):
             d.tick()

@@ -37,12 +37,12 @@ def _isolate():
 
 
 def _adv(source: str, n: int):
-    return create_decision(id=f"{source}-{n}", source=source, kind="advance",
+    return create_decision(id=f"{source}-{n}", source=source, type="advance",
                            payload={"events": ["start", "complete"], "note": f"{source} {n}"})
 
 
 def _handoff(source: str, n: int, ok: bool):
-    return create_decision(id=f"{source}-h{n}", source=source, kind="swarm.handoff",
+    return create_decision(id=f"{source}-h{n}", source=source, type="swarm.handoff",
                            payload={"draft": f"draft {n}", "ok": ok})
 
 

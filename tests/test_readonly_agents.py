@@ -61,7 +61,7 @@ def test_each_readonly_agent_runs_through_its_tool(tmp_path: Path):
         assert gated.ok, gated.reason
         outcome = executor.apply(decision)
         assert outcome.applied, outcome.reason
-        results[mod.KIND] = outcome.output
+        results[mod.NAME] = outcome.output
 
     assert results["system-health"]["system"]
     assert results["disk-monitor"]["freeBytes"] >= 0
@@ -84,9 +84,9 @@ def test_many_readonly_agents_run_under_one_daemon(tmp_path: Path):
         ("inventory", {"path": str(tmp_path)}),
         ("text-metrics", {"path": str(sample)}),
     ]
-    for i, (kind, inp) in enumerate(jobs):
+    for i, (agent, inp) in enumerate(jobs):
         (tmp_path / "inbox" / f"j{i}.json").write_text(
-            json.dumps({"id": f"j{i}", "kind": kind, "input": inp}), encoding="utf-8"
+            json.dumps({"id": f"j{i}", "agent": agent, "input": inp}), encoding="utf-8"
         )
 
     for _ in range(60):
@@ -96,8 +96,8 @@ def test_many_readonly_agents_run_under_one_daemon(tmp_path: Path):
 
     assert daemon.processed >= 4
     assert daemon.failed == 0
-    kinds = {
-        json.loads(o.read_text(encoding="utf-8"))["kind"]
+    agents = {
+        json.loads(o.read_text(encoding="utf-8"))["agent"]
         for o in (tmp_path / "outbox").glob("*.json")
     }
-    assert {"system-health", "disk-monitor", "inventory", "text-metrics"} <= kinds
+    assert {"system-health", "disk-monitor", "inventory", "text-metrics"} <= agents

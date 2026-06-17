@@ -26,7 +26,7 @@ The boundary is a one-way valve. Reasoning produces `Decision` values; those val
 Decision {
   id:      string          # unique
   source:  string          # emitting agent id
-  kind:    string          # discriminator for deterministic dispatch
+  type:    string          # discriminator for deterministic dispatch
   payload: JSON            # inert, serializable data only
 }
 ```

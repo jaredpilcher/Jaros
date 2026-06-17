@@ -13,49 +13,78 @@ The core loop at a glance — submit work, check status, replay it byte-identica
 > misbehaving agent **can only touch what it was granted**. No server, database,
 > or broker: just files and threads.
 
-## 1. Install
+## 1. Install and scaffold a node
 
 ```bash
-pip install -e ".[dev]"
-pytest          # full suite + architecture guardrails should pass
+pip install jaros
+jaros init --with-examples   # scaffolds ./.jaros-data with bundled example agents/tools/evals/schedules
 ```
+
+`jaros init --with-examples` creates the data dir and stages a library of example
+agents and tools (the read-only health/disk/inventory/text agents and the swarm
+hive), so everything below has something to run — and the [console](../console/)
+shows installed agents right away.
+
+> Every command discovers the data dir automatically: it uses `./.jaros-data` by
+> default, or `$JAROS_DATA_DIR` if set, or `--data-dir DIR` to override. The rest
+> of this guide just relies on the default, so no flag is needed.
+
+In a hurry? Point your coding agent (such as **Claude Code**) at
+[`agent-kit/`](../agent-kit/), tell it to read the kit, and it learns Jaros and
+builds + verifies agents for you — more in [step 3](#3-the-read-only-library-already-installed).
+
+> Hacking on Jaros itself? Clone the repo and `pip install -e ".[dev]"` instead,
+> then `pytest` (full suite + architecture guardrails should pass).
 
 ## 2. Run the OS and your first job
 
-Use a throwaway data dir (never one a daemon you don't own is using):
-
 ```bash
-DATA=/tmp/jaros
-jaros serve --data-dir $DATA &                       # the long-running node
-jaros submit advance --input '{}'    --data-dir $DATA # built-in agent
-jaros status --data-dir $DATA                          # state, processed, schedules
-jaros watch  --data-dir $DATA                          # live status + new results
+jaros serve &                          # the long-running node (+ web console)
+jaros submit system-health             # a bundled example agent
+jaros submit advance --input '{}'      # the built-in agent
+jaros status                           # state, processed, schedules
+jaros watch                            # live status + new results
 ```
 
-Each accepted decision is recorded to `$DATA/state/decisions.log`; every mediated
-action to `$DATA/state/audit.log`.
+`jaros serve` prints a short banner — data dir, model, and the console URL
+(http://localhost:5500) — then stays quiet, logging only meaningful events (a job
+completing or failing, a schedule firing), not a per-tick heartbeat. It also brings
+the [web console](#8-watch--drive-everything-from-the-browser) up by default; pass
+`--no-console` to skip it. `jaros watch` is likewise change-only: it reprints the
+status line only when it changes and adds one line per new result.
 
-## 3. Add read-only agents (many purposes, at once)
+Each accepted decision is recorded to `.jaros-data/state/decisions.log`; every mediated
+action to `.jaros-data/state/audit.log`.
 
-Drop in the [read-only library](../examples/readonly/) — agents that only read
-(health, disk, inventory, text), safe to run anywhere:
+## 3. The read-only library (already installed)
+
+`--with-examples` staged the [read-only library](../examples/readonly/) — agents
+that only read (health, disk, inventory, text), safe to run anywhere. Try a few:
 
 ```bash
-cp examples/readonly/agents/*.py $DATA/agents/
-cp examples/readonly/tools/*.py   $DATA/tools/
-jaros submit system-health                       --data-dir $DATA
-jaros submit disk-monitor --input '{"path":"."}' --data-dir $DATA
+jaros submit disk-monitor --input '{"path":"."}'        
+jaros submit text-metrics --input '{"path":"README.md"}'
 ```
 
 Write your own agent (a `ReasoningBoundary` that emits `Decision` data) and a
 read-only tool (`NAME`/`validate`/`execute`); see
 [docs/building-agents.md](building-agents.md) and the [examples](../examples/).
 
+**Or let your coding agent build it.** Point your coding agent — **Claude Code**,
+Cursor, or similar — at [`AGENTS.md`](../AGENTS.md) → [`agent-kit/`](../agent-kit/)
+and tell it to read what's there. The kit hands it the whole project in one
+folder — the mental model, a skill per artifact, accurate API reference, and
+runnable templates — so it learns how Jaros is meant to be used and authors +
+verifies new agents and tools for you right away. Just say *"read `agent-kit/`
+and build me an agent that does X."*
+
 ## 4. Schedule them (native, no external cron)
 
+The example schedules came with `--with-examples` (one interval, one cron). The
+daemon dispatches them natively:
+
 ```bash
-cp examples/readonly/schedules/*.json $DATA/schedules/   # interval + cron examples
-jaros status --data-dir $DATA                            # see schedules + next/last run
+jaros status   # see schedules + next/last run
 ```
 
 Schedules are crash-safe: a restart neither double-fires nor skips. See
@@ -64,8 +93,7 @@ Schedules are crash-safe: a restart neither double-fires nor skips. See
 ## 5. Evaluate agents (reproducible tests)
 
 ```bash
-cp examples/readonly/evals/*.json $DATA/evals/
-jaros eval --data-dir $DATA        # input -> expected decision/result; exit 0 iff all pass
+jaros eval        # runs the bundled evals/; exit 0 iff all pass
 ```
 
 CI-friendly and reproducible — no model-grading flakiness. See
@@ -77,8 +105,8 @@ The headline guarantee, in one command — reconstruct the entire run from the
 recorded decisions, **byte-identical, with no model call**:
 
 ```bash
-jaros replay --data-dir $DATA          # human report; exit 0 reproducible, 1 divergence, 2 nothing
-jaros replay --data-dir $DATA --json   # { decisions, modelCalls:0, finalState, byteIdentical, ok }
+jaros replay          # human report; exit 0 reproducible, 1 divergence, 2 nothing
+jaros replay --json   # { decisions, modelCalls:0, finalState, byteIdentical, ok }
 ```
 
 Replay re-applies the decision log through the runtime's **own** handlers into a
@@ -97,18 +125,19 @@ made it. Every agent reaches the model through the one `LlmClient` interface; th
 demo uses the deterministic **mock** by default (no model server). Point it at a
 real small model by setting `config/llm.json` to `{"provider":"ollama"}`.
 
-```bash
-cp examples/swarm/agents/*.py $DATA/agents/
-cp examples/swarm/tools/*.py   $DATA/tools/
-for t in "login fails" "double charge"; do
-  jaros submit planner  --input "{\"ticket\":\"$t\"}" --data-dir $DATA
-  jaros submit worker   --input "{\"ticket\":\"$t\"}" --data-dir $DATA
-  jaros submit reviewer --input "{\"ticket\":\"$t\"}" --data-dir $DATA
-done
-jaros submit worker --input '{"ticket":"refund","bad":true}' --data-dir $DATA  # seed a bad handoff
+The swarm hive (planner/worker/reviewer + the handoff tool) also came with
+`--with-examples`, so just run it:
 
-jaros replay --data-dir $DATA          # per-agent summary + the attributed agent/decision
-jaros replay --data-dir $DATA --json   # adds byAgent + attribution (modelCalls:0, byteIdentical)
+```bash
+for t in "login fails" "double charge"; do
+  jaros submit planner  --input "{\"ticket\":\"$t\"}"
+  jaros submit worker   --input "{\"ticket\":\"$t\"}"
+  jaros submit reviewer --input "{\"ticket\":\"$t\"}"
+done
+jaros submit worker --input '{"ticket":"refund","bad":true}'  # seed a bad handoff
+
+jaros replay          # per-agent summary + the attributed agent/decision
+jaros replay --json   # adds byAgent + attribution (modelCalls:0, byteIdentical)
 ```
 
 `jaros replay` reconstructs every member's decisions in recorded order to
@@ -120,21 +149,28 @@ hash-chained, per-agent decision log. End-to-end in Docker:
 
 ## 8. Watch + drive everything from the browser
 
+`jaros serve` already started the console — open **http://localhost:5500**. It
+ships in the wheel (a prebuilt SPA + a pure-stdlib server), so **`pip install
+jaros` gives you the console with no Node toolchain**. Submit jobs, install
+agents/tools, manage schedules, run evals, browse + replay the decision log, and
+inspect the state machine and harness — all over the shared file system; the node
+stays serverless.
+
 ```bash
-cd console && npm install
-JAROS_DATA_DIR=/tmp/jaros npm run dev      # http://localhost:5500
+jaros console --console-port 8080   # run just the console (no daemon), on a port you pick
+jaros serve --no-console            # or skip it entirely
 ```
 
-Submit jobs, install agents/tools, manage schedules, run evals, browse + replay
-the decision log, and inspect the state machine and harness — all over the shared
-file system; the node stays serverless. See the [console README](../console/README.md).
+For console **development** (React hot-reload against a checkout), run the
+TypeScript bridge instead — `cd console && npm install && npm run dev`. See the
+[console README](../console/README.md).
 
 ## 9. Deploy in Docker (one node, then many)
 
 ```bash
 docker build -t jaros .
 docker run -d --name jaros_os -v ${PWD}/.jaros-data:/data jaros
-jaros submit advance --input '{}' --data-dir .jaros-data
+jaros submit advance --input '{}'          # host CLI drives the container over ./.jaros-data
 ```
 
 **Distributed:** run several containers on the *same* shared volume. Each job is

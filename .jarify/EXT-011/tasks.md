@@ -16,7 +16,7 @@ Provide a side-effect-free 5-field cron evaluator.
 Model a schedule and load the operator's definitions from the shared FS.
 
 #### Steps
-1. Create `jaros/scheduling/scheduler.py` with a frozen `Schedule` dataclass (`id`, `kind`, `input`, `enabled`, and one of `every_seconds`/`cron`/`at`) and `load_schedules(schedules_dir) -> list[Schedule]` reading `*.json`, skipping malformed files with a logged reason.
+1. Create `jaros/scheduling/scheduler.py` with a frozen `Schedule` dataclass (`id`, `agent`, `input`, `enabled`, and one of `every_seconds`/`cron`/`at`) and `load_schedules(schedules_dir) -> list[Schedule]` reading `*.json`, skipping malformed files with a logged reason.
 2. Add `Schedule.from_dict()` validation (exactly one trigger; known fields) and `next_run(now, last_run)` for interval/cron used by observability.
 
 #### Implements
@@ -41,7 +41,7 @@ Track last-fire state and decide which schedules are due, surviving restarts.
 Evaluate schedules each tick and dispatch due jobs to the inbox, contained.
 
 #### Steps
-1. In `jaros/daemon.py`, construct a `Scheduler` over the data dir at boot; add `_dispatch_schedules()` that calls `load_schedules` + `scheduler.due(now)` and, per due schedule, writes an atomic `inbox/<id>.json` `{id, kind, input}` and calls `mark_fired`.
+1. In `jaros/daemon.py`, construct a `Scheduler` over the data dir at boot; add `_dispatch_schedules()` that calls `load_schedules` + `scheduler.due(now)` and, per due schedule, writes an atomic `inbox/<id>.json` `{id, agent, input}` and calls `mark_fired`.
 2. Call `_dispatch_schedules()` from `tick()` inside a try/except so one bad schedule never stops the loop; track a `scheduled` count and include `scheduler.describe(...)` in `_write_status()` as `schedules`.
 
 #### Implements

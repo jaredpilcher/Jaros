@@ -48,7 +48,7 @@ def check() -> list[str]:
         dlog = DecisionLog(Path(tempfile.mkdtemp(prefix="jaros-determinism-")) / "state")
         for i in range(4):
             record_decision(dlog, create_decision(
-                id=f"d{i}", source="core", kind="advance",
+                id=f"d{i}", source="core", type="advance",
                 payload={"events": ["start", "complete"]},
             ))
 
@@ -61,8 +61,8 @@ def check() -> list[str]:
             problems.append("core state-driving replay is NOT deterministic across runs")
     finally:
         executor.reset_handlers()
-        for kind, fn in saved.items():
-            executor.register_handler(kind, fn)
+        for decision_type, fn in saved.items():
+            executor.register_handler(decision_type, fn)
     return problems
 
 

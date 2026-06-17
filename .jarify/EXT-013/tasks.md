@@ -5,8 +5,8 @@
 Define declarative cases and a deterministic per-case runner.
 
 #### Steps
-1. Create `jaros/eval/runner.py` with `Expect` (optional `decision_count`/`decision_kind`/`source`/`payload_contains`/`gate`/`result_contains`), `EvalCase` (+ `from_dict` validation), `EvalCheck`, and `EvalResult`.
-2. Implement `run_case(case, registry, *, execute=True)` that resolves the kind, runs `decide()`, evaluates each expectation (decision fields, gate via `validate_decision`, result via `executor.apply`), captures exceptions as a failed eval, and returns per-check results.
+1. Create `jaros/eval/runner.py` with `Expect` (optional `decision_count`/`decision_type`/`source`/`payload_contains`/`gate`/`result_contains`), `EvalCase` (+ `from_dict` validation), `EvalCheck`, and `EvalResult`.
+2. Implement `run_case(case, registry, *, execute=True)` that resolves the agent, runs `decide()`, evaluates each expectation (decision fields, gate via `validate_decision`, result via `executor.apply`), captures exceptions as a failed eval, and returns per-check results.
 
 #### Implements
 - [REQ-1] Declarative Eval Case Model
@@ -39,7 +39,7 @@ Run the eval suite from the host, CI-friendly.
 Ship eval cases for the read-only agents and test the framework.
 
 #### Steps
-1. Create `examples/readonly/evals/readonly.json` with cases for `system-health`, `disk-monitor`, `inventory`, and `text-metrics` asserting decision kind/payload/gate and (where path-independent) `result_contains`.
+1. Create `examples/readonly/evals/readonly.json` with cases for `system-health`, `disk-monitor`, `inventory`, and `text-metrics` asserting decision type/payload/gate and (where path-independent) `result_contains`.
 2. Create `tests/test_eval.py` covering decision-level checks, gate, result execution, error capture, malformed-skip loading, and that the shipped read-only suite passes via `run_suite`.
 
 #### Implements

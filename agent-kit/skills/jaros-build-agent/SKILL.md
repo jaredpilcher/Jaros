@@ -1,30 +1,30 @@
 ---
 name: jaros-build-agent
-description: Use when creating a new Jaros agent — a ReasoningBoundary that reasons over a job's input and emits inert Decision data (never a side effect). Covers the KIND/build(llm)/decide contract and verification.
+description: Use when creating a new Jaros agent — a ReasoningBoundary that reasons over a job's input and emits inert Decision data (never a side effect). Covers the NAME/build(llm)/decide contract and verification.
 ---
 
 # Build a Jaros agent
 
-An agent answers a job `kind`. It reasons over the job's input and returns a list
+An agent has a `NAME` and answers jobs addressed to it (a job's `agent` field). It reasons over the job's input and returns a list
 of inert `Decision` objects — data only, never a side effect. The effect for a
-decision lives in a **tool** whose `NAME` equals the decision's `kind` (see
+decision lives in a **tool** whose `NAME` equals the decision's `type` (see
 [jaros-build-tool](../jaros-build-tool/SKILL.md)).
 
 ## Contract
 
 A `*.py` in the data dir's `agents/` folder must expose:
 
-- `KIND: str` — the job kind this agent answers.
+- `NAME: str` — the agent's name (what a job's `agent` field selects).
 - `build(llm) -> ReasoningBoundary` — factory; `llm` is the shared client.
 - the returned object has `decide(self, context) -> list[Decision]`.
 
 ## Steps
 
 1. Copy [`templates/agent.py`](../../templates/agent.py) into `<data-dir>/agents/`.
-2. Set `KIND` (what `jaros submit <KIND>` routes to).
+2. Set `NAME` (what `jaros submit <NAME>` routes to).
 3. In `decide`, read what you need from `context` (the job's parsed JSON input).
-4. Return `create_decision(id=..., source=KIND, kind="<action>", payload={...})`.
-   - `kind` must equal the executing tool's `NAME`.
+4. Return `create_decision(id=..., source=NAME, type="<action>", payload={...})`.
+   - `type` must equal the executing tool's `NAME`.
    - `payload` is inert JSON only — `create_decision` rejects anything else.
 5. If the model should choose *what* happens, **let its answer drive the decision**
    — see the next section. Keep all effects in the tool, not the agent.
@@ -35,14 +35,14 @@ A `*.py` in the data dir's `agents/` folder must expose:
 import uuid
 from jaros.core import create_decision
 
-KIND = "word-count"
+NAME = "word-count"
 
 class WordCountBoundary:
     def __init__(self, llm): self._llm = llm
     def decide(self, context) -> list:
         path = context.get("path", "README.md") if isinstance(context, dict) else "README.md"
-        return [create_decision(id=f"wc-{uuid.uuid4().hex}", source=KIND,
-                                kind="text.wordcount", payload={"path": path})]
+        return [create_decision(id=f"wc-{uuid.uuid4().hex}", source=NAME,
+                                type="text.wordcount", payload={"path": path})]
 
 def build(llm): return WordCountBoundary(llm)
 ```
@@ -50,7 +50,7 @@ def build(llm): return WordCountBoundary(llm)
 ## Let the model DRIVE the decision (not just ride along)
 
 This is the point of an agent. The LLM decides *what* — and that choice must shape
-the **decision the executor acts on**: its `kind`, its `payload`, or the `events`
+the **decision the executor acts on**: its `type`, its `payload`, or the `events`
 that drive the state machine. Do **not** call the model and then bury its text in a
 cosmetic `note` while the real behaviour stays hardcoded — then the model decided
 nothing.
@@ -65,7 +65,7 @@ import uuid
 from jaros.core import create_decision
 from jaros.llm import LlmRequest
 
-KIND = "triage"
+NAME = "triage"
 
 class TriageBoundary:
     def __init__(self, llm): self._llm = llm
@@ -77,7 +77,7 @@ class TriageBoundary:
         accepted = verdict.strip().upper().startswith("ACCEPT")
         # The model's verdict picks the events -> the reconstructed final state.
         events = ["start", "complete"] if accepted else ["start", "fail"]   # DONE vs FAILED
-        return [create_decision(id=f"t-{uuid.uuid4().hex}", source=KIND, kind="advance",
+        return [create_decision(id=f"t-{uuid.uuid4().hex}", source=NAME, type="advance",
                                 payload={"events": events, "verdict": "accept" if accepted else "reject"})]
 
 def build(llm): return TriageBoundary(llm)
@@ -92,8 +92,8 @@ runnable hive in [`examples/swarm/agents/`](../../../examples/swarm/agents/).
 
 ## Verify
 
-Stage the agent (and its tool + an eval) and run `jaros eval --data-dir <dir>` —
-it must exit 0. Then `jaros replay --data-dir <dir> --json` must report
+Stage the agent (and its tool + an eval) and run `jaros eval` —
+it must exit 0. Then `jaros replay --json` must report
 `modelCalls: 0` and `byteIdentical: true`. See
 [reference/workflow.md](../../reference/workflow.md).
 
@@ -101,7 +101,7 @@ it must exit 0. Then `jaros replay --data-dir <dir> --json` must report
 
 - Emit data only. No file writes, network, or handles inside `decide`.
 - The payload must be JSON-serializable and round-trippable.
-- If you call the model, its answer must **drive** the decision (kind / payload /
+- If you call the model, its answer must **drive** the decision (type / payload /
   events) — never a cosmetic note over hardcoded behaviour.
 - See [reference/architecture.md](../../reference/architecture.md) and
   [reference/public-api.md](../../reference/public-api.md).

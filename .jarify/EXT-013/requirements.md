@@ -25,8 +25,8 @@ An eval case declares the agent to run, its input, and all-optional expectations
 about the emitted decision and (optionally) the execution result.
 
 #### Acceptance Criteria
-- [x] `EvalCase` carries `name`, `kind`, `input`, and an `Expect` with optional
-      `decision_count`, `decision_kind`, `source`, `payload_contains`, `gate`
+- [x] `EvalCase` carries `name`, `agent`, `input`, and an `Expect` with optional
+      `decision_count`, `decision_type`, `source`, `payload_contains`, `gate`
       ("accept"/"reject"), and `result_contains`.
 - [x] `EvalCase.from_dict` validates required fields and rejects a malformed
       `expect`; cases are plain JSON, authorable by hand or tooling.
@@ -38,8 +38,8 @@ A runner resolves the agent, runs `decide()`, and evaluates each expectation,
 reporting per-check pass/fail — deterministically.
 
 #### Acceptance Criteria
-- [x] `run_case(case, registry)` resolves `case.kind`, runs `decide(input)`, and
-      checks decision count/kind/source/payload, the validation gate, and (when
+- [x] `run_case(case, registry)` resolves `case.agent`, runs `decide(input)`, and
+      checks decision count/type/source/payload, the validation gate, and (when
       requested) the executed result via the deterministic executor — no model call.
 - [x] A resolution or reasoning exception is a failed eval with a captured error,
       never a crash.

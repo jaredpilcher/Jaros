@@ -54,7 +54,7 @@ docker run -d \
 
 ## 3. Protocol 2: Develop and Install a New Agent
 
-To create and register a new agent kind inside Jaros, you must write a Python script conforming to the `ReasoningBoundary` agent structure.
+To create and register a new agent inside Jaros, you must write a Python script conforming to the `ReasoningBoundary` agent structure.
 
 ### Step A: Create the Agent Agent Script (`custom_agent.py`)
 Write your agent reasoning code exactly like this template. Keep it standard-library-only.
@@ -64,8 +64,8 @@ import json
 from jaros.core import create_decision
 from jaros.llm import LlmRequest
 
-# 1. Define the unique kind registration key
-KIND = "custom_agent"
+# 1. Define the agent's name (its registration key)
+NAME = "custom_agent"
 
 # 2. Implement the builder function
 def build(llm):
@@ -82,8 +82,8 @@ def build(llm):
             return [
                 create_decision(
                     id="dec-1",
-                    source=KIND,
-                    kind="advance",
+                    source=NAME,
+                    type="advance",
                     payload={
                         "events": ["start", "complete"],
                         "note": reply.text,
@@ -98,7 +98,7 @@ def build(llm):
 Execute the `add-agent` subcommand from the host. This copies the script into the watched `agents/` directory atomically:
 
 ```bash
-python -m jaros.cli --data-dir .jaros-data add-agent path/to/custom_agent.py --name custom_agent
+python -m jaros.cli add-agent path/to/custom_agent.py --name custom_agent
 ```
 The running Docker container daemon will instantly detect the file, load it, and make `custom_agent` available for execution.
 
@@ -112,7 +112,7 @@ To execute an installed agent, you submit a job descriptor atomically into the s
 Pass prompt contexts or goal arguments directly inside the `--input` JSON option:
 
 ```bash
-python -m jaros.cli --data-dir .jaros-data submit custom_agent --input '{"task": "Evaluate user security parameters"}'
+python -m jaros.cli submit custom_agent --input '{"task": "Evaluate user security parameters"}'
 ```
 
 ### Step B: Submitting via Direct File Write (Decoupled/Cron)
@@ -131,7 +131,7 @@ job_id = uuid.uuid4().hex
 # Define job descriptor
 job = {
     "id": job_id,
-    "kind": "custom_agent",  # The agent kind to trigger
+    "agent": "custom_agent",  # The agent to trigger
     "input": {"task": "Verify transaction logs"}  # Prompt context
 }
 
@@ -161,14 +161,14 @@ return [
     create_decision(
         id="trigger-agent-b",
         source="agent_a",
-        kind="advance",
+        type="advance",
         payload={
             "events": ["START"],
             # Harness will safely write this file on behalf of Agent A
             "artifact_path": "inbox/job_agent_b_123.json",
             "data": {
                 "id": "job_agent_b_123",
-                "kind": "agent_b",  # Triggers Agent B!
+                "agent": "agent_b",  # Triggers Agent B!
                 "input": {"data_from_a": "Data content..."}
             }
         }
@@ -185,7 +185,7 @@ return [
     create_decision(
         id="send-to-queue",
         source="agent_a",
-        kind="advance",
+        type="advance",
         payload={
             "events": ["START"],
             "action": "queue.send",
@@ -205,7 +205,7 @@ To monitor execution progress and read final outbox results cleanly:
 ### Step A: Read status metadata
 Query the overall running state, processed counts, and active pool threads:
 ```bash
-python -m jaros.cli --data-dir .jaros-data status
+python -m jaros.cli status
 ```
 Or read `status.json` directly from the shared volume:
 ```python
@@ -217,7 +217,7 @@ print(f"Processed: {status['processed']}, State: {status['state']}")
 ### Step B: Watch job outputs
 Loop-read the `outbox/` layout directory for results:
 ```bash
-python -m jaros.cli --data-dir .jaros-data watch
+python -m jaros.cli watch
 ```
 Or check the specific job result file:
 ```python
@@ -232,14 +232,14 @@ print(result["result"])
 If you (the agent) need to trigger a shell command on the host and retrieve the result from the container, you **must not** attempt direct process execution or open network sockets. Instead, follow this decoupled, file-system-only event loop:
 
 ### Step A: Propose a Host Command Request
-Emit a `Decision` of kind `"host_command"`, declaring the target binary and options. *This is pure data; you perform no execution.*
+Emit a `Decision` of type `"host_command"`, declaring the target binary and options. *This is pure data; you perform no execution.*
 
 ```python
 return [
     create_decision(
         id="cmd-req-1",
         source="my_agent",
-        kind="host_command",
+        type="host_command",
         payload={
             "events": ["START"],
             "command_id": "job-git-status-123",
@@ -273,14 +273,14 @@ This preserves the decoupled boundary perfectly!
 If you (the agent) need to query a database (such as PostgreSQL), you **must not** attempt to import a database driver (like `psycopg2` or `asyncpg`), hold credentials, or open direct connection sockets. Follow this decoupled, parameter-driven pattern:
 
 ### Step A: Propose the Query Request
-Emit a `Decision` of kind `"db_query"`, declaring the query string and parameterized variables. *This is pure data; you have no connection access.*
+Emit a `Decision` of type `"db_query"`, declaring the query string and parameterized variables. *This is pure data; you have no connection access.*
 
 ```python
 return [
     create_decision(
         id="db-query-1",
         source="my_agent",
-        kind="db_query",
+        type="db_query",
         payload={
             "events": ["START"],
             "query": "SELECT username, email FROM users WHERE role = %s",

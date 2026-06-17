@@ -65,10 +65,10 @@ def _capture() -> list[tuple[str, tuple[int, int, int]]]:
                 break
             time.sleep(0.2)
 
-        def submit(kind, payload):
+        def submit(agent, payload):
             subprocess.run(
                 [sys.executable, "-m", "jaros.cli", "--data-dir", str(data),
-                 "submit", kind, "--input", json.dumps(payload)],
+                 "submit", agent, "--input", json.dumps(payload)],
                 cwd=str(REPO), capture_output=True, text=True,
             )
 

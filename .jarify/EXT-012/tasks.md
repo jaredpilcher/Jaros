@@ -14,10 +14,10 @@ Provide four read-only Execution-Plane tools, each performing only reads.
 
 ### [TASK-2] Implement the read-only agents
 
-Provide an agent per purpose that proposes its tool's decision kind.
+Provide an agent per purpose that proposes its tool's decision type.
 
 #### Steps
-1. Create `examples/readonly/agents/{system_health,disk_monitor,inventory,text_metrics}_agent.py`, each with `KIND` and `build(llm)` returning a boundary whose `decide()` emits a single inert decision of the matching kind (`sys.info`/`fs.disk_usage`/`fs.stat`/`text.count`).
+1. Create `examples/readonly/agents/{system_health,disk_monitor,inventory,text_metrics}_agent.py`, each with `NAME` and `build(llm)` returning a boundary whose `decide()` emits a single inert decision of the matching type (`sys.info`/`fs.disk_usage`/`fs.stat`/`text.count`).
 2. Keep the agents side-effect free — they consult context and emit `Decision` data only, holding no handles.
 
 #### Implements
@@ -41,7 +41,7 @@ Prove each agent runs read-only and that many run concurrently under one daemon.
 
 #### Steps
 1. Create `tests/test_readonly_agents.py` that loads each tool, builds each agent, runs `decide()` → gate → `executor.apply`, and asserts the read-only result shape.
-2. Add a daemon integration test that stages all agents + tools, submits all four kinds, ticks, and asserts `processed >= 4`, `failed == 0`, and an outbox result per kind.
+2. Add a daemon integration test that stages all agents + tools, submits all four agents, ticks, and asserts `processed >= 4`, `failed == 0`, and an outbox result per agent.
 
 #### Implements
 - [REQ-1] Read-Only by Capability and by Tool

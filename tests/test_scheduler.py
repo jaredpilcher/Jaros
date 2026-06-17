@@ -20,19 +20,19 @@ def _write(dir_: Path, name: str, body: dict) -> None:
 
 def test_schedule_requires_exactly_one_trigger():
     with pytest.raises(ValueError):
-        Schedule.from_dict({"id": "a", "kind": "advance"})  # no trigger
+        Schedule.from_dict({"id": "a", "agent": "advance"})  # no trigger
     with pytest.raises(ValueError):
-        Schedule.from_dict({"id": "a", "kind": "advance", "every_seconds": 5, "cron": "* * * * *"})
+        Schedule.from_dict({"id": "a", "agent": "advance", "every_seconds": 5, "cron": "* * * * *"})
     with pytest.raises(ValueError):
-        Schedule.from_dict({"id": "", "kind": "advance", "every_seconds": 5})  # no id
+        Schedule.from_dict({"id": "", "agent": "advance", "every_seconds": 5})  # no id
 
 
 def test_loader_skips_malformed(tmp_path: Path):
     sched_dir = tmp_path / "schedules"
-    _write(sched_dir, "good", {"id": "g", "kind": "advance", "every_seconds": 60})
+    _write(sched_dir, "good", {"id": "g", "agent": "advance", "every_seconds": 60})
     _write(sched_dir, "bad_json", {})
     (sched_dir / "bad_json.json").write_text("{ not json", encoding="utf-8")
-    _write(sched_dir, "bad_trigger", {"id": "b", "kind": "advance"})
+    _write(sched_dir, "bad_trigger", {"id": "b", "agent": "advance"})
     loaded = load_schedules(sched_dir)
     assert [s.id for s in loaded] == ["g"]
 
@@ -40,7 +40,7 @@ def test_loader_skips_malformed(tmp_path: Path):
 # --- interval ---------------------------------------------------------------
 
 def test_interval_fires_once_per_window(tmp_path: Path):
-    sched = Schedule(id="i", kind="advance", every_seconds=60)
+    sched = Schedule(id="i", agent="advance", every_seconds=60)
     sc = Scheduler(tmp_path / "state.json")
     t0 = datetime(2026, 6, 13, 9, 0, 0)
     assert sc.due([sched], t0) == [sched]      # no prior state -> due
@@ -52,7 +52,7 @@ def test_interval_fires_once_per_window(tmp_path: Path):
 # --- cron -------------------------------------------------------------------
 
 def test_cron_fires_on_minute_not_twice(tmp_path: Path):
-    sched = Schedule(id="c", kind="advance", cron="*/15 * * * *")
+    sched = Schedule(id="c", agent="advance", cron="*/15 * * * *")
     sc = Scheduler(tmp_path / "state.json")
     on = datetime(2026, 6, 13, 9, 15, 0)
     assert sc.due([sched], on) == [sched]
@@ -65,7 +65,7 @@ def test_cron_fires_on_minute_not_twice(tmp_path: Path):
 # --- one-shot + enable ------------------------------------------------------
 
 def test_one_shot_fires_once(tmp_path: Path):
-    sched = Schedule(id="o", kind="advance", at="2026-06-13T09:00:00")
+    sched = Schedule(id="o", agent="advance", at="2026-06-13T09:00:00")
     sc = Scheduler(tmp_path / "state.json")
     assert sc.due([sched], datetime(2026, 6, 13, 8, 0, 0)) == []  # before
     when = datetime(2026, 6, 13, 9, 0, 1)
@@ -75,7 +75,7 @@ def test_one_shot_fires_once(tmp_path: Path):
 
 
 def test_disabled_suppresses(tmp_path: Path):
-    sched = Schedule(id="d", kind="advance", every_seconds=1, enabled=False)
+    sched = Schedule(id="d", agent="advance", every_seconds=1, enabled=False)
     sc = Scheduler(tmp_path / "state.json")
     assert sc.due([sched], datetime(2026, 6, 13, 9, 0, 0)) == []
 
@@ -83,7 +83,7 @@ def test_disabled_suppresses(tmp_path: Path):
 # --- durability + prune -----------------------------------------------------
 
 def test_state_persists_across_reload_and_prunes(tmp_path: Path):
-    sched = Schedule(id="p", kind="advance", every_seconds=3600)
+    sched = Schedule(id="p", agent="advance", every_seconds=3600)
     state = tmp_path / "state.json"
     sc = Scheduler(state)
     t0 = datetime(2026, 6, 13, 9, 0, 0)
@@ -97,7 +97,7 @@ def test_state_persists_across_reload_and_prunes(tmp_path: Path):
 
 
 def test_describe_reports_timing(tmp_path: Path):
-    sched = Schedule(id="x", kind="advance", every_seconds=60)
+    sched = Schedule(id="x", agent="advance", every_seconds=60)
     sc = Scheduler(tmp_path / "state.json")
     desc = sc.describe([sched], datetime(2026, 6, 13, 9, 0, 0))
     assert desc[0]["id"] == "x"

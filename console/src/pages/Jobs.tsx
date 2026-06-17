@@ -3,17 +3,17 @@ import { useEffect, useState } from "react";
 import { api, type Job, type OutboxResult } from "../api";
 import { Card, Empty, Json, PageIntro, Tip } from "../components/ui";
 
-const PRESETS: { kind: string; input: string }[] = [
-  { kind: "advance", input: "{}" },
-  { kind: "echo", input: '{ "msg": "hello from the console" }' },
-  { kind: "greeter", input: '{ "name": "Jaros" }' },
+const PRESETS: { agent: string; input: string }[] = [
+  { agent: "advance", input: "{}" },
+  { agent: "echo", input: '{ "msg": "hello from the console" }' },
+  { agent: "greeter", input: '{ "name": "Jaros" }' },
 ];
 
 // #EXT-010-REQ-3 Start
 export function Jobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [outbox, setOutbox] = useState<OutboxResult[]>([]);
-  const [kind, setKind] = useState("advance");
+  const [agent, setAgent] = useState("advance");
   const [input, setInput] = useState("{}");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [sel, setSel] = useState<OutboxResult | null>(null);
@@ -30,10 +30,10 @@ export function Jobs() {
 
   async function submit() {
     setMsg(null);
-    const r = await api.submitJob(kind, input);
+    const r = await api.submitJob(agent, input);
     if (r.error) setMsg({ ok: false, text: r.error });
     else {
-      setMsg({ ok: true, text: `submitted ${kind} → inbox/${r.id}.json` });
+      setMsg({ ok: true, text: `submitted ${agent} → inbox/${r.id}.json` });
       refresh();
     }
   }
@@ -42,24 +42,24 @@ export function Jobs() {
 
   return (
     <>
-    <PageIntro icon="▣" sub="Pick a preset for a one-click start, or enter any agent kind." to="/help#jobs">
+    <PageIntro icon="▣" sub="Pick a preset for a one-click start, or enter any agent name." to="/help#jobs">
       Submit a job and watch it flow <b>inbox → processed → outbox</b>. A job is the only way work enters Jaros.
     </PageIntro>
     <div className="grid cols-2" style={{ alignItems: "start" }}>
       <div className="grid" style={{ gap: 16 }}>
-        <Card title={<>Submit a job <Tip text="The kind selects which agent reasons over the job; the JSON input is passed to it as context." /></>} desc="written atomically to the shared inbox — the only entry point">
-          <label className="field">Agent kind</label>
+        <Card title={<>Submit a job <Tip text="The agent name selects which agent reasons over the job; the JSON input is passed to it as context." /></>} desc="written atomically to the shared inbox — the only entry point">
+          <label className="field">Agent</label>
           <div className="row" style={{ marginBottom: 12, flexWrap: "wrap" }}>
-            <input value={kind} onChange={(e) => setKind(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
+            <input value={agent} onChange={(e) => setAgent(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
             {PRESETS.map((p) => (
               <button
-                key={p.kind}
+                key={p.agent}
                 onClick={() => {
-                  setKind(p.kind);
+                  setAgent(p.agent);
                   setInput(p.input);
                 }}
               >
-                {p.kind}
+                {p.agent}
               </button>
             ))}
           </div>
@@ -84,7 +84,7 @@ export function Jobs() {
                   <tbody>
                     {byArea(area).map((j) => (
                       <tr key={j.id}>
-                        <td><span className="tag kind">{j.kind ?? "?"}</span></td>
+                        <td><span className="tag kind">{j.agent ?? "?"}</span></td>
                         <td style={{ color: "var(--muted)" }}>{j.id.slice(0, 12)}</td>
                         {area === "failed" && <td style={{ color: "var(--red)" }}>{j.reason}</td>}
                       </tr>
@@ -110,7 +110,7 @@ export function Jobs() {
                 onClick={() => setSel(sel?.id === o.id ? null : o)}
               >
                 <div className="row" style={{ justifyContent: "space-between" }}>
-                  <span className="tag kind">{o.kind ?? "?"}</span>
+                  <span className="tag kind">{o.agent ?? "?"}</span>
                   <span className="hint mono">{o.id.slice(0, 12)}</span>
                 </div>
                 {sel?.id === o.id && <div style={{ marginTop: 10 }}><Json value={o.result} /></div>}

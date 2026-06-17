@@ -16,7 +16,7 @@ One object per file in `schedules/`. Provide exactly one trigger:
 | Field | Meaning |
 | --- | --- |
 | `id` | unique schedule id |
-| `kind` | the agent kind to submit |
+| `agent` | the agent to submit a job to |
 | `input` | JSON input passed to the job |
 | `enabled` | `true`/`false` |
 | `every_seconds` | interval trigger (int) |
@@ -27,25 +27,25 @@ One object per file in `schedules/`. Provide exactly one trigger:
 
 1. Copy [`templates/schedule.json`](../../templates/schedule.json) into
    `<data-dir>/schedules/`.
-2. Set `id`, `kind`, and `input`.
+2. Set `id`, `agent`, and `input`.
 3. Choose ONE trigger: `every_seconds`, `cron`, or `at`.
 
 ## Worked examples
 
 ```json
-{ "id": "word-count-hourly", "kind": "word-count",
+{ "id": "word-count-hourly", "agent": "word-count",
   "input": { "path": "README.md" }, "every_seconds": 3600, "enabled": true }
 ```
 
 ```json
-{ "id": "nightly-health", "kind": "system-health",
+{ "id": "nightly-health", "agent": "system-health",
   "input": {}, "cron": "0 3 * * *", "enabled": true }
 ```
 
 ## Verify
 
 ```bash
-jaros status --data-dir <dir>    # lists schedules with their next/last run
+jaros status    # lists schedules with their next/last run
 ```
 
 Or manage them from the console's **Schedules** page (create / pause / delete).
