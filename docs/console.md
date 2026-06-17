@@ -6,6 +6,12 @@ install agents and tools, manage schedules, run evals, browse and replay the
 decision log, and introspect the state machine and harness — all over the shared
 file system. The node itself stays serverless.
 
+**`jaros serve` brings the console up by default** — boot a node and open
+**http://localhost:5500**. Pass `jaros serve --no-console` to skip it.
+
+To run the console on its own — first run (its npm deps aren't installed yet), or
+pointed at a node whose shared dir lives elsewhere — start it standalone:
+
 ```bash
 cd console && npm install
 JAROS_DATA_DIR=/tmp/jaros npm run dev        # open http://localhost:5500

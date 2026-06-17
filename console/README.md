@@ -54,13 +54,25 @@ Schedules, Evaluations, Harness, and a hover tooltip. A full walkthrough lives i
 
 ## Run it
 
-The console talks to a Jaros data directory. Point it at one and run a daemon
-against the **same** directory (use a throwaway dir, never one in use):
+The fastest path: **`jaros serve` starts this console for you** (once `npm install`
+has run here at least once) and prints the URL. Boot a node and open
+http://localhost:5500:
+
+```bash
+export JAROS_DATA_DIR=/tmp/jaros-demo   # a throwaway data dir, never one in use
+jaros serve                             # node + console; --no-console to skip
+```
+
+### Standalone
+
+To run the console on its own — to install its deps the first time, or to point it
+at a node whose shared directory lives elsewhere — start it against the **same**
+data directory the daemon uses:
 
 ```bash
 # terminal 1 — a Jaros OS on a throwaway data dir
 export JAROS_DATA_DIR=/tmp/jaros-demo
-jaros serve
+jaros serve --no-console
 
 # terminal 2 — the console
 cd console

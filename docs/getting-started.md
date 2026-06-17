@@ -39,12 +39,19 @@ builds + verifies agents for you — more in [step 3](#3-the-read-only-library-a
 ## 2. Run the OS and your first job
 
 ```bash
-jaros serve &                          # the long-running node
+jaros serve &                          # the long-running node (+ web console)
 jaros submit system-health             # a bundled example agent
 jaros submit advance --input '{}'      # the built-in agent
 jaros status                           # state, processed, schedules
 jaros watch                            # live status + new results
 ```
+
+`jaros serve` prints a short banner — data dir, model, and the console URL
+(http://localhost:5500) — then stays quiet, logging only meaningful events (a job
+completing or failing, a schedule firing), not a per-tick heartbeat. It also brings
+the [web console](#8-watch--drive-everything-from-the-browser) up by default; pass
+`--no-console` to skip it. `jaros watch` is likewise change-only: it reprints the
+status line only when it changes and adds one line per new result.
 
 Each accepted decision is recorded to `.jaros-data/state/decisions.log`; every mediated
 action to `.jaros-data/state/audit.log`.
@@ -142,14 +149,20 @@ hash-chained, per-agent decision log. End-to-end in Docker:
 
 ## 8. Watch + drive everything from the browser
 
+`jaros serve` already started the console — open **http://localhost:5500**. Submit
+jobs, install agents/tools, manage schedules, run evals, browse + replay the
+decision log, and inspect the state machine and harness — all over the shared file
+system; the node stays serverless.
+
+First run, or want the console on its own (e.g. pointed at a remote node's shared
+dir)? Install its deps once and run it standalone:
+
 ```bash
 cd console && npm install
-JAROS_DATA_DIR=../.jaros-data npm run dev   # point the console at your node; http://localhost:5500
+JAROS_DATA_DIR=../.jaros-data npm run dev   # point the console at any node's dir; http://localhost:5500
 ```
 
-Submit jobs, install agents/tools, manage schedules, run evals, browse + replay
-the decision log, and inspect the state machine and harness — all over the shared
-file system; the node stays serverless. See the [console README](../console/README.md).
+See the [console README](../console/README.md).
 
 ## 9. Deploy in Docker (one node, then many)
 
